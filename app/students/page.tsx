@@ -25,9 +25,7 @@ function StudentsContent() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setNewPeriod(period);
-  }, [period]);
+  // Initialize newPeriod when opening the add form instead of calling setState synchronously in an effect
 
   useEffect(() => {
     let cancelled = false;
@@ -38,9 +36,9 @@ function StudentsContent() {
       .eq("period", period)
       .eq("is_active", true)
       .order("name")
-      .then(({ data, error: fetchError }) => {
+      .then(({ data, error: fetchError }: { data: Student[] | null; error: { message?: string } | null }) => {
         if (cancelled) return;
-        if (fetchError) setError(fetchError.message);
+        if (fetchError) setError(fetchError.message ?? "Unknown error");
         else setStudents((data as Student[]) ?? []);
       });
 
@@ -103,7 +101,14 @@ function StudentsContent() {
           </p>
         </div>
         <button
-          onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
+          onClick={() => {
+            setShowAdd((v) => {
+              const next = !v;
+              if (next) setNewPeriod(period);
+              return next;
+            });
+            setSaveError(null);
+          }}
           className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
         >
           {showAdd ? "Cancel" : "+ Add Student"}

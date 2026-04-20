@@ -36,9 +36,9 @@ function HistoryContent() {
       )
       .order("checked_out_at", { ascending: false })
       .limit(500)
-      .then(({ data, error: fetchError }) => {
+      .then(({ data, error: fetchError }: { data: Checkout[] | null; error: { message?: string } | null }) => {
         if (cancelled) return;
-        if (fetchError) setError(fetchError.message);
+  if (fetchError) setError(fetchError.message ?? "Unknown error");
         else setHistory((data as unknown as Checkout[]) ?? []);
       });
 

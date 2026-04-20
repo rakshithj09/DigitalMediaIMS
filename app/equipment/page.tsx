@@ -20,7 +20,13 @@ function EquipmentContent() {
 
   // Add form
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    name: string;
+    category: (typeof EQUIPMENT_CATEGORIES)[number];
+    total_quantity: string;
+    serial_number: string;
+    condition_notes: string;
+  }>({
     name: "",
     category: EQUIPMENT_CATEGORIES[0],
     total_quantity: "1",
@@ -160,7 +166,7 @@ function EquipmentContent() {
               <select
                 id="eq-cat"
                 value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as (typeof EQUIPMENT_CATEGORIES)[number] }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 {EQUIPMENT_CATEGORIES.map((c) => (

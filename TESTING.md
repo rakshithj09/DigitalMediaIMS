@@ -38,3 +38,17 @@ Notes
 - This is a minimal UI placeholder. Automated tests were not added because this project does not currently include a test runner; consider adding Jest/React Testing Library if automated UI tests are required.
 
 If you want, I can add automated tests and wire a simple test runner in a follow-up change.
+
+---
+
+Additional manual test: Email sign-up / verification
+
+1. Visit the sign-up page (if using the demo component, go to /email-password).
+2. Toggle to "Create account", enter an email at @bentonvillek12.org and a password, then submit.
+3. Expect to see a message saying a verification email was sent.
+4. Check the Bentonville email inbox and click the verification link from Supabase.
+5. After verification, sign in using the same credentials (sign-in mode) and confirm access.
+
+Notes for maintainers
+- The client enforces the @bentonvillek12.org domain before calling Supabase, but you should also enforce domain restrictions server-side or with RLS policies to prevent abuse.
+- Ensure `.env.local` contains `NEXT_PUBLIC_SUPABASE_URL` and either `NEXT_PUBLIC_SUPABASE_ANON_KEY` or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.

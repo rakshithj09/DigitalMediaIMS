@@ -3,7 +3,7 @@
 import { useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { User } from "@supabase/supabase-js";
+import { User, Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lip/supabase/browser-client";
 import { PeriodProvider, usePeriod } from "@/app/lib/period-context";
 
@@ -109,18 +109,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        router.replace("/login");
-      } else {
-        setUser(data.user);
+  let mounted = true;
+
+    (async () => {
+      try {
+        const res = await supabase.auth.getUser();
+        if (!mounted) return;
+        const userData = res.data?.user ?? null;
+        if (!userData) {
+          router.replace("/login");
+        } else {
+          setUser(userData);
+        }
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
-    });
+    })();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
+    } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
       if (!session?.user) {
         router.replace("/login");
       } else {
@@ -128,7 +136,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
