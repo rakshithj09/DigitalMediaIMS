@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lip/supabase/browser-client";
 
 export default function LoginPage() {
@@ -98,6 +99,11 @@ export default function LoginPage() {
             >
               {loading ? "Signing in…" : "Sign in"}
             </button>
+            <div className="mt-3 text-center text-sm">
+              <Link href="/email-password" className="text-blue-600 hover:underline">
+                Create an account
+              </Link>
+            </div>
           </form>
         </div>
       </div>
