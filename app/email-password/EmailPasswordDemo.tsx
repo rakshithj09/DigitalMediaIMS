@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lip/supabase/browser-client";
 import { User } from "@supabase/supabase-js";
 
@@ -10,6 +11,8 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,39 +31,42 @@ export default function EmailPasswordDemo({ user }: Props) {
       return;
     }
 
+    if (mode === "signUp") {
+      if (!firstName || !lastName) {
+        setError("Please provide your first and last name.");
+        return;
+      }
+    }
+
     if (!domainAllowed(email)) {
       setError("Email must be a @bentonvillek12.org address.");
       return;
     }
 
     setLoading(true);
-
     try {
       if (mode === "signIn") {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (signInError) {
-          setError(signInError.message ?? "Sign-in failed");
-        } else {
-          setMessage("Signed in successfully.");
-          // you may want to refresh user/session or redirect
-        }
+        if (signInError) setError(signInError.message ?? "Sign-in failed");
+        else setMessage("Signed in successfully.");
       } else {
-        // sign up: Supabase will send a verification email if enabled in the project
+        // Include first/last name as user metadata at signup. Supabase will store this
+        // in user_metadata if the SDK/environment supports it.
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+            },
+          },
         });
-
-        if (signUpError) {
-          setError(signUpError.message ?? "Sign-up failed");
-        } else {
-          setMessage(
-            "Verification email sent. Check your Bentonville email and follow the link to verify your account."
-          );
-        }
+        if (signUpError) setError(signUpError.message ?? "Sign-up failed");
+        else setMessage("Verification email sent. Check your Bentonville email and verify the link.");
       }
     } catch (err: unknown) {
       let msg = "An error occurred";
@@ -77,85 +83,135 @@ export default function EmailPasswordDemo({ user }: Props) {
     }
   };
 
-  // If a user prop is provided (server-side detected), show a welcome state and sign-out option
   if (user) {
     const handleSignOut = async () => {
       await supabase.auth.signOut();
-      // when signed out you may want to reload or redirect
       window.location.reload();
     };
 
     return (
-      <div className="max-w-md mx-auto p-4">
-        <h2 className="text-lg font-semibold">Welcome</h2>
-        <p className="mt-2">Signed in as <strong>{user.email}</strong></p>
-        <div className="mt-4">
-          <button onClick={handleSignOut} className="px-3 py-1 rounded bg-red-600 text-white">Sign out</button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+            <h2 className="text-xl font-semibold">Welcome</h2>
+            <p className="mt-2 text-sm text-gray-600">Signed in as <strong>{user.email}</strong></p>
+            <div className="mt-4 flex justify-center gap-3">
+              <button onClick={handleSignOut} className="px-4 py-2 rounded bg-red-600 text-white">Sign out</button>
+              <Link href="/" className="px-4 py-2 rounded bg-blue-600 text-white">Go to Dashboard</Link>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto p-4">
-      <h1 className="text-xl font-semibold mb-2">Email / Password</h1>
-
-      <div className="mb-4">
-        <button
-          onClick={() => setMode("signIn")}
-          className={`px-3 py-1 mr-2 rounded ${mode === "signIn" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-        >
-          Sign in
-        </button>
-        <button
-          onClick={() => setMode("signUp")}
-          className={`px-3 py-1 rounded ${mode === "signUp" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-        >
-          Create account
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <label className="block">
-          <div className="text-sm font-medium">Email</div>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full border rounded px-2 py-1"
-            placeholder="you@bentonvillek12.org"
-            required
-          />
-        </label>
-
-        <label className="block">
-          <div className="text-sm font-medium">Password</div>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full border rounded px-2 py-1"
-            required
-          />
-        </label>
-
-        <div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-green-600 text-white rounded"
-          >
-            {loading ? "…" : mode === "signIn" ? "Sign in" : "Create account"}
-          </button>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-blue-700">Ignite IMS</h1>
+          <p className="text-gray-500 mt-1 text-sm">Digital Media Equipment Tracker</p>
         </div>
 
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-        {message && <div className="text-green-700 text-sm">{message}</div>}
-      </form>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            {mode === "signIn" ? "Sign in to your account" : "Create an account"}
+          </h2>
 
-      <div className="mt-4 text-xs text-gray-500">
-        Accounts must use a Bentonville email (@bentonvillek12.org). After signup you will receive
-        a verification email; complete verification to finish account creation.
+          {error && (
+            <div role="alert" className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* First / Last name inputs appear only when creating an account */}
+            {mode === "signUp" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First name</label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="First name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+            )}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="you@bentonvillek12.org"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                id="password"
+                type="password"
+                autoComplete={mode === "signIn" ? "current-password" : "new-password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold rounded-lg transition-colors text-sm"
+            >
+              {loading ? (mode === "signIn" ? "Signing in…" : "Creating…") : mode === "signIn" ? "Sign in" : "Create account"}
+            </button>
+
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
+                  className="text-blue-600 hover:underline mr-3"
+                >
+                  {mode === "signIn" ? "Create an account" : "Have an account? Sign in"}
+                </button>
+              </div>
+              <div>
+                <Link href="/login" className="text-gray-500 hover:underline">Back to login</Link>
+              </div>
+            </div>
+          </form>
+
+          {message && <div className="mt-4 text-sm text-green-700">{message}</div>}
+
+          <div className="mt-4 text-xs text-gray-500">
+            Accounts must use a Bentonville email (<kbd>@bentonvillek12.org</kbd>). After signup you will receive a verification email; verify to finish account creation.
+          </div>
+        </div>
       </div>
     </div>
   );
