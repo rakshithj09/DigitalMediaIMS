@@ -138,7 +138,7 @@ function StudentsContent() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="First Last"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -151,8 +151,8 @@ function StudentsContent() {
                 maxLength={20}
                 value={newStudentId}
                 onChange={(e) => setNewStudentId(e.target.value)}
-                placeholder="12345"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="4000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -163,7 +163,7 @@ function StudentsContent() {
                 id="s-period"
                 value={newPeriod}
                 onChange={(e) => setNewPeriod(e.target.value as Period)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>
@@ -189,7 +189,7 @@ function StudentsContent() {
           placeholder="Search by name or ID…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Search students"
         />
       </div>

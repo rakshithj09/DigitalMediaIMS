@@ -175,7 +175,7 @@ function CheckoutContent() {
                   id="co-student"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">Select a student…</option>
                   {students.map((s) => (
@@ -197,7 +197,7 @@ function CheckoutContent() {
                   id="co-eq"
                   value={equipmentId}
                   onChange={(e) => { setEquipmentId(e.target.value); setQuantity("1"); }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">Select equipment…</option>
                   {equipment.map((eq) => (
@@ -224,7 +224,7 @@ function CheckoutContent() {
                   max={maxQty || 1}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -239,7 +239,7 @@ function CheckoutContent() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g. for podcast project"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -295,7 +295,7 @@ function CheckoutContent() {
                       onChange={(e) =>
                         setReturnNotes((r) => ({ ...r, [c.id]: e.target.value }))
                       }
-                      className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-black focus:outline-none focus:ring-1 focus:ring-blue-400"
                     />
                   </div>
                 </div>

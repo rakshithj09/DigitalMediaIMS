@@ -156,7 +156,7 @@ function EquipmentContent() {
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Canon EOS R50"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -167,7 +167,7 @@ function EquipmentContent() {
                 id="eq-cat"
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as (typeof EQUIPMENT_CATEGORIES)[number] }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 {EQUIPMENT_CATEGORIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -186,7 +186,7 @@ function EquipmentContent() {
                 max={999}
                 value={form.total_quantity}
                 onChange={(e) => setForm((f) => ({ ...f, total_quantity: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -199,7 +199,7 @@ function EquipmentContent() {
                 maxLength={50}
                 value={form.serial_number}
                 onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div className="sm:col-span-2">
@@ -213,7 +213,7 @@ function EquipmentContent() {
                 value={form.condition_notes}
                 onChange={(e) => setForm((f) => ({ ...f, condition_notes: e.target.value }))}
                 placeholder="e.g. lens cap missing"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -236,13 +236,13 @@ function EquipmentContent() {
           placeholder="Search equipment…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Search equipment"
         />
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           aria-label="Filter by category"
         >
           {allCategories.map((c) => (
