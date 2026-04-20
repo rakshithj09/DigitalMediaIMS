@@ -3,12 +3,15 @@ import { cookies } from "next/headers";
 
 function getEnvironmentVariables() {
     const supabaseURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Accept either the anon key name or the publishable key name
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE;
 
     if (!supabaseURL || !supabaseAnonKey) {
-        throw new Error("Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+        throw new Error(
+            "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)."
+        );
     }
-    return { supabaseURL, supabaseAnonKey };    
+    return { supabaseURL, supabaseAnonKey };
 }
 
 export async function createSupabaseServerClient() {
