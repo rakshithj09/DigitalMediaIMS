@@ -13,6 +13,11 @@ type UpdateBody = {
   userId?: string | null;
 };
 
+type DeleteBody = {
+  id?: string;
+  teacherPassword?: string;
+};
+
 function getSupabaseAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -20,6 +25,23 @@ function getSupabaseAdminClient() {
   if (!url || !serviceRole) return null;
 
   return createClient(url, serviceRole, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+function getSupabasePublicClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
+
+  if (!url || !anonKey) return null;
+
+  return createClient(url, anonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -42,6 +64,26 @@ async function requireTeacher() {
   }
 
   return { user };
+}
+
+async function verifyTeacherPassword(email: string | undefined, password: string | undefined) {
+  if (!email || !password?.trim()) {
+    return "Teacher password is required.";
+  }
+
+  const supabase = getSupabasePublicClient();
+  if (!supabase) {
+    return "Server is missing Supabase public auth configuration.";
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  await supabase.auth.signOut();
+
+  if (error) {
+    return "Teacher password was incorrect.";
+  }
+
+  return null;
 }
 
 export async function PATCH(req: Request) {
@@ -134,4 +176,57 @@ export async function PATCH(req: Request) {
   }
 
   return NextResponse.json({ ok: true, student });
+}
+
+export async function DELETE(req: Request) {
+  const auth = await requireTeacher();
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
+  }
+
+  const body = (await req.json().catch(() => ({}))) as DeleteBody;
+  if (!body.id) {
+    return NextResponse.json({ error: "Student id is required." }, { status: 400 });
+  }
+
+  const passwordError = await verifyTeacherPassword(auth.user.email, body.teacherPassword);
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 403 });
+  }
+
+  const { data: student, error: lookupError } = await admin
+    .from("students")
+    .select("id, user_id")
+    .eq("id", body.id)
+    .single();
+
+  if (lookupError) {
+    return NextResponse.json({ error: lookupError.message }, { status: 400 });
+  }
+
+  if (student?.user_id) {
+    const { error: deleteAuthError } = await admin.auth.admin.deleteUser(student.user_id, false);
+    if (deleteAuthError) {
+      return NextResponse.json({ error: deleteAuthError.message }, { status: 400 });
+    }
+  }
+
+  const { error: updateError } = await admin
+    .from("students")
+    .update({ is_active: false, user_id: null })
+    .eq("id", body.id);
+
+  if (updateError) {
+    return NextResponse.json(
+      { error: `Auth account was deleted, but roster removal failed: ${updateError.message}` },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
 }

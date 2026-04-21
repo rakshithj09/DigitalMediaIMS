@@ -34,6 +34,10 @@ function StudentsContent() {
   const [editForm, setEditForm] = useState({ name: "", student_id: "", email: "", period: "AM" as Period });
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authResolved) return;
@@ -135,16 +139,35 @@ function StudentsContent() {
     setSaving(false);
   };
 
-  const handleDeactivate = async (id: string) => {
-    if (!confirm("Remove this student from the roster? Their checkout history is preserved.")) return;
+  const openDelete = (student: Student) => {
+    setDeletingStudent(student);
+    setDeletePassword("");
+    setDeleteError(null);
+  };
+
+  const handleDelete = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!deletingStudent) return;
+
+    setDeleteSaving(true);
+    setDeleteError(null);
+
     const resp = await fetch("/api/admin/students", {
-      method: "PATCH",
+      method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, isActive: false }),
+      body: JSON.stringify({ id: deletingStudent.id, teacherPassword: deletePassword }),
     });
+
     const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) alert("Error: " + String(data?.error?.message ?? data?.error ?? "Unable to remove student."));
-    else refresh();
+    if (!resp.ok) {
+      setDeleteError(String(data?.error?.message ?? data?.error ?? "Unable to delete student."));
+    } else {
+      setDeletingStudent(null);
+      setDeletePassword("");
+      refresh();
+    }
+
+    setDeleteSaving(false);
   };
 
   const openEdit = (student: Student) => {
@@ -461,6 +484,62 @@ function StudentsContent() {
         </div>
       )}
 
+      {/* Delete confirmation */}
+      {deletingStudent && (
+        <div
+          className="bg-white rounded-2xl p-6 mb-6"
+          style={{ border: "1px solid #fecaca", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        >
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div>
+              <h3 className="font-semibold text-base" style={{ color: "#b91c1c" }}>
+                Delete Student Account
+              </h3>
+              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                This removes {deletingStudent.name} from the active roster and deletes their sign-in account. Checkout history stays saved.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDeletingStudent(null)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+            >
+              Cancel
+            </button>
+          </div>
+          {deleteError && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+              {deleteError}
+            </div>
+          )}
+          <form onSubmit={handleDelete} className="space-y-4">
+            <div className="max-w-sm">
+              <label className="block text-sm font-medium mb-1.5" htmlFor="delete-password" style={{ color: "#374151" }}>
+                Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <input
+                id="delete-password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(event) => setDeletePassword(event.target.value)}
+                className="form-input"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={deleteSaving}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: "#dc2626" }}
+            >
+              {deleteSaving ? "Deleting…" : "Delete Student and Auth Account"}
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Search */}
       <div className="mb-4">
         <div className="relative max-w-sm">
@@ -557,11 +636,11 @@ function StudentsContent() {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDeactivate(s.id)}
+                            onClick={() => openDelete(s)}
                             className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
                             style={{ color: "#dc2626" }}
                           >
-                            Remove
+                            Delete
                           </button>
                         </div>
                       ) : (
