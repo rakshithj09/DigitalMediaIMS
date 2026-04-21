@@ -21,7 +21,6 @@ function HistoryContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
 
-  // Filters
   const [periodFilter, setPeriodFilter] = useState<Period | "All">("All");
   const [studentFilter, setStudentFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -42,13 +41,11 @@ function HistoryContent() {
       .limit(500)
       .then(({ data, error: fetchError }: { data: Checkout[] | null; error: { message?: string } | null }) => {
         if (cancelled) return;
-  if (fetchError) setError(fetchError.message ?? "Unknown error");
+        if (fetchError) setError(fetchError.message ?? "Unknown error");
         else setHistory((data as unknown as Checkout[]) ?? []);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -74,19 +71,13 @@ function HistoryContent() {
       }
     })();
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const filtered = (history ?? []).filter((c) => {
     if (currentUser?.user_metadata?.role === "Student" && c.student_id !== ownStudentId) return false;
     if (periodFilter !== "All" && c.period !== periodFilter) return false;
-    if (
-      studentFilter &&
-      !c.student?.name?.toLowerCase().includes(studentFilter.toLowerCase())
-    )
-      return false;
+    if (studentFilter && !c.student?.name?.toLowerCase().includes(studentFilter.toLowerCase())) return false;
     if (dateFrom && new Date(c.checked_out_at) < new Date(dateFrom)) return false;
     if (dateTo) {
       const to = new Date(dateTo);
@@ -97,105 +88,167 @@ function HistoryContent() {
   });
 
   const loading = history === null && error === null;
+  const hasFilters = studentFilter || periodFilter !== "All" || dateFrom || dateTo;
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">History</h2>
-        <p className="text-gray-500 text-sm mt-1">Full checkout and check-in log</p>
+      {/* Page header */}
+      <div className="mb-7">
+        <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+          History
+        </h2>
+        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+          Full checkout and check-in audit log
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        <input
-          type="search"
-          placeholder="Filter by student…"
-          value={studentFilter}
-          onChange={(e) => setStudentFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
-          aria-label="Filter by student name"
-        />
+      {/* Filters bar */}
+      <div
+        className="bg-white rounded-2xl p-4 mb-5 flex flex-wrap items-center gap-3"
+        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.04)" }}
+      >
+        <div className="relative">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"
+          >
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Filter by student…"
+            value={studentFilter}
+            onChange={(e) => setStudentFilter(e.target.value)}
+            className="form-input pl-8 text-sm"
+            style={{ width: 180 }}
+            aria-label="Filter by student name"
+          />
+        </div>
+
         <select
           value={periodFilter}
           onChange={(e) => setPeriodFilter(e.target.value as Period | "All")}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="form-input text-sm"
+          style={{ width: "auto" }}
           aria-label="Filter by period"
         >
           <option value="All">All Periods</option>
           <option value="AM">AM</option>
           <option value="PM">PM</option>
         </select>
+
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600 whitespace-nowrap">From</label>
+          <label className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--muted)" }}>From</label>
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="form-input text-sm"
+            style={{ width: "auto" }}
           />
         </div>
+
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600 whitespace-nowrap">To</label>
+          <label className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--muted)" }}>To</label>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="form-input text-sm"
+            style={{ width: "auto" }}
           />
         </div>
-        {(studentFilter || periodFilter !== "All" || dateFrom || dateTo) && (
+
+        {hasFilters && (
           <button
             onClick={() => { setStudentFilter(""); setPeriodFilter("All"); setDateFrom(""); setDateTo(""); }}
-            className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 font-medium"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            style={{ color: "var(--ignite-navy)", background: "#f1f5f9" }}
           >
-            Clear filters
+            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            Clear
           </button>
         )}
+
+        <div className="ml-auto text-xs font-medium" style={{ color: "var(--muted)" }}>
+          {filtered.length} / {(history ?? []).length} records
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div
+        className="bg-white rounded-2xl overflow-hidden"
+        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+      >
         {loading ? (
-          <div className="px-5 py-10 text-center text-gray-400 text-sm">Loading…</div>
+          <div className="px-6 py-16 text-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
+              <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            </div>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Loading history…</p>
+          </div>
         ) : error ? (
-          <div className="px-5 py-10 text-center text-red-500 text-sm">{error}</div>
+          <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
         ) : filtered.length === 0 ? (
-          <div className="px-5 py-10 text-center text-gray-400 text-sm">
-            No records match your filters.
+          <div className="px-6 py-16 text-center">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
+              <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" />
+              </svg>
+            </div>
+            <p className="font-medium text-sm" style={{ color: "#374151" }}>No records found</p>
+            <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+              {hasFilters ? "Try adjusting your filters." : "No checkout history yet."}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-5 py-3 text-left font-medium">Student</th>
-                  <th className="px-5 py-3 text-left font-medium">Item</th>
-                  <th className="px-5 py-3 text-left font-medium">Qty</th>
-                  <th className="px-5 py-3 text-left font-medium">Period</th>
-                  <th className="px-5 py-3 text-left font-medium">Checked Out</th>
-                  <th className="px-5 py-3 text-left font-medium">Checked In</th>
-                  <th className="px-5 py-3 text-left font-medium">Duration</th>
-                  <th className="px-5 py-3 text-left font-medium">Status</th>
-                  <th className="px-5 py-3 text-left font-medium">Notes</th>
+                  <th>Student</th>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Period</th>
+                  <th>Checked Out</th>
+                  <th>Checked In</th>
+                  <th>Duration</th>
+                  <th>Status</th>
+                  <th>Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-medium text-gray-900">
+                  <tr key={c.id}>
+                    <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
                       {c.student?.name ?? "—"}
                     </td>
-                    <td className="px-5 py-3 text-gray-700">
-                      {c.equipment?.name ?? "—"}
-                      <span className="ml-1.5 text-xs text-gray-400">{c.equipment?.category}</span>
+                    <td style={{ color: "#374151" }}>
+                      <span className="font-medium">{c.equipment?.name ?? "—"}</span>
+                      {c.equipment?.category && (
+                        <span
+                          className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium"
+                          style={{ background: "#f1f5f9", color: "var(--muted)" }}
+                        >
+                          {c.equipment.category}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-5 py-3 text-gray-600">{c.quantity}</td>
-                    <td className="px-5 py-3">
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                    <td className="text-sm" style={{ color: "#374151" }}>{c.quantity}</td>
+                    <td>
+                      <span
+                        className="badge"
+                        style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                      >
                         {c.period}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
+                    <td className="text-sm whitespace-nowrap" style={{ color: "var(--muted)" }}>
                       {new Date(c.checked_out_at).toLocaleString(undefined, {
                         month: "short",
                         day: "numeric",
@@ -203,7 +256,7 @@ function HistoryContent() {
                         minute: "2-digit",
                       })}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
+                    <td className="text-sm whitespace-nowrap" style={{ color: "var(--muted)" }}>
                       {c.checked_in_at
                         ? new Date(c.checked_in_at).toLocaleString(undefined, {
                             month: "short",
@@ -211,23 +264,29 @@ function HistoryContent() {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : "—"}
+                        : <span style={{ color: "#94a3b8" }}>—</span>}
                     </td>
-                    <td className="px-5 py-3 text-gray-500">
+                    <td className="text-sm" style={{ color: "var(--muted)" }}>
                       {duration(c.checked_out_at, c.checked_in_at)}
                     </td>
-                    <td className="px-5 py-3">
+                    <td>
                       {c.checked_in_at ? (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                        <span
+                          className="badge"
+                          style={{ background: "#dcfce7", color: "#16a34a" }}
+                        >
                           Returned
                         </span>
                       ) : (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                        <span
+                          className="badge"
+                          style={{ background: "#fef9c3", color: "#ca8a04" }}
+                        >
                           Out
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-gray-400 max-w-xs truncate text-xs">
+                    <td className="max-w-[160px] truncate text-xs" style={{ color: "#94a3b8" }}>
                       {[c.notes, c.return_notes].filter(Boolean).join(" · ") || "—"}
                     </td>
                   </tr>
@@ -237,10 +296,6 @@ function HistoryContent() {
           </div>
         )}
       </div>
-
-      <p className="text-xs text-gray-400 mt-3">
-        Showing {filtered.length} of {(history ?? []).length} records
-      </p>
     </div>
   );
 }

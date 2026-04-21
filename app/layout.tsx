@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ignite Digital Media — Equipment Tracker",
+  title: "Digital Media Equipment Tracker",
   description: "Track digital media equipment checkouts and returns for Ignite Professional Studies.",
 };
 

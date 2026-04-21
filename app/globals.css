@@ -1,106 +1,105 @@
 @import "tailwindcss";
 
+/* ── Brand color tokens ───────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  /* legacy mappings used elsewhere */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --navy:        #002c51;
+  --navy-hover:  #003d6e;
+  --navy-deep:   #0f2437;
+  --mint:        #07eccb;
+  --brand-bg:    #f1f5f9;
+  /* Aliases used across content pages */
+  --ignite-navy: #002c51;
+  --muted:       #64748b;
 }
 
-/* Ignite Professional Studies color system (from provided palette) */
-:root {
-  --ignite-navy: #002c51; /* primary */
-  --ignite-deep-teal: #00582e;
-  --ignite-deep: #0f2437;
-  --ignite-offwhite: #fafafa;
-  --ignite-gray: #6e7b87;
-  --ignite-mint: #07eccc3; /* light mint */
-  --ignite-gold: #f5b700; /* gold accent */
-  --ignite-amber: #e07a2d; /* orange accent */
-
-  --brand-bg: var(--ignite-offwhite);
-  --brand-fg: #052033;
-  --card-bg: #ffffff;
-  --muted: var(--ignite-gray);
-}
-
-/* removed @theme rule — replaced with standard CSS variable mappings above */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ── Base ─────────────────────────────────────────── */
 body {
   background: var(--brand-bg);
-  color: var(--brand-fg);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #0f172a;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Brand utilities */
+/* ── App header (used in AppShell only) ───────────── */
 .brand-header {
-  background: linear-gradient(180deg, var(--ignite-navy), var(--ignite-deep));
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
   color: white;
+  border-bottom: 3px solid var(--mint);
 }
 
-.brand-topbar {
-  border-bottom: 4px solid var(--ignite-mint);
+/* ── Small helper used in AppShell ───────────────── */
+.text-kicker {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.48);
+  letter-spacing: 0.04em;
 }
 
-.brand-logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-logo img {
-  height: 44px;
-  width: auto;
-  display: block;
-}
-
-.card {
-  background: var(--card-bg);
-  border: 1px solid rgba(2,8,23,0.06);
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 6px 18px rgba(2,8,23,0.06);
-}
-
-.btn-primary {
-  background: linear-gradient(180deg,var(--ignite-teal),#008b94);
-  color: white;
-  padding: 0.5rem 0.9rem;
-  border-radius: 8px;
-  font-weight: 600;
-}
-
-.btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.12);
-  color: white;
-  padding: 0.45rem 0.8rem;
-  border-radius: 8px;
-}
-
-.accent-gold { color: var(--ignite-gold); }
-.accent-amber { color: var(--ignite-amber); }
-
-.muted { color: var(--muted); }
-
-/* Form inputs */
+/* ── Form input ──────────────────────────────────── */
 .form-input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e6eef0;
-  border-radius: 8px;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  color: #0f172a;
   background: white;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+.form-input:focus {
+  border-color: #002c51;
+  box-shadow: 0 0 0 3px rgba(0,44,81,0.08);
+}
+.form-input::placeholder { color: #94a3b8; }
 
-/* small helpers */
-.kicker { font-size: 0.85rem; color: var(--muted); }
-.page-title { font-size: 1.5rem; font-weight: 700; color: var(--ignite-navy); }
+/* ── Data table ──────────────────────────────────── */
+.data-table {
+  width: 100%;
+  min-width: 720px;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+.data-table thead th {
+  padding: 0.65rem 1.25rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  background: #f8fafc;
+  border-bottom: 1px solid #e9eef5;
+}
+.data-table tbody tr { border-bottom: 1px solid #f1f5f9; }
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: #f8fafc; }
+.data-table td { padding: 0.8rem 1.25rem; }
+
+/* ── Badge ───────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.175rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.badge-period  { background: #e8f0fe; color: #1a3c78; }
+.badge-success { background: #dcfce7; color: #15803d; }
+.badge-warning { background: #fef9c3; color: #a16207; }
+.badge-danger  { background: #fee2e2; color: #b91c1c; }
+.badge-neutral { background: #f1f5f9; color: #475569; }
+
+@media (max-width: 640px) {
+  .form-input {
+    min-height: 2.625rem;
+  }
+
+  .data-table thead th,
+  .data-table td {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+}

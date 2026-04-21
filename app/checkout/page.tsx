@@ -22,7 +22,6 @@ function CheckoutContent() {
     setTick((t) => t + 1);
   }, []);
 
-  // Checkout form
   const [studentId, setStudentId] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
@@ -35,7 +34,6 @@ function CheckoutContent() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Check-in
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [returnNotes, setReturnNotes] = useState<Record<string, string>>({});
   const currentRole = (currentUser as unknown as { user_metadata?: { role?: string } })?.user_metadata?.role;
@@ -46,7 +44,6 @@ function CheckoutContent() {
     if (eq) queueMicrotask(() => setEquipmentId(eq));
   }, []);
 
-  // fetch current user and if they're a Student, locate their students record
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -81,9 +78,7 @@ function CheckoutContent() {
       }
     })();
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -133,18 +128,21 @@ function CheckoutContent() {
 
     Promise.all([
       studentsQuery,
-      createSupabaseBrowserClient()
-        .from("equipment")
-        .select("*")
-        .eq("is_active", true)
-        .order("name"),
-      createSupabaseBrowserClient()
-        .from("checkouts")
-        .select("equipment_id, quantity")
-        .is("checked_in_at", null),
+      createSupabaseBrowserClient().from("equipment").select("*").eq("is_active", true).order("name"),
+      createSupabaseBrowserClient().from("checkouts").select("equipment_id, quantity").is("checked_in_at", null),
       activeCheckoutsQuery,
-    ]).then(([{ data: stuData }, { data: eqData }, { data: coSums }, { data: coData }]) => {
+    ]).then(([{ data: stuData, error: stuError }, { data: eqData, error: eqError }, { data: coSums, error: sumsError }, { data: coData, error: coError }]) => {
       if (cancelled) return;
+      const loadError = stuError ?? eqError ?? sumsError ?? coError;
+      if (loadError) {
+        setSubmitError(loadError.message ?? "Unable to load checkout data.");
+        setStudents([]);
+        setEquipment([]);
+        setActiveCheckouts([]);
+        setLoadingData(false);
+        return;
+      }
+
       setStudents((stuData as Student[]) ?? []);
 
       const checkedOutMap = new Map<string, number>();
@@ -160,9 +158,7 @@ function CheckoutContent() {
       setLoadingData(false);
     });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [authResolved, checkoutPeriod, currentRole, ownStudentId, period, tick]);
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
@@ -188,13 +184,7 @@ function CheckoutContent() {
     const checkoutResp = await fetch("/api/checkouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId: finalStudentId,
-        equipmentId,
-        quantity: qty,
-        notes,
-        period,
-      }),
+      body: JSON.stringify({ studentId: finalStudentId, equipmentId, quantity: qty, notes, period: checkoutPeriod }),
     });
 
     if (!checkoutResp.ok) {
@@ -213,7 +203,6 @@ function CheckoutContent() {
   };
 
   const handleCheckIn = async (checkoutId: string) => {
-    // Ensure students can only check in their own items
     if (currentRole === "Student") {
       const co = (activeCheckouts ?? []).find((x) => x.id === checkoutId);
       if (!co || co.student_id !== ownStudentId) {
@@ -226,10 +215,7 @@ function CheckoutContent() {
     const checkInResp = await fetch("/api/checkouts/check-in", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        checkoutId,
-        returnNotes: returnNotes[checkoutId] ?? null,
-      }),
+      body: JSON.stringify({ checkoutId, returnNotes: returnNotes[checkoutId] ?? null }),
     });
 
     if (!checkInResp.ok) {
@@ -242,45 +228,81 @@ function CheckoutContent() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
-        <p className="text-gray-500 text-sm mt-1">
+      {/* Page header */}
+      <div className="mb-7">
+        <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+          Checkout
+        </h2>
+        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
           Check equipment in or out for{" "}
-          <span className="font-semibold text-blue-700">{checkoutPeriod} period</span>
+          <span className="badge badge-period">{checkoutPeriod} period</span>
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Checkout Form */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 text-lg">Check Out Equipment</h3>
+        {/* ── Checkout form ─────────────────────────────── */}
+        <div
+          className="bg-white rounded-2xl p-6"
+          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        >
+          <div className="flex items-center gap-2.5 mb-5">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: "#e8f0fe" }}
+            >
+              <svg width="16" height="16" fill="none" stroke="#1a3c78" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 3h5v5" /><path d="M21 3 9 15" /><path d="M3 9v11a2 2 0 0 0 2 2h11" />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
+              Check Out Equipment
+            </h3>
+          </div>
 
           {submitSuccess && (
-            <div className="mb-4 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+            <div
+              className="mb-5 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
+              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a" }}
+            >
+              <svg className="mt-0.5 shrink-0" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" />
+              </svg>
               Checkout recorded successfully!
             </div>
           )}
           {submitError && (
-            <div role="alert" className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            <div
+              role="alert"
+              className="mb-5 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
+              style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}
+            >
+              <svg className="mt-0.5 shrink-0" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
               {submitError}
             </div>
           )}
 
           {loadingData ? (
-            <p className="text-gray-400 text-sm">Loading…</p>
+            <div className="py-8 text-center">
+              <svg className="animate-spin mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+              <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>Loading…</p>
+            </div>
           ) : (
             <form onSubmit={handleCheckout} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="co-student">
-                  Student <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="co-student" style={{ color: "#374151" }}>
+                  Student <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                {/* If this browser session belongs to a Student, show their name and
-                    prevent changing the selected student. Otherwise show the full
-                    roster select. */}
                 {ownStudentId ? (
-                  <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-black bg-gray-50">
+                  <div
+                    className="px-3 py-2.5 rounded-lg text-sm font-medium"
+                    style={{ background: "#f8fafc", border: "1.5px solid #e2e8f0", color: "var(--ignite-navy)" }}
+                  >
                     {ownStudentName ?? students.find((s) => s.id === ownStudentId)?.name ?? "Your student"}
-                    {/* Keep a hidden input so the form submission still references studentId */}
                     <input type="hidden" value={ownStudentId} />
                   </div>
                 ) : (
@@ -289,7 +311,7 @@ function CheckoutContent() {
                       id="co-student"
                       value={studentId}
                       onChange={(e) => setStudentId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="form-input"
                     >
                       <option value="">Select a student…</option>
                       {students.map((s) => (
@@ -299,37 +321,39 @@ function CheckoutContent() {
                       ))}
                     </select>
                     {students.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1">No students in {checkoutPeriod} roster. Add students first.</p>
+                      <p className="text-xs mt-1.5" style={{ color: "#ca8a04" }}>
+                        No students in {checkoutPeriod} roster. Add students first.
+                      </p>
                     )}
                   </>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="co-eq">
-                  Equipment <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="co-eq" style={{ color: "#374151" }}>
+                  Equipment <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <select
                   id="co-eq"
                   value={equipmentId}
                   onChange={(e) => { setEquipmentId(e.target.value); setQuantity("1"); }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="form-input"
                 >
                   <option value="">Select equipment…</option>
                   {equipment.map((eq) => (
                     <option key={eq.id} value={eq.id} disabled={eq.available === 0}>
-                      {eq.name} ({eq.available} available){eq.available === 0 ? " — none available" : ""}
+                      {eq.name} — {eq.available} available{eq.available === 0 ? " (none left)" : ""}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="co-qty">
-                  Quantity <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="co-qty" style={{ color: "#374151" }}>
+                  Quantity <span style={{ color: "#ef4444" }}>*</span>
                   {selectedEquipment && (
-                    <span className="ml-2 font-normal text-gray-400">
-                      (max {maxQty})
+                    <span className="ml-2 font-normal text-xs" style={{ color: "var(--muted)" }}>
+                      (max {maxQty} available)
                     </span>
                   )}
                 </label>
@@ -340,13 +364,14 @@ function CheckoutContent() {
                   max={maxQty || 1}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="form-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="co-notes">
-                  Notes <span className="text-gray-400 font-normal">(optional)</span>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="co-notes" style={{ color: "#374151" }}>
+                  Notes{" "}
+                  <span className="font-normal" style={{ color: "var(--muted)" }}>(optional)</span>
                 </label>
                 <input
                   id="co-notes"
@@ -355,63 +380,131 @@ function CheckoutContent() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g. for podcast project"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="form-input"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submitting || maxQty === 0}
-                className="w-full py-2.5 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold rounded-lg text-sm transition-colors"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+                style={{ background: "var(--navy)", fontSize: "0.9375rem" }}
               >
-                {submitting ? "Recording…" : "Confirm Checkout"}
+                {submitting ? (
+                  <>
+                    <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                      <path d="M12 2a10 10 0 0 1 10 10" />
+                    </svg>
+                    Recording…
+                  </>
+                ) : "Confirm Checkout"}
               </button>
             </form>
           )}
         </div>
 
-        {/* Active Checkouts for Check-in */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 text-lg">Check In Equipment</h3>
+        {/* ── Check-in list ──────────────────────────────── */}
+        <div
+          className="bg-white rounded-2xl p-6"
+          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "#dcfce7" }}
+              >
+                <svg width="16" height="16" fill="none" stroke="#16a34a" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
+                Check In Equipment
+              </h3>
+            </div>
+            {visibleActiveCheckouts.length > 0 && (
+              <span
+                className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                style={{ background: "#e8f0fe", color: "#1a3c78" }}
+              >
+                {visibleActiveCheckouts.length} out
+              </span>
+            )}
+          </div>
 
           {activeCheckouts === null ? (
-            <p className="text-gray-400 text-sm">Loading…</p>
+            <div className="py-8 text-center">
+              <svg className="animate-spin mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+              <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>Loading…</p>
+            </div>
           ) : visibleActiveCheckouts.length === 0 ? (
-            <p className="text-gray-400 text-sm">No active checkouts for {checkoutPeriod} period.</p>
+            <div className="py-10 text-center">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+                style={{ background: "#f8fafc" }}
+              >
+                <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <p className="font-medium text-sm" style={{ color: "#374151" }}>All clear</p>
+              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                No active checkouts for {checkoutPeriod} period.
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {visibleActiveCheckouts.map((c) => (
-                <div key={c.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">
+                <div
+                  key={c.id}
+                  className="rounded-xl p-3.5"
+                  style={{ border: "1px solid #e9eef5", background: "#fafbfd" }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm leading-tight" style={{ color: "var(--ignite-navy)" }}>
                         {c.student?.name ?? "—"}
                       </p>
-                      <p className="text-gray-500 text-xs mt-0.5">
-                        {c.equipment?.name ?? "—"} · qty {c.quantity}
+                      <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                        {c.equipment?.name ?? "—"}
+                        <span
+                          className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                          style={{ background: "#f1f5f9", color: "var(--muted)" }}
+                        >
+                          qty {c.quantity}
+                        </span>
                       </p>
                       {c.notes && (
-                        <p className="text-gray-400 text-xs mt-0.5 italic">{c.notes}</p>
+                        <p className="text-xs mt-1 italic" style={{ color: "#94a3b8" }}>{c.notes}</p>
                       )}
                     </div>
                     <button
                       onClick={() => handleCheckIn(c.id)}
                       disabled={checkingIn === c.id}
-                      className="shrink-0 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:bg-green-300 text-white text-xs font-semibold rounded-lg transition-colors"
+                      className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                      style={{
+                        background: checkingIn === c.id ? "#d1fae5" : "#059669",
+                        color: checkingIn === c.id ? "#059669" : "white",
+                      }}
                     >
                       {checkingIn === c.id ? "…" : "Check In"}
                     </button>
                   </div>
-                  <div className="mt-2">
+                  <div className="mt-2.5">
                     <input
                       type="text"
                       maxLength={200}
                       placeholder="Return notes (optional)"
                       value={returnNotes[c.id] ?? ""}
-                      onChange={(e) =>
-                        setReturnNotes((r) => ({ ...r, [c.id]: e.target.value }))
-                      }
-                      className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs text-black focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      onChange={(e) => setReturnNotes((r) => ({ ...r, [c.id]: e.target.value }))}
+                      className="form-input text-xs py-1.5"
+                      style={{ fontSize: "0.75rem" }}
                     />
                   </div>
                 </div>

@@ -20,7 +20,6 @@ function EquipmentContent() {
     setTick((t) => t + 1);
   }, []);
 
-  // Add form
   const [showAdd, setShowAdd] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [form, setForm] = useState<{
@@ -94,22 +93,18 @@ function EquipmentContent() {
     if (!form.name.trim()) { setSaveError("Name is required."); setSaving(false); return; }
     if (isNaN(qty) || qty < 1) { setSaveError("Quantity must be at least 1."); setSaving(false); return; }
 
-    const insertResp = await fetch("/api/equipment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
+    const { error: insertError } = await createSupabaseBrowserClient()
+      .from("equipment")
+      .insert({
+        name: form.name.trim(),
         category: form.category,
-        totalQuantity: qty,
-        serialNumber: form.serial_number,
-        conditionNotes: form.condition_notes,
-      }),
-    });
+        total_quantity: qty,
+        serial_number: form.serial_number.trim() || null,
+        condition_notes: form.condition_notes.trim() || null,
+      });
 
-    if (!insertResp.ok) {
-      const data = await insertResp.json().catch(() => ({}));
-      const msg = (data && (data.error?.message ?? data.error)) ?? "Failed to add equipment.";
-      setSaveError(String(msg));
+    if (insertError) {
+      setSaveError(insertError.message);
     } else {
       setForm({ name: "", category: EQUIPMENT_CATEGORIES[0], total_quantity: "1", serial_number: "", condition_notes: "" });
       setShowAdd(false);
@@ -120,16 +115,11 @@ function EquipmentContent() {
 
   const handleDeactivate = async (id: string) => {
     if (!confirm("Remove this item from inventory? Checkout history is preserved.")) return;
-    const updateResp = await fetch("/api/equipment", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, isActive: false }),
-    });
-    if (!updateResp.ok) {
-      const data = await updateResp.json().catch(() => ({}));
-      const msg = (data && (data.error?.message ?? data.error)) ?? "Failed to remove equipment.";
-      alert("Error: " + String(msg));
-    }
+    const { error: updateError } = await createSupabaseBrowserClient()
+      .from("equipment")
+      .update({ is_active: false })
+      .eq("id", id);
+    if (updateError) alert("Error: " + updateError.message);
     else refresh();
   };
 
@@ -143,133 +133,185 @@ function EquipmentContent() {
   });
 
   const loading = equipment === null && error === null;
+  const isTeacher = currentUser?.user_metadata?.role !== "Student";
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+      {/* Page header */}
+      <div className="mb-7 flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Equipment</h2>
-          <p className="text-gray-500 text-sm mt-1">Inventory with real-time availability</p>
+          <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+            Equipment
+          </h2>
+          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+            Inventory with real-time availability
+          </p>
         </div>
-        {/* Hide add equipment for students */}
-        {currentUser?.user_metadata?.role !== "Student" ? (
+        {isTeacher && (
           <button
             onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
+            style={{ background: "var(--navy)" }}
           >
-            {showAdd ? "Cancel" : "+ Add Equipment"}
+            {showAdd ? (
+              <>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+                Cancel
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Equipment
+              </>
+            )}
           </button>
-        ) : null}
+        )}
       </div>
 
       {/* Add form */}
       {showAdd && (
-        <form
-          onSubmit={handleAdd}
-          className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm"
+        <div
+          className="bg-white rounded-2xl p-6 mb-6"
+          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
         >
-          <h3 className="font-semibold text-gray-800 mb-4">New Equipment</h3>
-          {saveError && <p className="text-red-600 text-sm mb-3">{saveError}</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="eq-name">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="eq-name"
-                type="text"
-                required
-                maxLength={100}
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Canon EOS R50"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="eq-cat">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="eq-cat"
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as (typeof EQUIPMENT_CATEGORIES)[number] }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                {EQUIPMENT_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="eq-qty">
-                Quantity <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="eq-qty"
-                type="number"
-                required
-                min={1}
-                max={999}
-                value={form.total_quantity}
-                onChange={(e) => setForm((f) => ({ ...f, total_quantity: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="eq-serial">
-                Serial / Asset Tag <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                id="eq-serial"
-                type="text"
-                maxLength={50}
-                value={form.serial_number}
-                onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="eq-notes">
-                Condition Notes <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                id="eq-notes"
-                type="text"
-                maxLength={200}
-                value={form.condition_notes}
-                onChange={(e) => setForm((f) => ({ ...f, condition_notes: e.target.value }))}
-                placeholder="e.g. lens cap missing"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg transition-colors"
+          <h3 className="font-semibold text-base mb-5" style={{ color: "var(--ignite-navy)" }}>
+            New Equipment
+          </h3>
+          {saveError && (
+            <div
+              className="mb-4 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
+              style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}
             >
-              {saving ? "Adding…" : "Add Equipment"}
-            </button>
-          </div>
-        </form>
+              <svg className="mt-0.5 shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {saveError}
+            </div>
+          )}
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="eq-name" style={{ color: "#374151" }}>
+                  Name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="eq-name"
+                  type="text"
+                  required
+                  maxLength={100}
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Canon EOS R50"
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="eq-cat" style={{ color: "#374151" }}>
+                  Category <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <select
+                  id="eq-cat"
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as (typeof EQUIPMENT_CATEGORIES)[number] }))}
+                  className="form-input"
+                >
+                  {EQUIPMENT_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="eq-qty" style={{ color: "#374151" }}>
+                  Quantity <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="eq-qty"
+                  type="number"
+                  required
+                  min={1}
+                  max={999}
+                  value={form.total_quantity}
+                  onChange={(e) => setForm((f) => ({ ...f, total_quantity: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="eq-serial" style={{ color: "#374151" }}>
+                  Serial / Asset Tag{" "}
+                  <span className="font-normal" style={{ color: "var(--muted)" }}>(optional)</span>
+                </label>
+                <input
+                  id="eq-serial"
+                  type="text"
+                  maxLength={50}
+                  value={form.serial_number}
+                  onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1.5" htmlFor="eq-notes" style={{ color: "#374151" }}>
+                  Condition Notes{" "}
+                  <span className="font-normal" style={{ color: "var(--muted)" }}>(optional)</span>
+                </label>
+                <input
+                  id="eq-notes"
+                  type="text"
+                  maxLength={200}
+                  value={form.condition_notes}
+                  onChange={(e) => setForm((f) => ({ ...f, condition_notes: e.target.value }))}
+                  placeholder="e.g. lens cap missing"
+                  className="form-input"
+                />
+              </div>
+            </div>
+            <div className="pt-1">
+              <button type="submit" disabled={saving}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+                style={{ background: "var(--navy)" }}>
+                {saving ? (
+                  <>
+                    <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                      <path d="M12 2a10 10 0 0 1 10 10" />
+                    </svg>
+                    Adding…
+                  </>
+                ) : "Add Equipment"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">
-        <input
-          type="search"
-          placeholder="Search equipment…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="Search equipment"
-        />
+        <div className="relative">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="15" height="15" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"
+          >
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Search equipment…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-input pl-9"
+            style={{ width: 240 }}
+            aria-label="Search equipment"
+          />
+        </div>
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="form-input"
+          style={{ width: "auto" }}
           aria-label="Filter by category"
         >
           {allCategories.map((c) => (
@@ -279,72 +321,96 @@ function EquipmentContent() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div
+        className="bg-white rounded-2xl overflow-hidden"
+        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+      >
         {loading ? (
-          <div className="px-5 py-10 text-center text-gray-400 text-sm">Loading…</div>
+          <div className="px-6 py-16 text-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
+              <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            </div>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Loading inventory…</p>
+          </div>
         ) : error ? (
-          <div className="px-5 py-10 text-center text-red-500 text-sm">{error}</div>
+          <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
         ) : filtered.length === 0 ? (
-          <div className="px-5 py-10 text-center text-gray-400 text-sm">
-            {search || categoryFilter !== "All" ? "No items match your filters." : "No equipment in inventory."}
+          <div className="px-6 py-16 text-center">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
+              <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
+                <rect x="2" y="7" width="20" height="14" rx="2" />
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+              </svg>
+            </div>
+            <p className="font-medium text-sm" style={{ color: "#374151" }}>No equipment found</p>
+            <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+              {search || categoryFilter !== "All" ? "Try adjusting your filters." : "No equipment in inventory yet."}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-5 py-3 text-left font-medium">Name</th>
-                  <th className="px-5 py-3 text-left font-medium">Category</th>
-                  <th className="px-5 py-3 text-left font-medium">Available</th>
-                  <th className="px-5 py-3 text-left font-medium">Total</th>
-                  <th className="px-5 py-3 text-left font-medium">Serial</th>
-                  <th className="px-5 py-3 text-left font-medium">Condition</th>
-                  <th className="px-5 py-3 text-left font-medium">Action</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Available</th>
+                  <th>Total</th>
+                  <th>Serial</th>
+                  <th>Condition</th>
+                  <th>Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {filtered.map((e) => {
                   const pct = e.total_quantity > 0 ? e.available / e.total_quantity : 1;
-                  const availColor =
+                  const availStyle =
                     pct === 0
-                      ? "text-red-600 bg-red-50"
+                      ? { background: "#fee2e2", color: "#dc2626" }
                       : pct < 0.5
-                      ? "text-amber-700 bg-amber-50"
-                      : "text-green-700 bg-green-50";
+                      ? { background: "#fef9c3", color: "#ca8a04" }
+                      : { background: "#dcfce7", color: "#16a34a" };
 
                   return (
-                    <tr key={e.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 font-medium text-gray-900">{e.name}</td>
-                      <td className="px-5 py-3">
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    <tr key={e.id}>
+                      <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{e.name}</td>
+                      <td>
+                        <span className="badge" style={{ background: "#f1f5f9", color: "var(--muted)" }}>
                           {e.category}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${availColor}`}>
+                      <td>
+                        <span className="badge font-bold" style={availStyle}>
                           {e.available} / {e.total_quantity}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-gray-600">{e.total_quantity}</td>
-                      <td className="px-5 py-3 text-gray-500">{e.serial_number ?? "—"}</td>
-                      <td className="px-5 py-3 text-gray-500 max-w-xs truncate">
+                      <td className="text-sm" style={{ color: "#374151" }}>{e.total_quantity}</td>
+                      <td className="font-mono text-xs" style={{ color: "var(--muted)" }}>
+                        {e.serial_number ?? "—"}
+                      </td>
+                      <td className="max-w-[180px] truncate text-sm" style={{ color: "var(--muted)" }}>
                         {e.condition_notes ?? "—"}
                       </td>
-                      <td className="px-5 py-3">
-                        {currentUser?.user_metadata?.role === "Student" ? (
-                          <Link
-                            href={`/checkout?eq=${e.id}`}
-                            className="text-xs text-blue-700 hover:underline font-medium"
-                          >
-                            Checkout
-                          </Link>
-                        ) : (
+                      <td>
+                        {isTeacher ? (
                           <button
                             onClick={() => handleDeactivate(e.id)}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium"
+                            className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
+                            style={{ color: "#dc2626" }}
                           >
                             Remove
                           </button>
+                        ) : (
+                          <Link
+                            href={`/checkout?eq=${e.id}`}
+                            className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
+                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                          >
+                            Checkout
+                          </Link>
                         )}
                       </td>
                     </tr>
@@ -356,7 +422,7 @@ function EquipmentContent() {
         )}
       </div>
 
-      <p className="text-xs text-gray-400 mt-3">
+      <p className="text-xs mt-3" style={{ color: "var(--muted)" }}>
         Showing {filtered.length} of {(equipment ?? []).length} items
       </p>
     </div>
