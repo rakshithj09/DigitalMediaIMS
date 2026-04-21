@@ -29,6 +29,28 @@ export default function EmailPasswordDemo({ user }: Props) {
   // Short-term client-side teacher verification code. Server-side validation
   // is recommended for production—this is a convenience per request.
   const TEACHER_VERIFICATION_CODE = "2015";
+  // Map known Supabase/signup error messages to friendlier UI messages.
+  const SIGNUP_ERROR_MAP: Record<string, string> = {
+    // Supabase sometimes returns this raw message when too many verification emails
+    // have been requested in a short period. Map it to a clearer instruction.
+    "email rate limit exceeded":
+      "Too many verification emails were sent. Please wait a few minutes before trying again, or contact an administrator.",
+  };
+
+  const getFriendlySignupMessage = (err: unknown) => {
+    if (!err) return "Sign-up failed";
+    // Supabase error objects usually have a `message` property.
+    const msg = (err as { message?: unknown }).message;
+    if (typeof msg === "string") {
+      const lower = msg.toLowerCase();
+      // Exact-match map first, then fallback to substring checks.
+      if (SIGNUP_ERROR_MAP[lower]) return SIGNUP_ERROR_MAP[lower];
+      if (lower.includes("rate limit"))
+        return "Too many requests. Please wait a few minutes before trying again.";
+      return msg;
+    }
+    return String(err);
+  };
 
   
 
@@ -94,7 +116,7 @@ export default function EmailPasswordDemo({ user }: Props) {
             data: metadata,
           },
         });
-        if (signUpError) setError(signUpError.message ?? "Sign-up failed");
+  if (signUpError) setError(getFriendlySignupMessage(signUpError));
         else setMessage("Verification email sent. Check your Bentonville email and verify the link.");
 
         // If the user is a student, attempt to also create a students roster entry so
