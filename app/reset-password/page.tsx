@@ -26,10 +26,11 @@ export default function ResetPasswordPage() {
       }
     });
 
-    supabase.auth.getSession().then((result) => {
+    (async () => {
+      const result = await supabase.auth.getSession();
       if (result.data.session) setReady(true);
       else setError("Open this page from the password reset email link.");
-    });
+    })();
 
     return () => subscription.unsubscribe();
   }, [supabase]);
