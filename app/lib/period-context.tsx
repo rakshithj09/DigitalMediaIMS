@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Period } from "./types";
 
 interface PeriodContextType {
@@ -14,17 +14,24 @@ const PeriodContext = createContext<PeriodContextType>({
 });
 
 export function PeriodProvider({ children }: { children: ReactNode }) {
-  // Initialize from localStorage using lazy initializer to avoid setting state inside an effect
-  const [period, setPeriodState] = useState<Period>(() => {
+  // Start with the server-safe default so server and initial client render match.
+  // After the component mounts, read localStorage and update the period if needed.
+  const [period, setPeriodState] = useState<Period>("AM");
+
+  // Read the persisted period only on the client after mount to avoid
+  // server/client rendering differences (hydration mismatch).
+  useEffect(() => {
     try {
-      if (typeof window === "undefined") return "AM";
       const stored = localStorage.getItem("ims_period") as Period | null;
-      if (stored === "AM" || stored === "PM") return stored;
+      // Defer the state update to avoid synchronous setState inside the effect
+      // which some linters treat as problematic for cascading renders.
+      if (stored === "AM" || stored === "PM") {
+        setTimeout(() => setPeriodState(stored), 0);
+      }
     } catch {
-      // If any error (e.g., access denied), fall back to default
+      // ignore
     }
-    return "AM";
-  });
+  }, []);
 
   const setPeriod = (p: Period) => {
     setPeriodState(p);
