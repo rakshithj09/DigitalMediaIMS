@@ -10,13 +10,18 @@ export default function LoginPage() {
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [error,    setError]    = useState<string | null>(null);
+  const [message,  setMessage]  = useState<string | null>(null);
   const [loading,  setLoading]  = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
   const router   = useRouter();
   const supabase = createSupabaseBrowserClient();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setMessage(null);
     setLoading(true);
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
@@ -32,6 +37,31 @@ export default function LoginPage() {
       setError("Unable to reach the server. Please try again.");
       setLoading(false);
     }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    const emailToReset = resetEmail.trim().toLowerCase();
+    if (!emailToReset.endsWith("@bentonvillek12.org")) {
+      setError("Enter your @bentonvillek12.org email.");
+      return;
+    }
+
+    setResetLoading(true);
+    const redirectTo = `${window.location.origin}/reset-password`;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(emailToReset, { redirectTo });
+
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setMessage("Password reset email sent. Check your inbox.");
+      setShowReset(false);
+      setResetEmail("");
+    }
+    setResetLoading(false);
   };
 
   return (
@@ -62,37 +92,75 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-slate-700">
-                Email
-              </label>
-              <input id="email" type="email" autoComplete="email" required
-                value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="email@bentonvillek12.org"
-                className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-900 bg-white placeholder:text-slate-400
-                           border border-slate-200 focus:outline-none focus:border-[#002c51] focus:ring-2 focus:ring-[#002c51]/10"/>
+          {message && (
+            <div className="mb-5 px-4 py-3 rounded-xl text-sm"
+              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}>
+              {message}
             </div>
+          )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1.5 text-slate-700">
-                Password
-              </label>
-              <input id="password" type="password" autoComplete="current-password" required
-                value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-900 bg-white placeholder:text-slate-400
-                           border border-slate-200 focus:outline-none focus:border-[#002c51] focus:ring-2 focus:ring-[#002c51]/10"/>
-            </div>
+          {showReset ? (
+            <form onSubmit={handlePasswordReset} className="flex flex-col gap-4">
+              <div>
+                <label htmlFor="reset-email" className="block text-sm font-medium mb-1.5 text-slate-700">
+                  Account email
+                </label>
+                <input id="reset-email" type="email" autoComplete="email" required
+                  value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+                  placeholder="email@bentonvillek12.org"
+                  className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-900 bg-white placeholder:text-slate-400
+                             border border-slate-200 focus:outline-none focus:border-[#002c51] focus:ring-2 focus:ring-[#002c51]/10"/>
+              </div>
 
-            {/* Button uses inline style so it's never invisible */}
-            <button type="submit" disabled={loading}
-              className="w-full py-2.5 rounded-lg text-sm font-semibold text-white mt-1
-                         transition-opacity disabled:opacity-50"
-              style={{ background: "var(--navy)" }}>
-              {loading ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
+              <button type="submit" disabled={resetLoading}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white mt-1 transition-opacity disabled:opacity-50"
+                style={{ background: "var(--navy)" }}>
+                {resetLoading ? "Sending…" : "Send Reset Email"}
+              </button>
+              <button type="button" onClick={() => { setShowReset(false); setError(null); setMessage(null); }}
+                className="text-sm font-semibold hover:underline"
+                style={{ color: "var(--navy)" }}>
+                Back to sign in
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-slate-700">
+                  Email
+                </label>
+                <input id="email" type="email" autoComplete="email" required
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="email@bentonvillek12.org"
+                  className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-900 bg-white placeholder:text-slate-400
+                             border border-slate-200 focus:outline-none focus:border-[#002c51] focus:ring-2 focus:ring-[#002c51]/10"/>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium mb-1.5 text-slate-700">
+                  Password
+                </label>
+                <input id="password" type="password" autoComplete="current-password" required
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-900 bg-white placeholder:text-slate-400
+                             border border-slate-200 focus:outline-none focus:border-[#002c51] focus:ring-2 focus:ring-[#002c51]/10"/>
+              </div>
+
+              <button type="button" onClick={() => { setShowReset(true); setResetEmail(email); setError(null); setMessage(null); }}
+                className="self-start text-xs font-semibold hover:underline"
+                style={{ color: "var(--navy)" }}>
+                Forgot password?
+              </button>
+
+              <button type="submit" disabled={loading}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white mt-1
+                           transition-opacity disabled:opacity-50"
+                style={{ background: "var(--navy)" }}>
+                {loading ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+          )}
 
           <p className="mt-5 text-sm text-center text-slate-500">
             New here?{" "}
