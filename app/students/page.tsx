@@ -465,8 +465,9 @@ function StudentsContent() {
       <div className="mb-4">
         <div className="relative max-w-sm">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            width="15" height="15" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"
+            className="absolute pointer-events-none"
+            style={{ left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}
+            width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
           >
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -475,7 +476,8 @@ function StudentsContent() {
             placeholder="Search by name or ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="form-input pl-9"
+            className="form-input"
+            style={{ paddingLeft: "2.65rem" }}
             aria-label="Search students"
           />
         </div>
