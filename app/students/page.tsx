@@ -170,7 +170,8 @@ function StudentsContent() {
         {currentUser?.user_metadata?.role !== "Student" && (
           <button
             onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
-            className="btn-primary"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
+            style={{ background: "var(--navy)" }}
           >
             {showAdd ? (
               <>
@@ -299,7 +300,9 @@ function StudentsContent() {
             </div>
 
             <div className="pt-1">
-              <button type="submit" disabled={saving} className="btn-primary">
+              <button type="submit" disabled={saving}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+                style={{ background: "var(--navy)" }}>
                 {saving ? (
                   <>
                     <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

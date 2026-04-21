@@ -377,8 +377,8 @@ function CheckoutContent() {
               <button
                 type="submit"
                 disabled={submitting || maxQty === 0}
-                className="btn-primary w-full justify-center py-2.5 mt-1"
-                style={{ fontSize: "0.9375rem" }}
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+                style={{ background: "var(--navy)", fontSize: "0.9375rem" }}
               >
                 {submitting ? (
                   <>
