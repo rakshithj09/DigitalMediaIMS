@@ -2,13 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 function getEnvironmentVariables() {
-    const supabaseURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    // Accept either the anon key name or the publishable key name
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE;
+    const supabaseURL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+    const supabaseAnonKey =
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
 
     if (!supabaseURL || !supabaseAnonKey) {
         throw new Error(
-            "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)."
+            "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
         );
     }
     return { supabaseURL, supabaseAnonKey };

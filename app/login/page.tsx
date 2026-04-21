@@ -18,16 +18,24 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError(authError.message);
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+      } else {
+        router.replace("/");
+      }
+    } catch (err) {
+      console.error("Supabase sign-in request failed", err);
+      setError(
+        "Unable to reach Supabase. Check that the project URL is correct and the Supabase project is active."
+      );
       setLoading(false);
-    } else {
-      router.replace("/");
     }
   };
 
