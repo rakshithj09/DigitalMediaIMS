@@ -18,6 +18,7 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<"Teacher" | "Student">("Student");
   const [periodSel, setPeriodSel] = useState<"AM" | "PM">("AM");
+  const [teacherCode, setTeacherCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +26,9 @@ export default function EmailPasswordDemo({ user }: Props) {
   const supabase = createSupabaseBrowserClient();
 
   const domainAllowed = (e: string) => e.toLowerCase().endsWith("@bentonvillek12.org");
+  // Short-term client-side teacher verification code. Server-side validation
+  // is recommended for production—this is a convenience per request.
+  const TEACHER_VERIFICATION_CODE = "2015";
 
   
 
@@ -47,6 +51,16 @@ export default function EmailPasswordDemo({ user }: Props) {
         setError("Please select whether you are a Teacher or Student.");
         return;
       }
+      if (role === "Teacher") {
+        if (!teacherCode.trim()) {
+          setError("Please provide your teacher verification code.");
+          return;
+        }
+        if (teacherCode.trim() !== TEACHER_VERIFICATION_CODE) {
+          setError("Invalid teacher verification code.");
+          return;
+        }
+      }
     }
 
     if (!domainAllowed(email)) {
@@ -64,17 +78,20 @@ export default function EmailPasswordDemo({ user }: Props) {
         if (signInError) setError(signInError.message ?? "Sign-in failed");
         else setMessage("Signed in successfully.");
       } else {
-        // Include first/last name and role/period as user metadata at signup.
-            const { error: signUpError } = await supabase.auth.signUp({
+        // Include first/last name and role-specific metadata at signup.
+        const metadata: Record<string, unknown> = {
+          first_name: firstName,
+          last_name: lastName,
+          role,
+        };
+        if (role === "Student") metadata.period = periodSel;
+        if (role === "Teacher") metadata.teacher_code = teacherCode.trim();
+
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: {
-              first_name: firstName,
-              last_name: lastName,
-              role,
-              period: periodSel,
-            },
+            data: metadata,
           },
         });
         if (signUpError) setError(signUpError.message ?? "Sign-up failed");
@@ -183,8 +200,8 @@ export default function EmailPasswordDemo({ user }: Props) {
               </div>
             </div>
 
-            {/* Role & Period selection for new accounts (preserve layout) */}
-            <div className="mt-3 grid grid-cols-2 gap-3" style={{ minHeight: 56 }}>
+            {/* Role & Period selection for new accounts (only visible when signing up) */}
+            <div className="mt-3 grid grid-cols-2 gap-3" style={{ minHeight: 56, display: mode === "signUp" ? undefined : "none" }}>
               <div>
                 <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                 <select
@@ -192,24 +209,39 @@ export default function EmailPasswordDemo({ user }: Props) {
                   value={role}
                   onChange={(e) => setRole(e.target.value as "Teacher" | "Student")}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  style={{ display: mode === "signUp" ? undefined : "none" }}
                 >
                   <option value="Student">Student</option>
                   <option value="Teacher">Teacher</option>
                 </select>
               </div>
               <div>
-                <label htmlFor="period" className="block text-sm font-medium text-gray-700 mb-1">Class period</label>
-                <select
-                  id="period"
-                  value={periodSel}
-                  onChange={(e) => setPeriodSel(e.target.value as "AM" | "PM")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  style={{ display: mode === "signUp" ? undefined : "none" }}
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
+                {role === "Student" ? (
+                  <>
+                    <label htmlFor="period" className="block text-sm font-medium text-gray-700 mb-1">Class period</label>
+                    <select
+                      id="period"
+                      value={periodSel}
+                      onChange={(e) => setPeriodSel(e.target.value as "AM" | "PM")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <label htmlFor="teacherCode" className="block text-sm font-medium text-gray-700 mb-1">Teacher verification code</label>
+                    <input
+                      id="teacherCode"
+                      type="text"
+                      value={teacherCode}
+                      onChange={(e) => setTeacherCode(e.target.value)}
+                      placeholder="Enter verification code"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Provide your staff verification code to confirm teacher access.</p>
+                  </>
+                )}
               </div>
             </div>
             <div>
@@ -222,7 +254,7 @@ export default function EmailPasswordDemo({ user }: Props) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="form-input w-full text-sm text-black focus:outline-none focus:ring-2 focus:ring-[var(--ignite-teal)]"
-                placeholder="you@bentonvillek12.org"
+                placeholder="email@bentonvillek12.org"
               />
             </div>
 
