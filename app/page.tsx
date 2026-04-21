@@ -127,12 +127,7 @@ function DashboardContent() {
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             Active checkouts for{" "}
-            <span
-              className="font-semibold px-2 py-0.5 rounded-full text-xs"
-              style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
-            >
-              {period} period
-            </span>
+            <span className="badge badge-period">{period} period</span>
           </p>
         </div>
         <button
@@ -204,7 +199,7 @@ function DashboardContent() {
           </h3>
           <span
             className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: list.length > 0 ? "var(--ignite-mint-dim)" : "#f1f5f9", color: list.length > 0 ? "var(--ignite-teal)" : "var(--muted)" }}
+            style={{ background: list.length > 0 ? "#e8f0fe" : "#f1f5f9", color: list.length > 0 ? "#1a3c78" : "var(--muted)" }}
           >
             {list.length} active
           </span>

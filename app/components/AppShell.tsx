@@ -119,7 +119,7 @@ function Shell({
           {role === "Student" ? (
             <div
               className="px-3 py-1 rounded-full text-xs font-semibold"
-              style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-mint)" }}
+              style={{ background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)" }}
             >
               {userPeriod ? `${userPeriod} Period` : "Student"}
             </div>

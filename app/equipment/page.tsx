@@ -404,7 +404,7 @@ function EquipmentContent() {
                           <Link
                             href={`/checkout?eq=${e.id}`}
                             className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
-                            style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
+                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
                           >
                             Checkout
                           </Link>

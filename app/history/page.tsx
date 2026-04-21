@@ -243,7 +243,7 @@ function HistoryContent() {
                     <td>
                       <span
                         className="badge"
-                        style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
+                        style={{ background: "#e8f0fe", color: "#1a3c78" }}
                       >
                         {c.period}
                       </span>

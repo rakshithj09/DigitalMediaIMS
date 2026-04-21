@@ -160,7 +160,7 @@ function StudentsContent() {
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             <span
               className="font-semibold px-2 py-0.5 rounded-full text-xs"
-              style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
+              style={{ background: "#e8f0fe", color: "#1a3c78" }}
             >
               {period} period
             </span>{" "}
@@ -257,7 +257,7 @@ function StudentsContent() {
                   maxLength={20}
                   value={newStudentId}
                   onChange={(e) => setNewStudentId(e.target.value)}
-                  placeholder="40001"
+                  placeholder="4000"
                   className="form-input"
                 />
               </div>
@@ -389,7 +389,7 @@ function StudentsContent() {
                   <td>
                     <span
                       className="badge"
-                      style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
+                      style={{ background: "#e8f0fe", color: "#1a3c78" }}
                     >
                       {s.period}
                     </span>

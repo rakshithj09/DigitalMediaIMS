@@ -225,12 +225,7 @@ function CheckoutContent() {
         </h2>
         <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
           Check equipment in or out for{" "}
-          <span
-            className="font-semibold px-2 py-0.5 rounded-full text-xs"
-            style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
-          >
-            {checkoutPeriod} period
-          </span>
+          <span className="badge badge-period">{checkoutPeriod} period</span>
         </p>
       </div>
 
@@ -243,9 +238,9 @@ function CheckoutContent() {
           <div className="flex items-center gap-2.5 mb-5">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: "var(--ignite-mint-dim)" }}
+              style={{ background: "#e8f0fe" }}
             >
-              <svg width="16" height="16" fill="none" stroke="var(--ignite-teal)" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" fill="none" stroke="#1a3c78" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M16 3h5v5" /><path d="M21 3 9 15" /><path d="M3 9v11a2 2 0 0 0 2 2h11" />
               </svg>
             </div>
@@ -423,7 +418,7 @@ function CheckoutContent() {
             {visibleActiveCheckouts.length > 0 && (
               <span
                 className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
+                style={{ background: "#e8f0fe", color: "#1a3c78" }}
               >
                 {visibleActiveCheckouts.length} out
               </span>
