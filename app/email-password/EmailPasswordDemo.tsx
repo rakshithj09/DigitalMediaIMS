@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { User } from "@supabase/supabase-js";
@@ -8,7 +9,9 @@ import { User } from "@supabase/supabase-js";
 type Props = { user?: User | null };
 
 export default function EmailPasswordDemo({ user }: Props) {
-  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const searchParams = useSearchParams();
+  const forcedMode = (searchParams?.get("mode") ?? "").toLowerCase() === "signup";
+  const [mode, setMode] = useState<"signIn" | "signUp">(forcedMode ? "signUp" : "signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -22,6 +25,8 @@ export default function EmailPasswordDemo({ user }: Props) {
   const supabase = createSupabaseBrowserClient();
 
   const domainAllowed = (e: string) => e.toLowerCase().endsWith("@bentonvillek12.org");
+
+  
 
   const handleSubmit = async (ev?: React.FormEvent) => {
     ev?.preventDefault();
@@ -241,13 +246,16 @@ export default function EmailPasswordDemo({ user }: Props) {
 
             <div className="flex items-center justify-between text-sm">
               <div>
-                <button
-                  type="button"
-                  onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
-                  className="text-blue-600 hover:underline mr-3"
-                >
-                  {mode === "signIn" ? "Create an account" : "Have an account? Sign in"}
-                </button>
+                {/* If mode was forced via query param, don't show the toggle back to sign in */}
+                {!forcedMode && (
+                  <button
+                    type="button"
+                    onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
+                    className="text-blue-600 hover:underline mr-3"
+                  >
+                    {mode === "signIn" ? "Create an account" : "Have an account? Sign in"}
+                  </button>
+                )}
               </div>
               <div>
                 <Link href="/login" className="text-gray-500 hover:underline">Back to login</Link>
