@@ -20,7 +20,13 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) { setError(authError.message); setLoading(false); }
+      if (authError) {
+        const message = authError.message.toLowerCase().includes("email not confirmed")
+          ? "Please verify your email before signing in."
+          : authError.message;
+        setError(message);
+        setLoading(false);
+      }
       else router.replace("/");
     } catch {
       setError("Unable to reach the server. Please try again.");

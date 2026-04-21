@@ -67,12 +67,18 @@ export default function EmailPasswordDemo({ user }: Props) {
             teacherCode: role === "Teacher" ? teacherCode.trim() : undefined,
           }),
         });
+        const data = await resp.json().catch(() => ({}));
         if (!resp.ok) {
-          const data = await resp.json().catch(() => ({}));
           setError(String(data?.error?.message ?? data?.error ?? "Account creation failed."));
           return;
         }
-        setMessage("Account created! You can now sign in.");
+        if (data?.warning) {
+          setError(String(data.warning));
+          return;
+        }
+        setMessage("Account created. Check your email and verify your account before signing in.");
+        setMode("signIn");
+        setPassword("");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

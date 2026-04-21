@@ -32,33 +32,21 @@ function getSupabaseAdminClient() {
   });
 }
 
-async function findUserByEmail(email: string) {
-  const admin = getSupabaseAdminClient();
-  if (!admin) return null;
+function getSupabasePublicClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
 
-  let page = 1;
-  const perPage = 100;
+  if (!url || !anonKey) return null;
 
-  while (page < 20) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-    if (error) return null;
-
-    const found = data.users.find((user) => user.email?.toLowerCase() === email);
-    if (found) return found;
-    if (data.users.length < perPage) return null;
-    page += 1;
-  }
-
-  return null;
-}
-
-function errorMessage(error: unknown, fallback: string) {
-  if (!error) return fallback;
-  if (typeof error === "string") return error;
-  if (typeof error === "object" && "message" in error && typeof error.message === "string") {
-    return error.message;
-  }
-  return fallback;
+  return createClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
 async function ensureStudentRosterRow(
@@ -106,8 +94,9 @@ async function ensureStudentRosterRow(
 
 export async function POST(req: Request) {
   const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
+  const supabase = getSupabasePublicClient();
+  if (!admin || !supabase) {
+    return NextResponse.json({ error: "Server is missing Supabase configuration." }, { status: 500 });
   }
 
   const body = (await req.json().catch(() => ({}))) as Body;
@@ -152,26 +141,21 @@ export async function POST(req: Request) {
   if (role === "Student" && period) metadata.period = period;
   if (role === "Student" && studentId) metadata.student_id = studentId;
 
-  const { data: createdData, error: createError } = await admin.auth.admin.createUser({
+  const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const { data: signUpData, error: createError } = await supabase.auth.signUp({
     email,
     password,
-    email_confirm: true,
-    user_metadata: metadata,
+    options: {
+      data: metadata,
+      emailRedirectTo: `${origin.replace(/\/+$/, "")}/login`,
+    },
   });
 
-  let user = createdData.user;
-
   if (createError) {
-    const message = errorMessage(createError, "Account creation failed.");
-    const existingUser = await findUserByEmail(email);
-
-    if (!existingUser) {
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-
-    user = existingUser;
+    return NextResponse.json({ error: createError.message ?? "Account creation failed." }, { status: 400 });
   }
 
+  const user = signUpData.user;
   if (!user?.id) {
     return NextResponse.json({ error: "Supabase did not return a usable user id for this account." }, { status: 500 });
   }
@@ -190,5 +174,13 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true });
+  if (signUpData.session) {
+    await supabase.auth.signOut();
+    return NextResponse.json({
+      ok: true,
+      warning: "Account created, but Supabase email confirmation appears to be disabled. Enable Confirm email in Supabase Authentication settings before release.",
+    });
+  }
+
+  return NextResponse.json({ ok: true, requiresEmailConfirmation: true });
 }
