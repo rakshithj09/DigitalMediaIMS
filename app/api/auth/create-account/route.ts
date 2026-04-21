@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient, User } from "@supabase/supabase-js";
 
 type Body = {
   email?: string;
@@ -12,29 +13,91 @@ type Body = {
 
 const TEACHER_VERIFICATION_CODE = "2015";
 
-function getSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!url || !serviceRole) return null;
-  return { url, serviceRole };
-}
-
-function restHeaders(serviceRole: string) {
-  return {
-    "Content-Type": "application/json",
-    apikey: serviceRole,
-    Authorization: `Bearer ${serviceRole}`,
-  };
-}
-
 function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function getSupabaseAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!url || !serviceRole) return null;
+
+  return createClient(url, serviceRole, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+async function findUserByEmail(email: string) {
+  const admin = getSupabaseAdminClient();
+  if (!admin) return null;
+
+  let page = 1;
+  const perPage = 100;
+
+  while (page < 20) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) return null;
+
+    const found = data.users.find((user) => user.email?.toLowerCase() === email);
+    if (found) return found;
+    if (data.users.length < perPage) return null;
+    page += 1;
+  }
+
+  return null;
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (!error) return fallback;
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return fallback;
+}
+
+async function ensureStudentRosterRow(user: User, firstName: string, lastName: string, email: string, period: "AM" | "PM") {
+  const admin = getSupabaseAdminClient();
+  if (!admin) throw new Error("Server is missing Supabase service configuration.");
+
+  const studentBody = {
+    name: `${firstName} ${lastName}`,
+    period,
+    email,
+    user_id: user.id,
+    is_active: true,
+  };
+
+  const { data: existing, error: lookupError } = await admin
+    .from("students")
+    .select("id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (lookupError) {
+    throw new Error(
+      `${lookupError.message}. If this mentions user_id or email, run supabase/student-account-link.sql in Supabase SQL Editor.`
+    );
+  }
+
+  if (existing?.id) {
+    const { error } = await admin.from("students").update(studentBody).eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const { error } = await admin.from("students").insert(studentBody);
+  if (error) throw new Error(error.message);
+}
+
 export async function POST(req: Request) {
-  const config = getSupabaseConfig();
-  if (!config) {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
     return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
   }
 
@@ -62,8 +125,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid teacher verification code." }, { status: 403 });
   }
 
-  const { url, serviceRole } = config;
-  const headers = restHeaders(serviceRole);
   const metadata: Record<string, string> = {
     first_name: firstName,
     last_name: lastName,
@@ -72,67 +133,42 @@ export async function POST(req: Request) {
 
   if (role === "Student" && period) metadata.period = period;
 
-  const userResp = await fetch(`${url}/auth/v1/admin/users`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: metadata,
-    }),
+  const { data: createdData, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: metadata,
   });
 
-  const userData = await userResp.json().catch(() => null);
-  if (!userResp.ok) {
-    const message = userData?.message ?? userData?.error_description ?? userData?.error ?? "Account creation failed.";
-    return NextResponse.json({ error: message }, { status: userResp.status });
+  let user = createdData.user;
+
+  if (createError) {
+    const message = errorMessage(createError, "Account creation failed.");
+    const existingUser = await findUserByEmail(email);
+
+    if (!existingUser) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    user = existingUser;
   }
 
-  if (role === "Student") {
-    const studentBody = {
-      name: `${firstName} ${lastName}`,
-      period,
-      email,
-      user_id: userData.id,
-      is_active: true,
-    };
+  if (!user?.id) {
+    return NextResponse.json({ error: "Supabase did not return a usable user id for this account." }, { status: 500 });
+  }
 
-    const lookup = await fetch(
-      `${url}/rest/v1/students?select=id&user_id=eq.${encodeURIComponent(userData.id)}&limit=1`,
-      { headers }
+  try {
+    if (role === "Student") {
+      if (period !== "AM" && period !== "PM") {
+        return NextResponse.json({ error: "Students must select AM or PM period." }, { status: 400 });
+      }
+      await ensureStudentRosterRow(user, firstName, lastName, email, period);
+    }
+  } catch (err) {
+    return NextResponse.json(
+      { error: `Account exists, but roster setup failed: ${err instanceof Error ? err.message : String(err)}` },
+      { status: 500 }
     );
-    const existing = (await lookup.json().catch(() => [])) as Array<{ id: string }>;
-
-    if (!lookup.ok) {
-      return NextResponse.json({ error: "Account created, but roster lookup failed." }, { status: lookup.status });
-    }
-
-    const studentResp = existing[0]?.id
-      ? await fetch(`${url}/rest/v1/students?id=eq.${existing[0].id}`, {
-          method: "PATCH",
-          headers: {
-            ...headers,
-            Prefer: "return=representation",
-          },
-          body: JSON.stringify(studentBody),
-        })
-      : await fetch(`${url}/rest/v1/students`, {
-          method: "POST",
-          headers: {
-            ...headers,
-            Prefer: "return=representation",
-          },
-          body: JSON.stringify([studentBody]),
-        });
-
-    const studentData = await studentResp.json().catch(() => null);
-    if (!studentResp.ok) {
-      return NextResponse.json(
-        { error: studentData?.message ?? studentData ?? "Account created, but roster setup failed." },
-        { status: studentResp.status }
-      );
-    }
   }
 
   return NextResponse.json({ ok: true });
