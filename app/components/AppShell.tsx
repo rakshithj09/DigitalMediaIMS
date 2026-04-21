@@ -77,7 +77,12 @@ function Shell({
           className="w-48 shrink-0 bg-white border-r border-gray-200 py-2"
           aria-label="Main navigation"
         >
-          {NAV_LINKS.map(({ href, label }) => {
+          {(() => {
+            // Limit navigation for student users: students should only see Dashboard, Equipment, and Checkout
+            const role = (user as unknown as { user_metadata?: { role?: string } }).user_metadata?.role;
+            const allowedForStudent = new Set(["/", "/equipment", "/checkout"]);
+            const links = role === "Student" ? NAV_LINKS.filter((l) => allowedForStudent.has(l.href)) : NAV_LINKS;
+            return links.map(({ href, label }) => {
             const active =
               href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
@@ -93,7 +98,8 @@ function Shell({
                 {label}
               </Link>
             );
-          })}
+            });
+          })()}
         </nav>
 
         <main className="flex-1 overflow-auto p-6">{children}</main>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
+import Link from "next/link";
+import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
@@ -20,6 +22,7 @@ function EquipmentContent() {
 
   // Add form
   const [showAdd, setShowAdd] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [form, setForm] = useState<{
     name: string;
     category: (typeof EQUIPMENT_CATEGORIES)[number];
@@ -37,6 +40,17 @@ function EquipmentContent() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await createSupabaseBrowserClient().auth.getUser();
+        if (!mounted) return;
+        setCurrentUser(res.data.user ?? null);
+      } catch {
+        // ignore failures - role checks are best-effort on the client
+      }
+    })();
+
     let cancelled = false;
 
     Promise.all([
@@ -67,6 +81,7 @@ function EquipmentContent() {
 
     return () => {
       cancelled = true;
+      mounted = false;
     };
   }, [tick]);
 
@@ -127,12 +142,15 @@ function EquipmentContent() {
           <h2 className="text-2xl font-bold text-gray-900">Equipment</h2>
           <p className="text-gray-500 text-sm mt-1">Inventory with real-time availability</p>
         </div>
-        <button
-          onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
-          className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
-        >
-          {showAdd ? "Cancel" : "+ Add Equipment"}
-        </button>
+        {/* Hide add equipment for students */}
+        {currentUser?.user_metadata?.role !== "Student" ? (
+          <button
+            onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            {showAdd ? "Cancel" : "+ Add Equipment"}
+          </button>
+        ) : null}
       </div>
 
       {/* Add form */}
@@ -304,12 +322,21 @@ function EquipmentContent() {
                         {e.condition_notes ?? "—"}
                       </td>
                       <td className="px-5 py-3">
-                        <button
-                          onClick={() => handleDeactivate(e.id)}
-                          className="text-xs text-red-600 hover:text-red-800 font-medium"
-                        >
-                          Remove
-                        </button>
+                        {currentUser?.user_metadata?.role === "Student" ? (
+                          <Link
+                            href={`/checkout?eq=${e.id}`}
+                            className="text-xs text-blue-700 hover:underline font-medium"
+                          >
+                            Checkout
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => handleDeactivate(e.id)}
+                            className="text-xs text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

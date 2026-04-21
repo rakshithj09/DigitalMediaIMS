@@ -13,6 +13,8 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [role, setRole] = useState<"Teacher" | "Student">("Student");
+  const [periodSel, setPeriodSel] = useState<"AM" | "PM">("AM");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +38,10 @@ export default function EmailPasswordDemo({ user }: Props) {
         setError("Please provide your first and last name.");
         return;
       }
+      if (!role) {
+        setError("Please select whether you are a Teacher or Student.");
+        return;
+      }
     }
 
     if (!domainAllowed(email)) {
@@ -53,20 +59,37 @@ export default function EmailPasswordDemo({ user }: Props) {
         if (signInError) setError(signInError.message ?? "Sign-in failed");
         else setMessage("Signed in successfully.");
       } else {
-        // Include first/last name as user metadata at signup. Supabase will store this
-        // in user_metadata if the SDK/environment supports it.
-        const { error: signUpError } = await supabase.auth.signUp({
+        // Include first/last name and role/period as user metadata at signup.
+            const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               first_name: firstName,
               last_name: lastName,
+              role,
+              period: periodSel,
             },
           },
         });
         if (signUpError) setError(signUpError.message ?? "Sign-up failed");
         else setMessage("Verification email sent. Check your Bentonville email and verify the link.");
+
+        // If the user is a student, attempt to also create a students roster entry so
+        // their name appears in the class roster automatically. This uses the anon
+        // key and will succeed only if your Supabase table allows inserts from the
+        // client (or if you have server-side logic to reconcile post-confirmation).
+        try {
+          if (role === "Student") {
+            const studentName = `${firstName.trim()} ${lastName.trim()}`;
+            await createSupabaseBrowserClient()
+              .from("students")
+              .insert({ name: studentName, period: periodSel });
+          }
+        } catch (err) {
+          // Non-fatal; we'll surface signup success above. Admins can reconcile students later.
+          console.error("Failed to insert student roster entry:", err);
+        }
       }
     } catch (err: unknown) {
       let msg = "An error occurred";
@@ -127,7 +150,7 @@ export default function EmailPasswordDemo({ user }: Props) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* First / Last name inputs appear only when creating an account */}
             {mode === "signUp" && (
-              <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First name</label>
                   <input
@@ -154,6 +177,36 @@ export default function EmailPasswordDemo({ user }: Props) {
                 </div>
               </div>
             )}
+
+              {/* Role & Period selection for new accounts */}
+              {mode === "signUp" && (
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select
+                      id="role"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as "Teacher" | "Student")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="Student">Student</option>
+                      <option value="Teacher">Teacher</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="period" className="block text-sm font-medium text-gray-700 mb-1">Class period</label>
+                    <select
+                      id="period"
+                      value={periodSel}
+                      onChange={(e) => setPeriodSel(e.target.value as "AM" | "PM")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input

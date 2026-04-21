@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
+import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -19,6 +20,7 @@ function StudentsContent() {
 
   // Add form state
   const [showAdd, setShowAdd] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [newName, setNewName] = useState("");
   const [newStudentId, setNewStudentId] = useState("");
   const [newPeriod, setNewPeriod] = useState<Period>(period);
@@ -46,6 +48,23 @@ function StudentsContent() {
       cancelled = true;
     };
   }, [period, tick]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await createSupabaseBrowserClient().auth.getUser();
+        if (!mounted) return;
+        setCurrentUser(res.data.user ?? null);
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
@@ -100,19 +119,22 @@ function StudentsContent() {
             <span className="font-semibold text-blue-700">{period} period</span> roster
           </p>
         </div>
-        <button
-          onClick={() => {
-            setShowAdd((v) => {
-              const next = !v;
-              if (next) setNewPeriod(period);
-              return next;
-            });
-            setSaveError(null);
-          }}
-          className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
-        >
-          {showAdd ? "Cancel" : "+ Add Student"}
-        </button>
+        {/* Only show add student button to non-students (teachers/admins) */}
+        {currentUser?.user_metadata?.role !== "Student" && (
+          <button
+            onClick={() => {
+              setShowAdd((v) => {
+                const next = !v;
+                if (next) setNewPeriod(period);
+                return next;
+              });
+              setSaveError(null);
+            }}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            {showAdd ? "Cancel" : "+ Add Student"}
+          </button>
+        )}
       </div>
 
       {/* Add form */}
@@ -229,12 +251,16 @@ function StudentsContent() {
                     {new Date(s.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-5 py-3">
-                    <button
-                      onClick={() => handleDeactivate(s.id)}
-                      className="text-xs text-red-600 hover:text-red-800 font-medium"
-                    >
-                      Remove
-                    </button>
+                    {currentUser?.user_metadata?.role !== "Student" ? (
+                      <button
+                        onClick={() => handleDeactivate(s.id)}
+                        className="text-xs text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

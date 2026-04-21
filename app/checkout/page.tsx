@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
+import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -22,7 +23,17 @@ function CheckoutContent() {
 
   // Checkout form
   const [studentId, setStudentId] = useState("");
-  const [equipmentId, setEquipmentId] = useState("");
+  const [, setCurrentUser] = useState<User | null>(null);
+  const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
+  const [equipmentId, setEquipmentId] = useState<string>(() => {
+    try {
+      if (typeof window === "undefined") return "";
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get("eq") ?? "";
+    } catch {
+      return "";
+    }
+  });
   const [quantity, setQuantity] = useState("1");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -84,6 +95,47 @@ function CheckoutContent() {
     };
   }, [period, tick]);
 
+  // fetch current user and if they're a Student, locate their students record
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await createSupabaseBrowserClient().auth.getUser();
+        const u = res.data.user ?? null;
+        if (!mounted) return;
+        setCurrentUser(u);
+
+        const meta = (u as unknown as { user_metadata?: { first_name?: string; last_name?: string; role?: string } }).user_metadata ?? {};
+        if (meta.role === "Student") {
+          const fullName = `${meta.first_name ?? ""} ${meta.last_name ?? ""}`.trim();
+          if (fullName) {
+            // Try to find the student ID from the roster by name + period
+            const found = (await createSupabaseBrowserClient()
+              .from("students")
+              .select("id")
+              .eq("name", fullName)
+              .eq("period", period)
+              .eq("is_active", true)
+              .limit(1)
+              .maybeSingle()) as { data?: { id?: string } | null; error?: unknown } | null;
+            if (!mounted) return;
+            const foundId = found?.data?.id;
+            if (foundId) {
+              setStudentId(foundId);
+              setOwnStudentId(foundId);
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [period]);
+
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const maxQty = selectedEquipment?.available ?? 0;
 
@@ -94,7 +146,8 @@ function CheckoutContent() {
     setSubmitSuccess(false);
 
     const qty = parseInt(quantity, 10);
-    if (!studentId) { setSubmitError("Please select a student."); setSubmitting(false); return; }
+    const finalStudentId = ownStudentId ?? studentId;
+    if (!finalStudentId) { setSubmitError("Please select a student."); setSubmitting(false); return; }
     if (!equipmentId) { setSubmitError("Please select an equipment item."); setSubmitting(false); return; }
     if (isNaN(qty) || qty < 1) { setSubmitError("Quantity must be at least 1."); setSubmitting(false); return; }
     if (qty > maxQty) { setSubmitError(`Only ${maxQty} unit(s) available.`); setSubmitting(false); return; }
@@ -102,7 +155,7 @@ function CheckoutContent() {
     const { error: insertError } = await createSupabaseBrowserClient()
       .from("checkouts")
       .insert({
-        student_id: studentId,
+        student_id: finalStudentId,
         equipment_id: equipmentId,
         quantity: qty,
         notes: notes.trim() || null,
@@ -175,6 +228,7 @@ function CheckoutContent() {
                   id="co-student"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
+                  disabled={!!ownStudentId}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">Select a student…</option>
@@ -186,6 +240,9 @@ function CheckoutContent() {
                 </select>
                 {students.length === 0 && (
                   <p className="text-xs text-amber-600 mt-1">No students in {period} roster. Add students first.</p>
+                )}
+                {ownStudentId && (
+                  <p className="text-xs text-gray-500 mt-1">You are checked in as{` `}{students.find(s => s.id === ownStudentId)?.name ?? "your student"} and can only checkout for yourself.</p>
                 )}
               </div>
 
