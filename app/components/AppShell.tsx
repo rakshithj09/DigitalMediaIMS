@@ -2,6 +2,7 @@
 
 import { useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { User, Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -80,11 +81,8 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "var(--mint)" }}>
-            {/* Lightning bolt */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <polygon points="13,2 4,14 12,14 11,22 20,10 12,10" fill="#002c51"/>
-            </svg>
+            style={{ background: "white" }}>
+            <Image src="/ignite-logo.png" alt="Ignite logo" width={26} height={26} className="object-contain" priority />
           </div>
           <div className="hidden sm:block min-w-0">
             <p className="text-sm font-bold text-white leading-tight">Digital Media</p>
@@ -237,10 +235,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--navy)" }}>
       <div className="text-center">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3"
-          style={{ background: "var(--mint)" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <polygon points="13,2 4,14 12,14 11,22 20,10 12,10" fill="#002c51"/>
-          </svg>
+          style={{ background: "white" }}>
+          <Image src="/ignite-logo.png" alt="Ignite logo" width={30} height={30} className="object-contain" priority />
         </div>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>Loading…</p>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
@@ -35,10 +36,8 @@ export default function LoginPage() {
         {/* Logo mark */}
         <div className="flex flex-col items-center mb-8 gap-3">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{ background: "var(--navy)" }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <polygon points="13,2 4,14 12,14 11,22 20,10 12,10" fill="#07eccb"/>
-            </svg>
+            style={{ background: "white", border: "1px solid #e2e8f0" }}>
+            <Image src="/ignite-logo.png" alt="Ignite logo" width={36} height={36} className="object-contain" priority />
           </div>
           <div className="text-center">
             <h1 className="text-xl font-bold" style={{ color: "var(--navy)" }}>Digital Media</h1>
