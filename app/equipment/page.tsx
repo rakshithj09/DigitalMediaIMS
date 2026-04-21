@@ -94,18 +94,22 @@ function EquipmentContent() {
     if (!form.name.trim()) { setSaveError("Name is required."); setSaving(false); return; }
     if (isNaN(qty) || qty < 1) { setSaveError("Quantity must be at least 1."); setSaving(false); return; }
 
-    const { error: insertError } = await createSupabaseBrowserClient()
-      .from("equipment")
-      .insert({
-        name: form.name.trim(),
+    const insertResp = await fetch("/api/equipment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.name,
         category: form.category,
-        total_quantity: qty,
-        serial_number: form.serial_number.trim() || null,
-        condition_notes: form.condition_notes.trim() || null,
-      });
+        totalQuantity: qty,
+        serialNumber: form.serial_number,
+        conditionNotes: form.condition_notes,
+      }),
+    });
 
-    if (insertError) {
-      setSaveError(insertError.message);
+    if (!insertResp.ok) {
+      const data = await insertResp.json().catch(() => ({}));
+      const msg = (data && (data.error?.message ?? data.error)) ?? "Failed to add equipment.";
+      setSaveError(String(msg));
     } else {
       setForm({ name: "", category: EQUIPMENT_CATEGORIES[0], total_quantity: "1", serial_number: "", condition_notes: "" });
       setShowAdd(false);
@@ -116,11 +120,16 @@ function EquipmentContent() {
 
   const handleDeactivate = async (id: string) => {
     if (!confirm("Remove this item from inventory? Checkout history is preserved.")) return;
-    const { error: updateError } = await createSupabaseBrowserClient()
-      .from("equipment")
-      .update({ is_active: false })
-      .eq("id", id);
-    if (updateError) alert("Error: " + updateError.message);
+    const updateResp = await fetch("/api/equipment", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, isActive: false }),
+    });
+    if (!updateResp.ok) {
+      const data = await updateResp.json().catch(() => ({}));
+      const msg = (data && (data.error?.message ?? data.error)) ?? "Failed to remove equipment.";
+      alert("Error: " + String(msg));
+    }
     else refresh();
   };
 
