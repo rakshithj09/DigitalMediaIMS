@@ -14,6 +14,12 @@ Set these values from your Supabase project settings:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` for server-only admin routes
 
+Open and run this SQL file in the Supabase SQL Editor before using student self-checkout:
+
+```bash
+supabase/student-account-link.sql
+```
+
 Then run the development server:
 
 ```bash

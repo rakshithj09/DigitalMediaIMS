@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${SERVICE_KEY}`,
         Prefer: "return=representation",
       },
-      body: JSON.stringify([{ name, student_id, period, email, is_active: true }]),
+      body: JSON.stringify([{ name, student_id, period, email, user_id: userData.id, is_active: true }]),
     });
 
     const studentData = await studentResp.json().catch(() => null);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Checkout, Period } from "@/app/lib/types";
@@ -17,6 +18,8 @@ function duration(start: string, end: string | null | undefined): string {
 function HistoryContent() {
   const [history, setHistory] = useState<Checkout[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
 
   // Filters
   const [periodFilter, setPeriodFilter] = useState<Period | "All">("All");
@@ -26,8 +29,9 @@ function HistoryContent() {
 
   useEffect(() => {
     let cancelled = false;
+    const supabase = createSupabaseBrowserClient();
 
-    createSupabaseBrowserClient()
+    supabase
       .from("checkouts")
       .select(
         `id, student_id, quantity, checked_out_at, checked_in_at, notes, return_notes, period,
@@ -47,7 +51,36 @@ function HistoryContent() {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    const supabase = createSupabaseBrowserClient();
+
+    (async () => {
+      const res = await supabase.auth.getUser();
+      const user = res.data.user ?? null;
+      if (!mounted) return;
+      setCurrentUser(user);
+
+      if (user?.user_metadata?.role === "Student") {
+        const found = (await supabase
+          .from("students")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle()) as { data?: { id?: string } | null } | null;
+
+        if (mounted) setOwnStudentId(found?.data?.id ?? null);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filtered = (history ?? []).filter((c) => {
+    if (currentUser?.user_metadata?.role === "Student" && c.student_id !== ownStudentId) return false;
     if (periodFilter !== "All" && c.period !== periodFilter) return false;
     if (
       studentFilter &&

@@ -25,15 +25,8 @@ function CheckoutContent() {
   const [studentId, setStudentId] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
-  const [equipmentId, setEquipmentId] = useState<string>(() => {
-    try {
-      if (typeof window === "undefined") return "";
-      const sp = new URLSearchParams(window.location.search);
-      return sp.get("eq") ?? "";
-    } catch {
-      return "";
-    }
-  });
+  const [ownStudentName, setOwnStudentName] = useState<string | null>(null);
+  const [equipmentId, setEquipmentId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -50,7 +43,7 @@ function CheckoutContent() {
     Promise.all([
       createSupabaseBrowserClient()
         .from("students")
-        .select("id, name, student_id, period, is_active, created_at")
+        .select("id, name, student_id, user_id, email, period, is_active, created_at")
         .eq("period", period)
         .eq("is_active", true)
         .order("name"),
@@ -95,37 +88,36 @@ function CheckoutContent() {
     };
   }, [period, tick]);
 
+  useEffect(() => {
+    const eq = new URLSearchParams(window.location.search).get("eq");
+    if (eq) queueMicrotask(() => setEquipmentId(eq));
+  }, []);
+
   // fetch current user and if they're a Student, locate their students record
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const res = await createSupabaseBrowserClient().auth.getUser();
-  const u = res.data.user ?? null;
-  if (!mounted) return;
-  setCurrentUser(u);
+        const u = res.data.user ?? null;
+        if (!mounted) return;
+        setCurrentUser(u);
 
-        const meta = (u as unknown as { user_metadata?: { first_name?: string; last_name?: string; role?: string } }).user_metadata ?? {};
+        const meta = (u as unknown as { user_metadata?: { role?: string } }).user_metadata ?? {};
         if (meta.role === "Student") {
-          const fullName = `${meta.first_name ?? ""} ${meta.last_name ?? ""}`.trim();
-          if (fullName) {
-            // Try to find the student ID from the roster by name + period
-            const found = (await createSupabaseBrowserClient()
-              .from("students")
-              .select("id")
-              .eq("name", fullName)
-              .eq("period", period)
-              .eq("is_active", true)
-              .limit(1)
-              .maybeSingle()) as { data?: { id?: string } | null; error?: unknown } | null;
-            if (!mounted) return;
-            const foundId = found?.data?.id;
-            if (foundId) {
-              setStudentId(foundId);
-              setOwnStudentId(foundId);
-              // Narrow students list to just the owning student for clarity
-              setStudents((prev) => (prev.filter((s) => s.id === foundId)));
-            }
+          const found = (await createSupabaseBrowserClient()
+            .from("students")
+            .select("id, name, period")
+            .eq("user_id", u.id)
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle()) as { data?: { id?: string; name?: string } | null; error?: unknown } | null;
+          if (!mounted) return;
+          const foundId = found?.data?.id;
+          if (foundId) {
+            setStudentId(foundId);
+            setOwnStudentId(foundId);
+            setOwnStudentName(found.data?.name ?? null);
           }
         }
       } catch {
@@ -159,20 +151,24 @@ function CheckoutContent() {
     if (isNaN(qty) || qty < 1) { setSubmitError("Quantity must be at least 1."); setSubmitting(false); return; }
     if (qty > maxQty) { setSubmitError(`Only ${maxQty} unit(s) available.`); setSubmitting(false); return; }
 
-    const { error: insertError } = await createSupabaseBrowserClient()
-      .from("checkouts")
-      .insert({
-        student_id: finalStudentId,
-        equipment_id: equipmentId,
+    const checkoutResp = await fetch("/api/checkouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentId: finalStudentId,
+        equipmentId,
         quantity: qty,
-        notes: notes.trim() || null,
+        notes,
         period,
-      });
+      }),
+    });
 
-    if (insertError) {
-      setSubmitError(insertError.message);
+    if (!checkoutResp.ok) {
+      const data = await checkoutResp.json().catch(() => ({}));
+      const msg = (data && (data.error?.message ?? data.error)) ?? "Checkout failed.";
+      setSubmitError(String(msg));
     } else {
-      setStudentId("");
+      if (!ownStudentId) setStudentId("");
       setEquipmentId("");
       setQuantity("1");
       setNotes("");
@@ -193,16 +189,20 @@ function CheckoutContent() {
     }
 
     setCheckingIn(checkoutId);
-    const { error: updateError } = await createSupabaseBrowserClient()
-      .from("checkouts")
-      .update({
-        checked_in_at: new Date().toISOString(),
-        return_notes: returnNotes[checkoutId]?.trim() || null,
-      })
-      .eq("id", checkoutId);
+    const checkInResp = await fetch("/api/checkouts/check-in", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        checkoutId,
+        returnNotes: returnNotes[checkoutId] ?? null,
+      }),
+    });
 
-    if (updateError) alert("Check-in failed: " + updateError.message);
-    else refresh();
+    if (!checkInResp.ok) {
+      const data = await checkInResp.json().catch(() => ({}));
+      const msg = (data && (data.error?.message ?? data.error)) ?? "Check-in failed.";
+      alert("Check-in failed: " + String(msg));
+    } else refresh();
     setCheckingIn(null);
   };
 
@@ -245,7 +245,7 @@ function CheckoutContent() {
                     roster select. */}
                 {ownStudentId ? (
                   <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-black bg-gray-50">
-                    {students.find((s) => s.id === ownStudentId)?.name ?? "Your student"}
+                    {ownStudentName ?? students.find((s) => s.id === ownStudentId)?.name ?? "Your student"}
                     <div className="text-xs text-gray-500 mt-1">You can only checkout for yourself.</div>
                     {/* Keep a hidden input so the form submission still references studentId */}
                     <input type="hidden" value={ownStudentId} />
@@ -343,7 +343,7 @@ function CheckoutContent() {
 
           {activeCheckouts === null ? (
             <p className="text-gray-400 text-sm">Loading…</p>
-          ) : activeCheckouts.length === 0 ? (
+          ) : visibleActiveCheckouts.length === 0 ? (
             <p className="text-gray-400 text-sm">No active checkouts for {period} period.</p>
           ) : (
             <div className="space-y-3">

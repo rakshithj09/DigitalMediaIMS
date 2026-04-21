@@ -4,6 +4,8 @@ export interface Student {
   id: string;
   name: string;
   student_id?: string | null;
+  user_id?: string | null;
+  email?: string | null;
   period: Period;
   is_active: boolean;
   created_at: string;

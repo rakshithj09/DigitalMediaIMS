@@ -108,42 +108,35 @@ export default function EmailPasswordDemo({ user }: Props) {
         if (signUpError) {
           setError(getFriendlySignupMessage(signUpError));
         } else {
-          setMessage("Verification email sent. Check your Bentonville email and verify the link.");
-
-          // After a successful student signup, attempt to create a minimal roster
-          // entry so the new student appears in lists (name + period). This calls
-          // a server-only route that uses the service role key to avoid client
-          // schema mismatches.
           if (role === "Student") {
-            try {
-              const name = `${firstName.trim()} ${lastName.trim()}`;
-              const user_id = signUpData?.user?.id as string | undefined;
-              await fetch("/api/admin/add-student-roster", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, period: periodSel, user_id }),
-              });
-            } catch (err) {
-              // Non-fatal — roster can be reconciled by admins or teachers.
-              console.error("Failed to add student roster entry:", err);
+            const name = `${firstName.trim()} ${lastName.trim()}`;
+            const user_id = signUpData?.user?.id as string | undefined;
+
+            if (!user_id) {
+              setError("Account created, but Supabase did not return a user id for the roster link.");
+              return;
+            }
+
+            const rosterResp = await fetch("/api/admin/add-student-roster", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name,
+                period: periodSel,
+                user_id,
+                email,
+              }),
+            });
+
+            if (!rosterResp.ok) {
+              const data = await rosterResp.json().catch(() => ({}));
+              const msg = (data && (data.error?.message ?? data.error)) ?? "Failed to add student to roster.";
+              setError(`Account created, but roster setup failed: ${String(msg)}`);
+              return;
             }
           }
-        }
 
-        // Previously we auto-inserted a students row for new student signups.
-        // That behavior can cause unexpected re-creation of rows after you've
-        // manually cleared the DB. Gate this behind an explicit public env var
-        // so it's opt-in for development workflows.
-        try {
-          if (role === "Student" && process.env.NEXT_PUBLIC_AUTO_ADD_STUDENTS === "true") {
-            const studentName = `${firstName.trim()} ${lastName.trim()}`;
-            await createSupabaseBrowserClient()
-              .from("students")
-              .insert({ name: studentName, period: periodSel });
-          }
-        } catch (err) {
-          // Non-fatal; we'll surface signup success above. Admins can reconcile students later.
-          console.error("Failed to insert student roster entry:", err);
+          setMessage("Verification email sent. Check your Bentonville email and verify the link.");
         }
       }
     } catch (err: unknown) {

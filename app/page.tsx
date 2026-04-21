@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -27,6 +28,8 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const supabase = createSupabaseBrowserClient();
 
   const refresh = useCallback(() => {
@@ -58,15 +61,53 @@ function DashboardContent() {
     };
   }, [period, tick]);
 
-  const handleCheckIn = async (checkoutId: string) => {
-    setCheckingIn(checkoutId);
-    const { error: updateError } = await supabase
-      .from("checkouts")
-      .update({ checked_in_at: new Date().toISOString() })
-      .eq("id", checkoutId);
+  useEffect(() => {
+    let mounted = true;
 
-    if (updateError) {
-      alert("Check-in failed: " + updateError.message);
+    (async () => {
+      const res = await supabase.auth.getUser();
+      const user = res.data.user ?? null;
+      if (!mounted) return;
+      setCurrentUser(user);
+
+      if (user?.user_metadata?.role === "Student") {
+        const found = (await supabase
+          .from("students")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle()) as { data?: { id?: string } | null } | null;
+
+        if (mounted) setOwnStudentId(found?.data?.id ?? null);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
+
+  const handleCheckIn = async (checkoutId: string) => {
+    if (currentUser?.user_metadata?.role === "Student") {
+      const checkout = (checkouts ?? []).find((c) => c.id === checkoutId);
+      if (!checkout || checkout.student_id !== ownStudentId) {
+        alert("You can only check in equipment you checked out.");
+        return;
+      }
+    }
+
+    setCheckingIn(checkoutId);
+    const checkInResp = await fetch("/api/checkouts/check-in", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checkoutId }),
+    });
+
+    if (!checkInResp.ok) {
+      const data = await checkInResp.json().catch(() => ({}));
+      const msg = (data && (data.error?.message ?? data.error)) ?? "Check-in failed.";
+      alert("Check-in failed: " + String(msg));
     } else {
       refresh();
     }
@@ -74,7 +115,9 @@ function DashboardContent() {
   };
 
   const loading = checkouts === null && error === null;
-  const list = checkouts ?? [];
+  const list = currentUser?.user_metadata?.role === "Student"
+    ? (checkouts ?? []).filter((c) => c.student_id === ownStudentId)
+    : checkouts ?? [];
   const totalItemsOut = list.reduce((sum, c) => sum + c.quantity, 0);
   const studentsWithCheckouts = new Set(list.map((c) => c.student_id)).size;
 
