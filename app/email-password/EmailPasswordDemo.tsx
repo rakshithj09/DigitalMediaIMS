@@ -240,7 +240,11 @@ export default function EmailPasswordDemo({ user }: Props) {
               />
             </div>
 
-            <button type="submit" disabled={loading} className="w-full btn-primary">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold rounded-lg transition-colors text-sm"
+            >
               {loading ? (mode === "signIn" ? "Signing in…" : "Creating…") : mode === "signIn" ? "Sign in" : "Create account"}
             </button>
 
