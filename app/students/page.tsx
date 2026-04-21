@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
 import { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -9,6 +10,7 @@ import { Student } from "@/app/lib/types";
 
 function StudentsContent() {
   const { period } = usePeriod();
+  const router = useRouter();
   const [students, setStudents] = useState<Student[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -21,6 +23,7 @@ function StudentsContent() {
   // Add form state
   const [showAdd, setShowAdd] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authResolved, setAuthResolved] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [newStudentId, setNewStudentId] = useState("");
@@ -33,6 +36,12 @@ function StudentsContent() {
   // Initialize newPeriod when opening the add form instead of calling setState synchronously in an effect
 
   useEffect(() => {
+    if (!authResolved) return;
+    if (currentUser?.user_metadata?.role === "Student") {
+      queueMicrotask(() => setStudents([]));
+      return;
+    }
+
     let cancelled = false;
 
     createSupabaseBrowserClient()
@@ -50,7 +59,7 @@ function StudentsContent() {
     return () => {
       cancelled = true;
     };
-  }, [period, tick]);
+  }, [authResolved, currentUser, period, tick]);
 
   useEffect(() => {
     let mounted = true;
@@ -58,16 +67,31 @@ function StudentsContent() {
       try {
         const res = await createSupabaseBrowserClient().auth.getUser();
         if (!mounted) return;
-        setCurrentUser(res.data.user ?? null);
+        const user = res.data.user ?? null;
+        setCurrentUser(user);
+        if (user?.user_metadata?.role === "Student") {
+          router.replace("/checkout");
+        }
       } catch {
         // ignore
+      } finally {
+        if (mounted) setAuthResolved(true);
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [router]);
+
+  if (!authResolved || currentUser?.user_metadata?.role === "Student") {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 className="text-xl font-semibold text-gray-900">Students</h2>
+        <p className="text-gray-500 text-sm mt-2">Redirecting to checkout…</p>
+      </div>
+    );
+  }
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();

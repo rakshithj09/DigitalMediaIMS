@@ -15,6 +15,8 @@ const NAV_LINKS = [
   { href: "/history", label: "History" },
 ];
 
+const STUDENT_NAV_HREFS = new Set(["/", "/equipment", "/checkout"]);
+
 function Shell({
   user,
   children,
@@ -25,6 +27,7 @@ function Shell({
   onLogout: () => void;
 }) {
   const { period, setPeriod } = usePeriod();
+  const router = useRouter();
   const pathname = usePathname();
   const role = (user as unknown as { user_metadata?: { role?: string; period?: string } }).user_metadata?.role;
   const userPeriod = (user as unknown as { user_metadata?: { period?: string } }).user_metadata?.period as "AM" | "PM" | undefined;
@@ -35,6 +38,12 @@ function Shell({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, userPeriod]);
+
+  useEffect(() => {
+    if (role === "Student" && !STUDENT_NAV_HREFS.has(pathname)) {
+      router.replace("/checkout");
+    }
+  }, [role, pathname, router]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--brand-bg)" }}>
@@ -100,8 +109,7 @@ function Shell({
           <div className="px-4 pb-3 text-xs uppercase tracking-wide text-muted">Navigation</div>
           {(() => {
             const role = (user as unknown as { user_metadata?: { role?: string } }).user_metadata?.role;
-            const allowedForStudent = new Set(["/", "/equipment", "/checkout"]);
-            const links = role === "Student" ? NAV_LINKS.filter((l) => allowedForStudent.has(l.href)) : NAV_LINKS;
+            const links = role === "Student" ? NAV_LINKS.filter((l) => STUDENT_NAV_HREFS.has(l.href)) : NAV_LINKS;
             return links.map(({ href, label }) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
               return (

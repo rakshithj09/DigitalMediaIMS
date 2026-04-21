@@ -15,6 +15,7 @@ function CheckoutContent() {
   const [equipment, setEquipment] = useState<EquipmentWithAvail[]>([]);
   const [activeCheckouts, setActiveCheckouts] = useState<Checkout[] | null>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [authResolved, setAuthResolved] = useState(false);
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => {
     setActiveCheckouts(null);
@@ -26,6 +27,7 @@ function CheckoutContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [ownStudentName, setOwnStudentName] = useState<string | null>(null);
+  const [ownStudentPeriod, setOwnStudentPeriod] = useState<"AM" | "PM" | null>(null);
   const [equipmentId, setEquipmentId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [notes, setNotes] = useState("");
@@ -36,57 +38,8 @@ function CheckoutContent() {
   // Check-in
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [returnNotes, setReturnNotes] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-
-    Promise.all([
-      createSupabaseBrowserClient()
-        .from("students")
-        .select("id, name, student_id, user_id, email, period, is_active, created_at")
-        .eq("period", period)
-        .eq("is_active", true)
-        .order("name"),
-      createSupabaseBrowserClient()
-        .from("equipment")
-        .select("*")
-        .eq("is_active", true)
-        .order("name"),
-      createSupabaseBrowserClient()
-        .from("checkouts")
-        .select("equipment_id, quantity")
-        .is("checked_in_at", null),
-      createSupabaseBrowserClient()
-        .from("checkouts")
-        .select(
-          `id, student_id, equipment_id, quantity, checked_out_at, notes, period,
-           student:students(id, name, student_id),
-           equipment:equipment(id, name, category)`
-        )
-        .is("checked_in_at", null)
-        .eq("period", period)
-        .order("checked_out_at", { ascending: false }),
-    ]).then(([{ data: stuData }, { data: eqData }, { data: coSums }, { data: coData }]) => {
-      if (cancelled) return;
-  setStudents((stuData as Student[]) ?? []);
-
-      const checkedOutMap = new Map<string, number>();
-      (coSums ?? []).forEach((c: { equipment_id: string; quantity: number }) => {
-        checkedOutMap.set(c.equipment_id, (checkedOutMap.get(c.equipment_id) ?? 0) + c.quantity);
-      });
-      const withAvail = ((eqData ?? []) as Equipment[]).map((e) => ({
-        ...e,
-        available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
-      }));
-      setEquipment(withAvail);
-      setActiveCheckouts((coData as unknown as Checkout[]) ?? []);
-      setLoadingData(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [period, tick]);
+  const currentRole = (currentUser as unknown as { user_metadata?: { role?: string } })?.user_metadata?.role;
+  const checkoutPeriod = currentRole === "Student" && ownStudentPeriod ? ownStudentPeriod : period;
 
   useEffect(() => {
     const eq = new URLSearchParams(window.location.search).get("eq");
@@ -111,28 +64,109 @@ function CheckoutContent() {
             .eq("user_id", u.id)
             .eq("is_active", true)
             .limit(1)
-            .maybeSingle()) as { data?: { id?: string; name?: string } | null; error?: unknown } | null;
+            .maybeSingle()) as { data?: { id?: string; name?: string; period?: string } | null; error?: unknown } | null;
           if (!mounted) return;
           const foundId = found?.data?.id;
           if (foundId) {
             setStudentId(foundId);
             setOwnStudentId(foundId);
             setOwnStudentName(found.data?.name ?? null);
+            setOwnStudentPeriod(found.data?.period === "PM" ? "PM" : "AM");
           }
         }
       } catch {
         // ignore
+      } finally {
+        if (mounted) setAuthResolved(true);
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, [period]);
+  }, []);
+
+  useEffect(() => {
+    if (!authResolved) return;
+
+    let cancelled = false;
+    const isStudent = currentRole === "Student";
+
+    if (isStudent && !ownStudentId) {
+      queueMicrotask(() => {
+        setStudents([]);
+        setEquipment([]);
+        setActiveCheckouts([]);
+        setLoadingData(false);
+      });
+      return;
+    }
+
+    queueMicrotask(() => setLoadingData(true));
+
+    const studentsQuery = createSupabaseBrowserClient()
+      .from("students")
+      .select("id, name, student_id, user_id, email, period, is_active, created_at")
+      .eq("is_active", true)
+      .order("name");
+
+    if (isStudent && ownStudentId) {
+      studentsQuery.eq("id", ownStudentId);
+    } else {
+      studentsQuery.eq("period", checkoutPeriod);
+    }
+
+    const activeCheckoutsQuery = createSupabaseBrowserClient()
+      .from("checkouts")
+      .select(
+        `id, student_id, equipment_id, quantity, checked_out_at, notes, period,
+         student:students(id, name, student_id),
+         equipment:equipment(id, name, category)`
+      )
+      .is("checked_in_at", null)
+      .eq("period", checkoutPeriod)
+      .order("checked_out_at", { ascending: false });
+
+    if (isStudent && ownStudentId) {
+      activeCheckoutsQuery.eq("student_id", ownStudentId);
+    }
+
+    Promise.all([
+      studentsQuery,
+      createSupabaseBrowserClient()
+        .from("equipment")
+        .select("*")
+        .eq("is_active", true)
+        .order("name"),
+      createSupabaseBrowserClient()
+        .from("checkouts")
+        .select("equipment_id, quantity")
+        .is("checked_in_at", null),
+      activeCheckoutsQuery,
+    ]).then(([{ data: stuData }, { data: eqData }, { data: coSums }, { data: coData }]) => {
+      if (cancelled) return;
+      setStudents((stuData as Student[]) ?? []);
+
+      const checkedOutMap = new Map<string, number>();
+      (coSums ?? []).forEach((c: { equipment_id: string; quantity: number }) => {
+        checkedOutMap.set(c.equipment_id, (checkedOutMap.get(c.equipment_id) ?? 0) + c.quantity);
+      });
+      const withAvail = ((eqData ?? []) as Equipment[]).map((e) => ({
+        ...e,
+        available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
+      }));
+      setEquipment(withAvail);
+      setActiveCheckouts((coData as unknown as Checkout[]) ?? []);
+      setLoadingData(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authResolved, checkoutPeriod, currentRole, ownStudentId, period, tick]);
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const maxQty = selectedEquipment?.available ?? 0;
-  const currentRole = (currentUser as unknown as { user_metadata?: { role?: string } })?.user_metadata?.role;
   const visibleActiveCheckouts = (activeCheckouts ?? []).filter((c) => {
     if (currentRole === "Student") return c.student_id === ownStudentId;
     return true;
@@ -212,7 +246,7 @@ function CheckoutContent() {
         <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
         <p className="text-gray-500 text-sm mt-1">
           Check equipment in or out for{" "}
-          <span className="font-semibold text-blue-700">{period} period</span>
+          <span className="font-semibold text-blue-700">{checkoutPeriod} period</span>
         </p>
       </div>
 
@@ -266,7 +300,7 @@ function CheckoutContent() {
                       ))}
                     </select>
                     {students.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1">No students in {period} roster. Add students first.</p>
+                      <p className="text-xs text-amber-600 mt-1">No students in {checkoutPeriod} roster. Add students first.</p>
                     )}
                   </>
                 )}
@@ -344,7 +378,7 @@ function CheckoutContent() {
           {activeCheckouts === null ? (
             <p className="text-gray-400 text-sm">Loading…</p>
           ) : visibleActiveCheckouts.length === 0 ? (
-            <p className="text-gray-400 text-sm">No active checkouts for {period} period.</p>
+            <p className="text-gray-400 text-sm">No active checkouts for {checkoutPeriod} period.</p>
           ) : (
             <div className="space-y-3">
               {visibleActiveCheckouts.map((c) => (
