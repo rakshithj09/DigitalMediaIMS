@@ -240,25 +240,35 @@ function CheckoutContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="co-student">
                   Student <span className="text-red-500">*</span>
                 </label>
-                <select
-                  id="co-student"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  disabled={!!ownStudentId}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="">Select a student…</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}{s.student_id ? ` (${s.student_id})` : ""}
-                    </option>
-                  ))}
-                </select>
-                {students.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1">No students in {period} roster. Add students first.</p>
-                )}
-                {ownStudentId && (
-                  <p className="text-xs text-gray-500 mt-1">You are checked in as{` `}{students.find(s => s.id === ownStudentId)?.name ?? "your student"} and can only checkout for yourself.</p>
+                {/* If this browser session belongs to a Student, show their name and
+                    prevent changing the selected student. Otherwise show the full
+                    roster select. */}
+                {ownStudentId ? (
+                  <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-black bg-gray-50">
+                    {students.find((s) => s.id === ownStudentId)?.name ?? "Your student"}
+                    <div className="text-xs text-gray-500 mt-1">You can only checkout for yourself.</div>
+                    {/* Keep a hidden input so the form submission still references studentId */}
+                    <input type="hidden" value={ownStudentId} />
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      id="co-student"
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="">Select a student…</option>
+                      {students.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}{s.student_id ? ` (${s.student_id})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {students.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">No students in {period} roster. Add students first.</p>
+                    )}
+                  </>
                 )}
               </div>
 

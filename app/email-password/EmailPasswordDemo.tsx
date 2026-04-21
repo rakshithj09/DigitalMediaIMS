@@ -29,26 +29,15 @@ export default function EmailPasswordDemo({ user }: Props) {
   // Short-term client-side teacher verification code. Server-side validation
   // is recommended for production—this is a convenience per request.
   const TEACHER_VERIFICATION_CODE = "2015";
-  // Map known Supabase/signup error messages to friendlier UI messages.
-  const SIGNUP_ERROR_MAP: Record<string, string> = {
-    // Supabase sometimes returns this raw message when too many verification emails
-    // have been requested in a short period. Map it to a clearer instruction.
-    "email rate limit exceeded":
-      "Too many verification emails were sent. Please wait a few minutes before trying again, or contact an administrator.",
-  };
-
+  // Return the raw Supabase signup error message (do not map rate-limit to a
+  // custom friendlier string). The caller can display whatever message the
+  // Supabase client returns so behavior is predictable and not rate-limited by
+  // this client-side mapping.
   const getFriendlySignupMessage = (err: unknown) => {
     if (!err) return "Sign-up failed";
     // Supabase error objects usually have a `message` property.
     const msg = (err as { message?: unknown }).message;
-    if (typeof msg === "string") {
-      const lower = msg.toLowerCase();
-      // Exact-match map first, then fallback to substring checks.
-      if (SIGNUP_ERROR_MAP[lower]) return SIGNUP_ERROR_MAP[lower];
-      if (lower.includes("rate limit"))
-        return "Too many requests. Please wait a few minutes before trying again.";
-      return msg;
-    }
+    if (typeof msg === "string") return msg;
     return String(err);
   };
 
@@ -109,15 +98,37 @@ export default function EmailPasswordDemo({ user }: Props) {
         if (role === "Student") metadata.period = periodSel;
         if (role === "Teacher") metadata.teacher_code = teacherCode.trim();
 
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: metadata,
           },
         });
-  if (signUpError) setError(getFriendlySignupMessage(signUpError));
-        else setMessage("Verification email sent. Check your Bentonville email and verify the link.");
+        if (signUpError) {
+          setError(getFriendlySignupMessage(signUpError));
+        } else {
+          setMessage("Verification email sent. Check your Bentonville email and verify the link.");
+
+          // After a successful student signup, attempt to create a minimal roster
+          // entry so the new student appears in lists (name + period). This calls
+          // a server-only route that uses the service role key to avoid client
+          // schema mismatches.
+          if (role === "Student") {
+            try {
+              const name = `${firstName.trim()} ${lastName.trim()}`;
+              const user_id = signUpData?.user?.id as string | undefined;
+              await fetch("/api/admin/add-student-roster", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, period: periodSel, user_id }),
+              });
+            } catch (err) {
+              // Non-fatal — roster can be reconciled by admins or teachers.
+              console.error("Failed to add student roster entry:", err);
+            }
+          }
+        }
 
         // Previously we auto-inserted a students row for new student signups.
         // That behavior can cause unexpected re-creation of rows after you've
