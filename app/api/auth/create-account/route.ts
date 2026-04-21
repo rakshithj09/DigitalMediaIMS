@@ -8,6 +8,7 @@ type Body = {
   lastName?: string;
   role?: "Teacher" | "Student";
   period?: "AM" | "PM";
+  studentId?: string;
   teacherCode?: string;
 };
 
@@ -60,13 +61,21 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-async function ensureStudentRosterRow(user: User, firstName: string, lastName: string, email: string, period: "AM" | "PM") {
+async function ensureStudentRosterRow(
+  user: User,
+  firstName: string,
+  lastName: string,
+  email: string,
+  period: "AM" | "PM",
+  studentId: string
+) {
   const admin = getSupabaseAdminClient();
   if (!admin) throw new Error("Server is missing Supabase service configuration.");
 
   const studentBody = {
     name: `${firstName} ${lastName}`,
     period,
+    student_id: studentId,
     email,
     user_id: user.id,
     is_active: true,
@@ -108,6 +117,7 @@ export async function POST(req: Request) {
   const lastName = cleanString(body.lastName);
   const role = body.role;
   const period = body.period;
+  const studentId = cleanString(body.studentId);
 
   if (!email || !password || !firstName || !lastName || !role) {
     return NextResponse.json({ error: "Email, password, name, and role are required." }, { status: 400 });
@@ -121,6 +131,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Students must select AM or PM period." }, { status: 400 });
   }
 
+  if (role === "Student" && !studentId) {
+    return NextResponse.json({ error: "Student ID is required for student accounts." }, { status: 400 });
+  }
+
+  if (studentId.length > 20) {
+    return NextResponse.json({ error: "Student ID must be 20 characters or fewer." }, { status: 400 });
+  }
+
   if (role === "Teacher" && cleanString(body.teacherCode) !== TEACHER_VERIFICATION_CODE) {
     return NextResponse.json({ error: "Invalid teacher verification code." }, { status: 403 });
   }
@@ -132,6 +150,7 @@ export async function POST(req: Request) {
   };
 
   if (role === "Student" && period) metadata.period = period;
+  if (role === "Student" && studentId) metadata.student_id = studentId;
 
   const { data: createdData, error: createError } = await admin.auth.admin.createUser({
     email,
@@ -162,7 +181,7 @@ export async function POST(req: Request) {
       if (period !== "AM" && period !== "PM") {
         return NextResponse.json({ error: "Students must select AM or PM period." }, { status: 400 });
       }
-      await ensureStudentRosterRow(user, firstName, lastName, email, period);
+      await ensureStudentRosterRow(user, firstName, lastName, email, period, studentId);
     }
   } catch (err) {
     return NextResponse.json(

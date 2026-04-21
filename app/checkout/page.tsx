@@ -280,7 +280,6 @@ function CheckoutContent() {
                 {ownStudentId ? (
                   <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-black bg-gray-50">
                     {ownStudentName ?? students.find((s) => s.id === ownStudentId)?.name ?? "Your student"}
-                    <div className="text-xs text-gray-500 mt-1">You can only checkout for yourself.</div>
                     {/* Keep a hidden input so the form submission still references studentId */}
                     <input type="hidden" value={ownStudentId} />
                   </div>

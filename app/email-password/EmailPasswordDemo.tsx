@@ -16,6 +16,7 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [role, setRole] = useState<"Teacher" | "Student">("Student");
   const [periodSel, setPeriodSel] = useState<"AM" | "PM">("AM");
   const [teacherCode, setTeacherCode] = useState("");
@@ -46,6 +47,10 @@ export default function EmailPasswordDemo({ user }: Props) {
       }
       if (!role) {
         setError("Please select whether you are a Teacher or Student.");
+        return;
+      }
+      if (role === "Student" && !studentId.trim()) {
+        setError("Please provide your student ID.");
         return;
       }
       if (role === "Teacher") {
@@ -85,6 +90,7 @@ export default function EmailPasswordDemo({ user }: Props) {
             lastName,
             role,
             period: role === "Student" ? periodSel : undefined,
+            studentId: role === "Student" ? studentId.trim() : undefined,
             teacherCode: role === "Teacher" ? teacherCode.trim() : undefined,
           }),
         });
@@ -229,6 +235,21 @@ export default function EmailPasswordDemo({ user }: Props) {
                 )}
               </div>
             </div>
+            {mode === "signUp" && role === "Student" && (
+              <div>
+                <label htmlFor="studentId" className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+                <input
+                  id="studentId"
+                  type="text"
+                  required
+                  maxLength={20}
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="4000"
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
@@ -287,7 +308,7 @@ export default function EmailPasswordDemo({ user }: Props) {
           {message && <div className="mt-4 text-sm text-green-700">{message}</div>}
 
           <div className="mt-4 text-xs text-gray-500">
-            Accounts must use a Bentonville email (<kbd>@bentonvillek12.org</kbd>).
+            Accounts must use a Bentonville domain (<kbd>@bentonvillek12.org</kbd>).
           </div>
         </div>
       </div>
