@@ -201,7 +201,7 @@ export async function DELETE(req: Request) {
 
   const { data: student, error: lookupError } = await admin
     .from("students")
-    .select("id, user_id")
+    .select("id, user_id, email")
     .eq("id", body.id)
     .single();
 
@@ -210,22 +210,41 @@ export async function DELETE(req: Request) {
   }
 
   if (student?.user_id) {
+    const { error: profileByIdError } = await admin
+      .from("profiles")
+      .delete()
+      .eq("id", student.user_id);
+
+    if (profileByIdError && profileByIdError.code !== "42P01") {
+      return NextResponse.json({ error: profileByIdError.message }, { status: 400 });
+    }
+  }
+
+  if (student?.email) {
+    const { error: profileByEmailError } = await admin
+      .from("profiles")
+      .delete()
+      .eq("email", student.email);
+
+    if (profileByEmailError && profileByEmailError.code !== "42P01") {
+      return NextResponse.json({ error: profileByEmailError.message }, { status: 400 });
+    }
+  }
+
+  const { error: deleteStudentError } = await admin
+    .from("students")
+    .delete()
+    .eq("id", body.id);
+
+  if (deleteStudentError) {
+    return NextResponse.json({ error: deleteStudentError.message }, { status: 400 });
+  }
+
+  if (student?.user_id) {
     const { error: deleteAuthError } = await admin.auth.admin.deleteUser(student.user_id, false);
     if (deleteAuthError) {
       return NextResponse.json({ error: deleteAuthError.message }, { status: 400 });
     }
-  }
-
-  const { error: updateError } = await admin
-    .from("students")
-    .update({ is_active: false, user_id: null })
-    .eq("id", body.id);
-
-  if (updateError) {
-    return NextResponse.json(
-      { error: `Auth account was deleted, but roster removal failed: ${updateError.message}` },
-      { status: 500 }
-    );
   }
 
   return NextResponse.json({ ok: true });

@@ -162,6 +162,7 @@ function StudentsContent() {
     if (!resp.ok) {
       setDeleteError(String(data?.error?.message ?? data?.error ?? "Unable to delete student."));
     } else {
+      setStudents((current) => current?.filter((student) => student.id !== deletingStudent.id) ?? current);
       setDeletingStudent(null);
       setDeletePassword("");
       refresh();
