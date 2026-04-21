@@ -20,20 +20,16 @@ function StudentsContent() {
     setTick((t) => t + 1);
   }, []);
 
-  // Add form state
   const [showAdd, setShowAdd] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [newStudentId, setNewStudentId] = useState("");
-  // Period is no longer selected here; use the top-right selector value
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Initialize newPeriod when opening the add form instead of calling setState synchronously in an effect
 
   useEffect(() => {
     if (!authResolved) return;
@@ -56,9 +52,7 @@ function StudentsContent() {
         else setStudents((data as Student[]) ?? []);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [authResolved, currentUser, period, tick]);
 
   useEffect(() => {
@@ -79,16 +73,14 @@ function StudentsContent() {
       }
     })();
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [router]);
 
   if (!authResolved || currentUser?.user_metadata?.role === "Student") {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900">Students</h2>
-        <p className="text-gray-500 text-sm mt-2">Redirecting to checkout…</p>
+      <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid #e9eef5" }}>
+        <h2 className="text-xl font-semibold" style={{ color: "var(--ignite-navy)" }}>Students</h2>
+        <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>Redirecting to checkout…</p>
       </div>
     );
   }
@@ -106,8 +98,6 @@ function StudentsContent() {
       return;
     }
 
-    // Call server-side admin API to create an auth user and insert the students row.
-    // This requires SUPABASE_SERVICE_ROLE_KEY to be set on the server environment.
     try {
       const resp = await fetch("/api/admin/create-student", {
         method: "POST",
@@ -151,198 +141,273 @@ function StudentsContent() {
     else refresh();
   };
 
-  const filtered = (students ?? []).filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    (s.student_id ?? "").toLowerCase().includes(search.toLowerCase())
+  const filtered = (students ?? []).filter(
+    (s) =>
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      (s.student_id ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   const loading = students === null && error === null;
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+      {/* Page header */}
+      <div className="mb-7 flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Students</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            <span className="font-semibold text-blue-700">{period} period</span> roster
+          <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+            Students
+          </h2>
+          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+            <span
+              className="font-semibold px-2 py-0.5 rounded-full text-xs"
+              style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
+            >
+              {period} period
+            </span>{" "}
+            roster — {(students ?? []).length} student{(students ?? []).length !== 1 ? "s" : ""}
           </p>
         </div>
-        {/* Only show add student button to non-students (teachers/admins) */}
         {currentUser?.user_metadata?.role !== "Student" && (
           <button
-            onClick={() => {
-                  setShowAdd((v) => !v);
-                  setSaveError(null);
-                }}
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
+            className="btn-primary"
           >
-            {showAdd ? "Cancel" : "+ Add Student"}
+            {showAdd ? (
+              <>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+                Cancel
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Student
+              </>
+            )}
           </button>
         )}
       </div>
 
       {/* Add form */}
       {showAdd && (
-        <form
-          onSubmit={handleAdd}
-          className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm"
+        <div
+          className="bg-white rounded-2xl p-6 mb-6"
+          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
         >
-          <h3 className="font-semibold text-gray-800 mb-4">New Student</h3>
+          <h3 className="font-semibold text-base mb-5" style={{ color: "var(--ignite-navy)" }}>
+            New Student
+          </h3>
           {saveError && (
-            <p className="text-red-600 text-sm mb-3">{saveError}</p>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-first">
-                First name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="s-first"
-                type="text"
-                required
-                maxLength={60}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="First"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-last">
-                Last name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="s-last"
-                type="text"
-                required
-                maxLength={60}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Last"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            {/* Period removed from the add-student form; top-right selector controls the period */}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-sid">
-                Student ID <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="s-sid"
-                type="text"
-                required
-                maxLength={20}
-                value={newStudentId}
-                onChange={(e) => setNewStudentId(e.target.value)}
-                placeholder="4000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-email">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="s-email"
-                type="email"
-                required
-                maxLength={200}
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="student@bentonvillek12.org"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-password">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="s-password"
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Set a temporary password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">Teachers set a temp password — students should change it after first sign in.</p>
-            </div>
-          </div>
-          <div className="mt-4">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg transition-colors"
+            <div
+              className="mb-4 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
+              style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}
             >
-              {saving ? "Adding…" : "Add Student"}
-            </button>
-          </div>
-        </form>
+              <svg className="mt-0.5 shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {saveError}
+            </div>
+          )}
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="s-first" style={{ color: "#374151" }}>
+                  First name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="s-first"
+                  type="text"
+                  required
+                  maxLength={60}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First"
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="s-last" style={{ color: "#374151" }}>
+                  Last name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="s-last"
+                  type="text"
+                  required
+                  maxLength={60}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last"
+                  className="form-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="s-sid" style={{ color: "#374151" }}>
+                  Student ID <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="s-sid"
+                  type="text"
+                  required
+                  maxLength={20}
+                  value={newStudentId}
+                  onChange={(e) => setNewStudentId(e.target.value)}
+                  placeholder="40001"
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="s-email" style={{ color: "#374151" }}>
+                  Email <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="s-email"
+                  type="email"
+                  required
+                  maxLength={200}
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="student@bentonvillek12.org"
+                  className="form-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="s-password" style={{ color: "#374151" }}>
+                  Temporary password <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="s-password"
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Set a temp password"
+                  className="form-input"
+                />
+                <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
+                  Students should change this after first sign in.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <button type="submit" disabled={saving} className="btn-primary">
+                {saving ? (
+                  <>
+                    <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                      <path d="M12 2a10 10 0 0 1 10 10" />
+                    </svg>
+                    Adding…
+                  </>
+                ) : "Add Student"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* Search */}
       <div className="mb-4">
-        <input
-          type="search"
-          placeholder="Search by name or ID…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="Search students"
-        />
+        <div className="relative max-w-sm">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="15" height="15" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"
+          >
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Search by name or ID…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-input pl-9"
+            aria-label="Search students"
+          />
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div
+        className="bg-white rounded-2xl overflow-hidden"
+        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+      >
         {loading ? (
-          <div className="px-5 py-10 text-center text-gray-400 text-sm">Loading…</div>
+          <div className="px-6 py-16 text-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
+              <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            </div>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Loading students…</p>
+          </div>
         ) : error ? (
-          <div className="px-5 py-10 text-center text-red-500 text-sm">{error}</div>
+          <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
         ) : filtered.length === 0 ? (
-          <div className="px-5 py-10 text-center text-gray-400 text-sm">
-            {search ? "No students match your search." : `No active students in ${period} period.`}
+          <div className="px-6 py-16 text-center">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
+              <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+            </div>
+            <p className="font-medium text-sm" style={{ color: "#374151" }}>No students found</p>
+            <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+              {search ? "Try a different search." : `No active students in ${period} period.`}
+            </p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="px-5 py-3 text-left font-medium">Name</th>
-                <th className="px-5 py-3 text-left font-medium">Student ID</th>
-                <th className="px-5 py-3 text-left font-medium">Period</th>
-                <th className="px-5 py-3 text-left font-medium">Added</th>
-                <th className="px-5 py-3 text-left font-medium">Action</th>
+                <th>Name</th>
+                <th>Student ID</th>
+                <th>Period</th>
+                <th>Added</th>
+                <th>Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {filtered.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium text-gray-900">{s.name}</td>
-                  <td className="px-5 py-3 text-gray-500">{s.student_id ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                <tr key={s.id}>
+                  <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{s.name}</td>
+                  <td>
+                    <span className="font-mono text-sm" style={{ color: "#374151" }}>
+                      {s.student_id ?? <span style={{ color: "var(--muted)" }}>—</span>}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      className="badge"
+                      style={{ background: "var(--ignite-mint-dim)", color: "var(--ignite-teal)" }}
+                    >
                       {s.period}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-gray-500">
-                    {new Date(s.created_at).toLocaleDateString()}
+                  <td className="text-sm" style={{ color: "var(--muted)" }}>
+                    {new Date(s.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                   </td>
-                  <td className="px-5 py-3">
+                  <td>
                     {currentUser?.user_metadata?.role !== "Student" ? (
                       <button
                         onClick={() => handleDeactivate(s.id)}
-                        className="text-xs text-red-600 hover:text-red-800 font-medium"
+                        className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
+                        style={{ color: "#dc2626" }}
                       >
                         Remove
                       </button>
                     ) : (
-                      <span className="text-xs text-gray-400">—</span>
+                      <span style={{ color: "var(--muted)" }}>—</span>
                     )}
                   </td>
                 </tr>
@@ -352,7 +417,7 @@ function StudentsContent() {
         )}
       </div>
 
-      <p className="text-xs text-gray-400 mt-3">
+      <p className="text-xs mt-3" style={{ color: "var(--muted)" }}>
         Showing {filtered.length} of {(students ?? []).length} students
       </p>
     </div>
