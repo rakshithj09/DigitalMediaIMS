@@ -14,6 +14,11 @@ type CreateBody = {
 type UpdateBody = {
   id?: string;
   isActive?: boolean;
+  name?: string;
+  category?: string;
+  totalQuantity?: number;
+  serialNumber?: string | null;
+  conditionNotes?: string | null;
 };
 
 function getSupabaseAdminClient() {
@@ -107,9 +112,51 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Equipment id is required." }, { status: 400 });
   }
 
+  const update: Record<string, unknown> = {};
+
+  if (typeof body.isActive === "boolean") {
+    update.is_active = body.isActive;
+  }
+
+  if (body.name !== undefined) {
+    const name = body.name.trim();
+    if (!name) {
+      return NextResponse.json({ error: "Equipment name is required." }, { status: 400 });
+    }
+    update.name = name;
+  }
+
+  if (body.category !== undefined) {
+    const category = body.category.trim();
+    if (!EQUIPMENT_CATEGORIES.includes(category as (typeof EQUIPMENT_CATEGORIES)[number])) {
+      return NextResponse.json({ error: "Please select a valid equipment category." }, { status: 400 });
+    }
+    update.category = category;
+  }
+
+  if (body.totalQuantity !== undefined) {
+    const totalQuantity = Number(body.totalQuantity);
+    if (!Number.isInteger(totalQuantity) || totalQuantity < 1 || totalQuantity > 999) {
+      return NextResponse.json({ error: "Quantity must be between 1 and 999." }, { status: 400 });
+    }
+    update.total_quantity = totalQuantity;
+  }
+
+  if (body.serialNumber !== undefined) {
+    update.serial_number = body.serialNumber?.trim() || null;
+  }
+
+  if (body.conditionNotes !== undefined) {
+    update.condition_notes = body.conditionNotes?.trim() || null;
+  }
+
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ error: "No equipment changes were provided." }, { status: 400 });
+  }
+
   const { error } = await admin
     .from("equipment")
-    .update({ is_active: body.isActive ?? false })
+    .update(update)
     .eq("id", body.id);
 
   if (error) {

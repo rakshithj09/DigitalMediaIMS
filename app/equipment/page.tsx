@@ -37,6 +37,16 @@ function EquipmentContent() {
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [editingEquipment, setEditingEquipment] = useState<EquipmentWithAvail | null>(null);
+  const [editForm, setEditForm] = useState<typeof form>({
+    name: "",
+    category: EQUIPMENT_CATEGORIES[0],
+    total_quantity: "1",
+    serial_number: "",
+    condition_notes: "",
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -93,18 +103,21 @@ function EquipmentContent() {
     if (!form.name.trim()) { setSaveError("Name is required."); setSaving(false); return; }
     if (isNaN(qty) || qty < 1) { setSaveError("Quantity must be at least 1."); setSaving(false); return; }
 
-    const { error: insertError } = await createSupabaseBrowserClient()
-      .from("equipment")
-      .insert({
+    const resp = await fetch("/api/equipment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         name: form.name.trim(),
         category: form.category,
-        total_quantity: qty,
-        serial_number: form.serial_number.trim() || null,
-        condition_notes: form.condition_notes.trim() || null,
-      });
+        totalQuantity: qty,
+        serialNumber: form.serial_number.trim() || null,
+        conditionNotes: form.condition_notes.trim() || null,
+      }),
+    });
+    const data = await resp.json().catch(() => ({}));
 
-    if (insertError) {
-      setSaveError(insertError.message);
+    if (!resp.ok) {
+      setSaveError(String(data?.error?.message ?? data?.error ?? "Unable to add equipment."));
     } else {
       setForm({ name: "", category: EQUIPMENT_CATEGORIES[0], total_quantity: "1", serial_number: "", condition_notes: "" });
       setShowAdd(false);
@@ -115,12 +128,60 @@ function EquipmentContent() {
 
   const handleDeactivate = async (id: string) => {
     if (!confirm("Remove this item from inventory? Checkout history is preserved.")) return;
-    const { error: updateError } = await createSupabaseBrowserClient()
-      .from("equipment")
-      .update({ is_active: false })
-      .eq("id", id);
-    if (updateError) alert("Error: " + updateError.message);
+    const resp = await fetch("/api/equipment", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, isActive: false }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) alert("Error: " + String(data?.error?.message ?? data?.error ?? "Unable to remove equipment."));
     else refresh();
+  };
+
+  const openEdit = (item: EquipmentWithAvail) => {
+    setEditingEquipment(item);
+    setEditForm({
+      name: item.name,
+      category: item.category as (typeof EQUIPMENT_CATEGORIES)[number],
+      total_quantity: String(item.total_quantity),
+      serial_number: item.serial_number ?? "",
+      condition_notes: item.condition_notes ?? "",
+    });
+    setEditError(null);
+  };
+
+  const handleEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingEquipment) return;
+
+    const qty = parseInt(editForm.total_quantity, 10);
+    if (!editForm.name.trim()) { setEditError("Name is required."); return; }
+    if (isNaN(qty) || qty < 1) { setEditError("Quantity must be at least 1."); return; }
+
+    setEditSaving(true);
+    setEditError(null);
+
+    const resp = await fetch("/api/equipment", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingEquipment.id,
+        name: editForm.name.trim(),
+        category: editForm.category,
+        totalQuantity: qty,
+        serialNumber: editForm.serial_number.trim() || null,
+        conditionNotes: editForm.condition_notes.trim() || null,
+      }),
+    });
+    const data = await resp.json().catch(() => ({}));
+
+    if (!resp.ok) {
+      setEditError(String(data?.error?.message ?? data?.error ?? "Unable to update equipment."));
+    } else {
+      setEditingEquipment(null);
+      refresh();
+    }
+    setEditSaving(false);
   };
 
   const allCategories = ["All", ...EQUIPMENT_CATEGORIES];
@@ -288,6 +349,115 @@ function EquipmentContent() {
         </div>
       )}
 
+      {/* Edit form */}
+      {editingEquipment && (
+        <div
+          className="bg-white rounded-2xl p-6 mb-6"
+          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        >
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
+              Edit Equipment
+            </h3>
+            <button
+              type="button"
+              onClick={() => setEditingEquipment(null)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+            >
+              Cancel
+            </button>
+          </div>
+          {editError && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+              {editError}
+            </div>
+          )}
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-name" style={{ color: "#374151" }}>
+                  Name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="edit-eq-name"
+                  type="text"
+                  required
+                  maxLength={100}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-cat" style={{ color: "#374151" }}>
+                  Category
+                </label>
+                <select
+                  id="edit-eq-cat"
+                  value={editForm.category}
+                  onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value as (typeof EQUIPMENT_CATEGORIES)[number] }))}
+                  className="form-input"
+                >
+                  {EQUIPMENT_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-qty" style={{ color: "#374151" }}>
+                  Quantity <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="edit-eq-qty"
+                  type="number"
+                  required
+                  min={1}
+                  max={999}
+                  value={editForm.total_quantity}
+                  onChange={(e) => setEditForm((f) => ({ ...f, total_quantity: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-serial" style={{ color: "#374151" }}>
+                  Serial / Asset Tag
+                </label>
+                <input
+                  id="edit-eq-serial"
+                  type="text"
+                  maxLength={50}
+                  value={editForm.serial_number}
+                  onChange={(e) => setEditForm((f) => ({ ...f, serial_number: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-notes" style={{ color: "#374151" }}>
+                  Condition Notes
+                </label>
+                <input
+                  id="edit-eq-notes"
+                  type="text"
+                  maxLength={200}
+                  value={editForm.condition_notes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, condition_notes: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={editSaving}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: "var(--navy)" }}
+            >
+              {editSaving ? "Saving…" : "Save Changes"}
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">
         <div className="relative">
@@ -396,13 +566,22 @@ function EquipmentContent() {
                       </td>
                       <td>
                         {isTeacher ? (
-                          <button
-                            onClick={() => handleDeactivate(e.id)}
-                            className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
-                            style={{ color: "#dc2626" }}
-                          >
-                            Remove
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => openEdit(e)}
+                              className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
+                              style={{ color: "var(--ignite-navy)", background: "#e8f0fe" }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeactivate(e.id)}
+                              className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
+                              style={{ color: "#dc2626" }}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         ) : (
                           <Link
                             href={`/checkout?eq=${e.id}`}

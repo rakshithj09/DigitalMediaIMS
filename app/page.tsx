@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
@@ -110,12 +111,150 @@ function DashboardContent() {
   };
 
   const loading = checkouts === null && error === null;
+  const currentRole = currentUser?.user_metadata?.role;
   const list =
-    currentUser?.user_metadata?.role === "Student"
+    currentRole === "Student"
       ? (checkouts ?? []).filter((c) => c.student_id === ownStudentId)
       : checkouts ?? [];
   const totalItemsOut = list.reduce((sum, c) => sum + c.quantity, 0);
   const studentsWithCheckouts = new Set(list.map((c) => c.student_id)).size;
+
+  if (currentRole === "Student") {
+    const overdueCount = list.filter((c) => durationMs(c.checked_out_at) > 3 * 60 * 60 * 1000).length;
+    const oldestCheckout = list.reduce<Checkout | null>((oldest, c) => {
+      if (!oldest) return c;
+      return new Date(c.checked_out_at) < new Date(oldest.checked_out_at) ? c : oldest;
+    }, null);
+
+    return (
+      <div>
+        <div className="mb-7 flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+              My Equipment
+            </h2>
+            <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+              Your active checkouts for <span className="badge badge-period">{period} period</span>
+            </p>
+          </div>
+          <Link
+            href="/checkout"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+            style={{ background: "var(--navy)" }}
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
+            </svg>
+            Check Out Item
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <StatCard
+            label="Items You Have"
+            value={totalItemsOut}
+            icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>}
+            iconBg="#e8f0fe"
+            iconColor="#1a3c78"
+            accentColor="#3b82f6"
+          />
+          <StatCard
+            label="Needs Attention"
+            value={overdueCount}
+            icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>}
+            iconBg="#fee2e2"
+            iconColor="#dc2626"
+            accentColor="#ef4444"
+          />
+          <StatCard
+            label={oldestCheckout ? "Oldest Checkout" : "Ready To Go"}
+            value={oldestCheckout ? Math.max(1, Math.floor(durationMs(oldestCheckout.checked_out_at) / 60000)) : 0}
+            suffix={oldestCheckout ? "m" : ""}
+            icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>}
+            iconBg="#dcfce7"
+            iconColor="#16a34a"
+            accentColor="#22c55e"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+          <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>What You Have Out</h3>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#e8f0fe", color: "#1a3c78" }}>
+                {list.length} active
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="px-6 py-16 text-center text-sm" style={{ color: "var(--muted)" }}>Loading your checkouts…</div>
+            ) : error ? (
+              <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
+            ) : list.length === 0 ? (
+              <div className="px-6 py-16 text-center">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
+                  <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <p className="font-medium text-sm" style={{ color: "#374151" }}>No equipment checked out</p>
+                <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>You are clear for {period} period.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {list.map((c) => {
+                  const ms = durationMs(c.checked_out_at);
+                  const overdue = ms > 3 * 60 * 60 * 1000;
+                  const warning = ms > 60 * 60 * 1000 && !overdue;
+
+                  return (
+                    <div key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{c.equipment?.name ?? "Equipment"}</p>
+                          <span className="badge badge-neutral">qty {c.quantity}</span>
+                          <span
+                            className="badge"
+                            style={overdue ? { background: "#fee2e2", color: "#dc2626" } : warning ? { background: "#fef9c3", color: "#ca8a04" } : { background: "#dcfce7", color: "#16a34a" }}
+                          >
+                            {overdue ? "Return soon" : warning ? "Keep track" : "Checked out"} · {timeAgo(c.checked_out_at)}
+                          </span>
+                        </div>
+                        {c.notes && <p className="text-sm mt-1 truncate" style={{ color: "var(--muted)" }}>{c.notes}</p>}
+                      </div>
+                      <button
+                        onClick={() => handleCheckIn(c.id)}
+                        disabled={checkingIn === c.id}
+                        className="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg"
+                        style={{ background: checkingIn === c.id ? "#d1fae5" : "#059669", color: checkingIn === c.id ? "#059669" : "white" }}
+                      >
+                        {checkingIn === c.id ? "Checking In…" : "Check In"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 h-fit" style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}>
+            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>Quick Actions</h3>
+            <div className="mt-4 grid gap-2">
+              <Link href="/equipment" className="px-3 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "#f8fafc", color: "var(--ignite-navy)" }}>
+                Browse available equipment
+              </Link>
+              <Link href="/checkout" className="px-3 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "#f8fafc", color: "var(--ignite-navy)" }}>
+                Check equipment in or out
+              </Link>
+            </div>
+            <p className="text-xs mt-4" style={{ color: "var(--muted)" }}>
+              Return items before leaving class unless your teacher tells you otherwise.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -320,6 +459,7 @@ function StatCard({
   iconBg,
   iconColor,
   accentColor,
+  suffix = "",
 }: {
   label: string;
   value: number;
@@ -327,6 +467,7 @@ function StatCard({
   iconBg: string;
   iconColor: string;
   accentColor: string;
+  suffix?: string;
 }) {
   return (
     <div
@@ -349,7 +490,7 @@ function StatCard({
         />
       </div>
       <p className="text-3xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.03em" }}>
-        {value}
+        {value}{suffix}
       </p>
       <p className="text-sm font-medium mt-1" style={{ color: "var(--muted)" }}>
         {label}

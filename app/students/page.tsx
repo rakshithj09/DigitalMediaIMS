@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { Student } from "@/app/lib/types";
+import { Period, Student } from "@/app/lib/types";
 
 function StudentsContent() {
   const { period } = usePeriod();
@@ -30,6 +30,10 @@ function StudentsContent() {
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", student_id: "", email: "", period: "AM" as Period });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authResolved) return;
@@ -133,12 +137,56 @@ function StudentsContent() {
 
   const handleDeactivate = async (id: string) => {
     if (!confirm("Remove this student from the roster? Their checkout history is preserved.")) return;
-    const { error: updateError } = await createSupabaseBrowserClient()
-      .from("students")
-      .update({ is_active: false })
-      .eq("id", id);
-    if (updateError) alert("Error: " + updateError.message);
+    const resp = await fetch("/api/admin/students", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, isActive: false }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) alert("Error: " + String(data?.error?.message ?? data?.error ?? "Unable to remove student."));
     else refresh();
+  };
+
+  const openEdit = (student: Student) => {
+    setEditingStudent(student);
+    setEditForm({
+      name: student.name,
+      student_id: student.student_id ?? "",
+      email: student.email ?? "",
+      period: student.period,
+    });
+    setEditError(null);
+  };
+
+  const handleEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+
+    setEditSaving(true);
+    setEditError(null);
+
+    const resp = await fetch("/api/admin/students", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingStudent.id,
+        userId: editingStudent.user_id ?? null,
+        name: editForm.name,
+        studentId: editForm.student_id,
+        email: editForm.email,
+        period: editForm.period,
+      }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      setEditError(String(data?.error?.message ?? data?.error ?? "Unable to update student."));
+    } else {
+      setEditingStudent(null);
+      refresh();
+    }
+
+    setEditSaving(false);
   };
 
   const filtered = (students ?? []).filter(
@@ -318,6 +366,101 @@ function StudentsContent() {
         </div>
       )}
 
+      {/* Edit form */}
+      {editingStudent && (
+        <div
+          className="bg-white rounded-2xl p-6 mb-6"
+          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        >
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
+              Edit Student
+            </h3>
+            <button
+              type="button"
+              onClick={() => setEditingStudent(null)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+            >
+              Cancel
+            </button>
+          </div>
+          {editError && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+              {editError}
+            </div>
+          )}
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-name" style={{ color: "#374151" }}>
+                  Full name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  required
+                  maxLength={120}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-sid" style={{ color: "#374151" }}>
+                  Student ID <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="edit-sid"
+                  type="text"
+                  required
+                  maxLength={20}
+                  value={editForm.student_id}
+                  onChange={(e) => setEditForm((f) => ({ ...f, student_id: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-period" style={{ color: "#374151" }}>
+                  Period
+                </label>
+                <select
+                  id="edit-period"
+                  value={editForm.period}
+                  onChange={(e) => setEditForm((f) => ({ ...f, period: e.target.value as Period }))}
+                  className="form-input"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-email" style={{ color: "#374151" }}>
+                  Email <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="edit-email"
+                  type="email"
+                  required
+                  maxLength={200}
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={editSaving}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: "var(--navy)" }}
+            >
+              {editSaving ? "Saving…" : "Save Changes"}
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Search */}
       <div className="mb-4">
         <div className="relative max-w-sm">
@@ -403,13 +546,22 @@ function StudentsContent() {
                     </td>
                     <td>
                       {currentUser?.user_metadata?.role !== "Student" ? (
-                        <button
-                          onClick={() => handleDeactivate(s.id)}
-                          className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
-                          style={{ color: "#dc2626" }}
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openEdit(s)}
+                            className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
+                            style={{ color: "var(--ignite-navy)", background: "#e8f0fe" }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeactivate(s.id)}
+                            className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
+                            style={{ color: "#dc2626" }}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       ) : (
                         <span style={{ color: "var(--muted)" }}>—</span>
                       )}
