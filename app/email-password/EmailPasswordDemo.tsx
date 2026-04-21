@@ -29,20 +29,6 @@ export default function EmailPasswordDemo({ user }: Props) {
   // Short-term client-side teacher verification code. Server-side validation
   // is recommended for production—this is a convenience per request.
   const TEACHER_VERIFICATION_CODE = "2015";
-  // Return the raw Supabase signup error message (do not map rate-limit to a
-  // custom friendlier string). The caller can display whatever message the
-  // Supabase client returns so behavior is predictable and not rate-limited by
-  // this client-side mapping.
-  const getFriendlySignupMessage = (err: unknown) => {
-    if (!err) return "Sign-up failed";
-    // Supabase error objects usually have a `message` property.
-    const msg = (err as { message?: unknown }).message;
-    if (typeof msg === "string") return msg;
-    return String(err);
-  };
-
-  
-
   const handleSubmit = async (ev?: React.FormEvent) => {
     ev?.preventDefault();
     setError(null);
@@ -89,55 +75,28 @@ export default function EmailPasswordDemo({ user }: Props) {
         if (signInError) setError(signInError.message ?? "Sign-in failed");
         else setMessage("Signed in successfully.");
       } else {
-        // Include first/last name and role-specific metadata at signup.
-        const metadata: Record<string, unknown> = {
-          first_name: firstName,
-          last_name: lastName,
-          role,
-        };
-        if (role === "Student") metadata.period = periodSel;
-        if (role === "Teacher") metadata.teacher_code = teacherCode.trim();
-
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: metadata,
-          },
+        const accountResp = await fetch("/api/auth/create-account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password,
+            firstName,
+            lastName,
+            role,
+            period: role === "Student" ? periodSel : undefined,
+            teacherCode: role === "Teacher" ? teacherCode.trim() : undefined,
+          }),
         });
-        if (signUpError) {
-          setError(getFriendlySignupMessage(signUpError));
-        } else {
-          if (role === "Student") {
-            const name = `${firstName.trim()} ${lastName.trim()}`;
-            const user_id = signUpData?.user?.id as string | undefined;
 
-            if (!user_id) {
-              setError("Account created, but Supabase did not return a user id for the roster link.");
-              return;
-            }
-
-            const rosterResp = await fetch("/api/admin/add-student-roster", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name,
-                period: periodSel,
-                user_id,
-                email,
-              }),
-            });
-
-            if (!rosterResp.ok) {
-              const data = await rosterResp.json().catch(() => ({}));
-              const msg = (data && (data.error?.message ?? data.error)) ?? "Failed to add student to roster.";
-              setError(`Account created, but roster setup failed: ${String(msg)}`);
-              return;
-            }
-          }
-
-          setMessage("Verification email sent. Check your Bentonville email and verify the link.");
+        if (!accountResp.ok) {
+          const data = await accountResp.json().catch(() => ({}));
+          const msg = (data && (data.error?.message ?? data.error)) ?? "Account creation failed.";
+          setError(String(msg));
+          return;
         }
+
+        setMessage("Account created. You can sign in now.");
       }
     } catch (err: unknown) {
       let msg = "An error occurred";
@@ -328,7 +287,7 @@ export default function EmailPasswordDemo({ user }: Props) {
           {message && <div className="mt-4 text-sm text-green-700">{message}</div>}
 
           <div className="mt-4 text-xs text-gray-500">
-            Accounts must use a Bentonville email (<kbd>@bentonvillek12.org</kbd>). After signup you will receive a verification email; verify to finish account creation.
+            Accounts must use a Bentonville email (<kbd>@bentonvillek12.org</kbd>).
           </div>
         </div>
       </div>
