@@ -119,12 +119,12 @@ export default function EmailPasswordDemo({ user }: Props) {
   if (signUpError) setError(getFriendlySignupMessage(signUpError));
         else setMessage("Verification email sent. Check your Bentonville email and verify the link.");
 
-        // If the user is a student, attempt to also create a students roster entry so
-        // their name appears in the class roster automatically. This uses the anon
-        // key and will succeed only if your Supabase table allows inserts from the
-        // client (or if you have server-side logic to reconcile post-confirmation).
+        // Previously we auto-inserted a students row for new student signups.
+        // That behavior can cause unexpected re-creation of rows after you've
+        // manually cleared the DB. Gate this behind an explicit public env var
+        // so it's opt-in for development workflows.
         try {
-          if (role === "Student") {
+          if (role === "Student" && process.env.NEXT_PUBLIC_AUTO_ADD_STUDENTS === "true") {
             const studentName = `${firstName.trim()} ${lastName.trim()}`;
             await createSupabaseBrowserClient()
               .from("students")

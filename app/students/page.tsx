@@ -5,7 +5,7 @@ import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { Student, Period } from "@/app/lib/types";
+import { Student } from "@/app/lib/types";
 
 function StudentsContent() {
   const { period } = usePeriod();
@@ -24,8 +24,9 @@ function StudentsContent() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [newStudentId, setNewStudentId] = useState("");
-  const [newPeriod, setNewPeriod] = useState<Period>(period);
+  // Period is no longer selected here; use the top-right selector value
   const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -81,29 +82,37 @@ function StudentsContent() {
       return;
     }
 
-    const name = `${f} ${l}`;
+    // Call server-side admin API to create an auth user and insert the students row.
+    // This requires SUPABASE_SERVICE_ROLE_KEY to be set on the server environment.
+    try {
+      const resp = await fetch("/api/admin/create-student", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: f,
+          last_name: l,
+          student_id: newStudentId.trim(),
+          email: newEmail.trim(),
+          password: newPassword,
+          period,
+        }),
+      });
 
-    const insertPayload: Record<string, unknown> = {
-      name,
-      student_id: newStudentId.trim() || null,
-      period: newPeriod,
-      is_active: true,
-    };
-    if (newEmail.trim()) insertPayload["email"] = newEmail.trim();
-
-    const { error: insertError } = await createSupabaseBrowserClient()
-      .from("students")
-      .insert(insertPayload);
-
-    if (insertError) {
-      setSaveError(insertError.message);
-    } else {
-      setFirstName("");
-      setLastName("");
-      setNewStudentId("");
-      setNewEmail("");
-      setShowAdd(false);
-      refresh();
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const msg = (data && (data.error?.message ?? data.error)) ?? JSON.stringify(data) ?? "Failed to create student";
+        setSaveError(String(msg));
+      } else {
+        setFirstName("");
+        setLastName("");
+        setNewStudentId("");
+        setNewEmail("");
+        setNewPassword("");
+        setShowAdd(false);
+        refresh();
+      }
+    } catch (err) {
+      setSaveError(String(err));
     }
     setSaving(false);
   };
@@ -138,13 +147,9 @@ function StudentsContent() {
         {currentUser?.user_metadata?.role !== "Student" && (
           <button
             onClick={() => {
-              setShowAdd((v) => {
-                const next = !v;
-                if (next) setNewPeriod(period);
-                return next;
-              });
-              setSaveError(null);
-            }}
+                  setShowAdd((v) => !v);
+                  setSaveError(null);
+                }}
             className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors"
           >
             {showAdd ? "Cancel" : "+ Add Student"}
@@ -193,30 +198,18 @@ function StudentsContent() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-period">
-                Period
-              </label>
-              <select
-                id="s-period"
-                value={newPeriod}
-                onChange={(e) => setNewPeriod(e.target.value as Period)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
-            </div>
+            {/* Period removed from the add-student form; top-right selector controls the period */}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-sid">
-                Student ID <span className="text-gray-400 font-normal">(optional)</span>
+                Student ID <span className="text-red-500">*</span>
               </label>
               <input
                 id="s-sid"
                 type="text"
+                required
                 maxLength={20}
                 value={newStudentId}
                 onChange={(e) => setNewStudentId(e.target.value)}
@@ -226,17 +219,36 @@ function StudentsContent() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-email">
-                Email <span className="text-gray-400 font-normal">(optional)</span>
+                Email <span className="text-red-500">*</span>
               </label>
               <input
                 id="s-email"
                 type="email"
+                required
                 maxLength={200}
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 placeholder="student@bentonvillek12.org"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-password">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="s-password"
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Set a temporary password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Teachers set a temp password — students should change it after first sign in.</p>
             </div>
           </div>
           <div className="mt-4">
