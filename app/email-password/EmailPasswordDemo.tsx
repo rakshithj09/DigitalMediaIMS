@@ -132,8 +132,8 @@ export default function EmailPasswordDemo({ user }: Props) {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(180deg, var(--brand-bg), #f7fbfb)' }}>
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-[var(--ignite-navy)]">Ignite IMS</h1>
-          <p className="kicker mt-1">Digital Media Equipment Tracker</p>
+          <h1 className="text-3xl font-bold text-[var(--ignite-navy)]">Ignite Digital Media</h1>
+          <p className="kicker mt-1">Equipment Tracker</p>
         </div>
 
         <div className="card">

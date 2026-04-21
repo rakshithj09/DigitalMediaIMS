@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ignite IMS — Digital Media Equipment Tracker",
+  title: "Ignite Digital Media — Equipment Tracker",
   description: "Track digital media equipment checkouts and returns for Ignite Professional Studies.",
 };
 

@@ -34,8 +34,8 @@ function Shell({
           <div className="brand-logo">
             {/* Place a logo at /public/ignite-logo.png to show here; fallback to text */}
             <div>
-              <div className="text-lg font-semibold">Ignite IMS</div>
-              <div className="kicker">Digital Media Equipment Tracker</div>
+              <div className="text-lg font-semibold">Ignite Digital Media</div>
+              <div className="kicker">Equipment Tracker</div>
             </div>
           </div>
         </div>
