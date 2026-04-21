@@ -58,7 +58,21 @@ function Shell({
             ))}
           </div>
 
-          <div className="text-sm text-white/90 hidden lg:inline truncate max-w-[220px]">{user.email}</div>
+          {/* Show first name + last initial (e.g. "Sam P.") falling back to email */}
+          <div className="text-sm text-white/90 hidden lg:inline truncate max-w-[220px]">
+            {(() => {
+              const meta = (user as unknown as { user_metadata?: { first_name?: string; last_name?: string } }).user_metadata ?? {};
+              const first = (meta.first_name ?? "").toString().trim();
+              const last = (meta.last_name ?? "").toString().trim();
+              if (first) return last ? `${first} ${last[0]}.` : first;
+              // fallback to email local part
+              try {
+                return user.email?.split("@")[0] ?? "";
+              } catch {
+                return "";
+              }
+            })()}
+          </div>
 
           <button onClick={onLogout} className="btn-ghost">Logout</button>
         </div>
