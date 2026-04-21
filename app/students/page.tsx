@@ -21,9 +21,11 @@ function StudentsContent() {
   // Add form state
   const [showAdd, setShowAdd] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [newName, setNewName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [newStudentId, setNewStudentId] = useState("");
   const [newPeriod, setNewPeriod] = useState<Period>(period);
+  const [newEmail, setNewEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -71,22 +73,35 @@ function StudentsContent() {
     setSaving(true);
     setSaveError(null);
 
-    const trimmedName = newName.trim();
-    if (!trimmedName) {
-      setSaveError("Name is required.");
+    const f = firstName.trim();
+    const l = lastName.trim();
+    if (!f || !l) {
+      setSaveError("First and last name are required.");
       setSaving(false);
       return;
     }
 
+    const name = `${f} ${l}`;
+
+    const insertPayload: Record<string, unknown> = {
+      name,
+      student_id: newStudentId.trim() || null,
+      period: newPeriod,
+      is_active: true,
+    };
+    if (newEmail.trim()) insertPayload["email"] = newEmail.trim();
+
     const { error: insertError } = await createSupabaseBrowserClient()
       .from("students")
-      .insert({ name: trimmedName, student_id: newStudentId.trim() || null, period: newPeriod });
+      .insert(insertPayload);
 
     if (insertError) {
       setSaveError(insertError.message);
     } else {
-      setNewName("");
+      setFirstName("");
+      setLastName("");
       setNewStudentId("");
+      setNewEmail("");
       setShowAdd(false);
       refresh();
     }
@@ -149,31 +164,32 @@ function StudentsContent() {
           )}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-name">
-                Name <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-first">
+                First name <span className="text-red-500">*</span>
               </label>
               <input
-                id="s-name"
+                id="s-first"
                 type="text"
                 required
-                maxLength={100}
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="First Last"
+                maxLength={60}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-sid">
-                Student ID <span className="text-gray-400 font-normal">(optional)</span>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-last">
+                Last name <span className="text-red-500">*</span>
               </label>
               <input
-                id="s-sid"
+                id="s-last"
                 type="text"
-                maxLength={20}
-                value={newStudentId}
-                onChange={(e) => setNewStudentId(e.target.value)}
-                placeholder="4000"
+                required
+                maxLength={60}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -190,6 +206,37 @@ function StudentsContent() {
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-sid">
+                Student ID <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                id="s-sid"
+                type="text"
+                maxLength={20}
+                value={newStudentId}
+                onChange={(e) => setNewStudentId(e.target.value)}
+                placeholder="4000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="s-email">
+                Email <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                id="s-email"
+                type="email"
+                maxLength={200}
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="student@bentonvillek12.org"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
           <div className="mt-4">

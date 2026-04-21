@@ -191,5 +191,3 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </PeriodProvider>
   );
 }
-
-
