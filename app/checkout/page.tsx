@@ -23,7 +23,7 @@ function CheckoutContent() {
 
   // Checkout form
   const [studentId, setStudentId] = useState("");
-  const [, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [equipmentId, setEquipmentId] = useState<string>(() => {
     try {
@@ -75,7 +75,7 @@ function CheckoutContent() {
         .order("checked_out_at", { ascending: false }),
     ]).then(([{ data: stuData }, { data: eqData }, { data: coSums }, { data: coData }]) => {
       if (cancelled) return;
-      setStudents((stuData as Student[]) ?? []);
+  setStudents((stuData as Student[]) ?? []);
 
       const checkedOutMap = new Map<string, number>();
       (coSums ?? []).forEach((c: { equipment_id: string; quantity: number }) => {
@@ -101,9 +101,9 @@ function CheckoutContent() {
     (async () => {
       try {
         const res = await createSupabaseBrowserClient().auth.getUser();
-        const u = res.data.user ?? null;
-        if (!mounted) return;
-        setCurrentUser(u);
+  const u = res.data.user ?? null;
+  if (!mounted) return;
+  setCurrentUser(u);
 
         const meta = (u as unknown as { user_metadata?: { first_name?: string; last_name?: string; role?: string } }).user_metadata ?? {};
         if (meta.role === "Student") {
@@ -123,6 +123,8 @@ function CheckoutContent() {
             if (foundId) {
               setStudentId(foundId);
               setOwnStudentId(foundId);
+              // Narrow students list to just the owning student for clarity
+              setStudents((prev) => (prev.filter((s) => s.id === foundId)));
             }
           }
         }
@@ -138,6 +140,11 @@ function CheckoutContent() {
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const maxQty = selectedEquipment?.available ?? 0;
+  const currentRole = (currentUser as unknown as { user_metadata?: { role?: string } })?.user_metadata?.role;
+  const visibleActiveCheckouts = (activeCheckouts ?? []).filter((c) => {
+    if (currentRole === "Student") return c.student_id === ownStudentId;
+    return true;
+  });
 
   const handleCheckout = async (e: FormEvent) => {
     e.preventDefault();
@@ -176,6 +183,15 @@ function CheckoutContent() {
   };
 
   const handleCheckIn = async (checkoutId: string) => {
+    // Ensure students can only check in their own items
+    if (currentRole === "Student") {
+      const co = (activeCheckouts ?? []).find((x) => x.id === checkoutId);
+      if (!co || co.student_id !== ownStudentId) {
+        alert("You can only check in items you have checked out.");
+        return;
+      }
+    }
+
     setCheckingIn(checkoutId);
     const { error: updateError } = await createSupabaseBrowserClient()
       .from("checkouts")
@@ -321,7 +337,7 @@ function CheckoutContent() {
             <p className="text-gray-400 text-sm">No active checkouts for {period} period.</p>
           ) : (
             <div className="space-y-3">
-              {activeCheckouts.map((c) => (
+              {visibleActiveCheckouts.map((c) => (
                 <div key={c.id} className="border border-gray-200 rounded-lg p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>

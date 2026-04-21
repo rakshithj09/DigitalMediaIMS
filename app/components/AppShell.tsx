@@ -26,6 +26,15 @@ function Shell({
 }) {
   const { period, setPeriod } = usePeriod();
   const pathname = usePathname();
+  const role = (user as unknown as { user_metadata?: { role?: string; period?: string } }).user_metadata?.role;
+  const userPeriod = (user as unknown as { user_metadata?: { period?: string } }).user_metadata?.period as "AM" | "PM" | undefined;
+
+  useEffect(() => {
+    if (role === "Student" && (userPeriod === "AM" || userPeriod === "PM")) {
+      setPeriod(userPeriod);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, userPeriod]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--brand-bg)" }}>
@@ -41,22 +50,30 @@ function Shell({
         </div>
 
         <div className="flex items-center gap-4">
-          <div role="group" aria-label="Class period selector" className="flex overflow-hidden rounded-lg border border-transparent">
-            {(["AM", "PM"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                aria-pressed={period === p}
-                className={`px-4 py-1.5 text-sm font-semibold transition-colors ${
-                  period === p
-                    ? "bg-white text-[var(--ignite-navy)]"
-                    : "text-white/90 hover:bg-white/10"
-                } rounded`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+          {/* If the current user is a Student, lock the period to their saved period
+              and show a static label. Teachers can still toggle AM/PM. */}
+          {role === "Student" ? (
+            <div className="px-3 py-1.5 text-sm font-semibold text-white/90">
+              {userPeriod ? `${userPeriod} period` : "Student"}
+            </div>
+          ) : (
+            <div role="group" aria-label="Class period selector" className="flex overflow-hidden rounded-lg border border-transparent">
+              {( ["AM", "PM"] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  aria-pressed={period === p}
+                  className={`px-4 py-1.5 text-sm font-semibold transition-colors ${
+                    period === p
+                      ? "bg-white text-[var(--ignite-navy)]"
+                      : "text-white/90 hover:bg-white/10"
+                  } rounded`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Show first name + last initial (e.g. "Sam P.") falling back to email */}
           <div className="text-sm text-white/90 hidden lg:inline truncate max-w-[220px]">
@@ -174,3 +191,5 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </PeriodProvider>
   );
 }
+
+
