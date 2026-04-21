@@ -4,7 +4,7 @@ import { useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { User, Session } from "@supabase/supabase-js";
-import { createSupabaseBrowserClient } from "@/lip/supabase/browser-client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { PeriodProvider, usePeriod } from "@/app/lib/period-context";
 
 const NAV_LINKS = [

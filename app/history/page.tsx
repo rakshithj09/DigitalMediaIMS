@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/app/components/AppShell";
-import { createSupabaseBrowserClient } from "@/lip/supabase/browser-client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Checkout, Period } from "@/app/lib/types";
 
 function duration(start: string, end: string | null | undefined): string {

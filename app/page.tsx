@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
-import { createSupabaseBrowserClient } from "@/lip/supabase/browser-client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Checkout } from "@/app/lib/types";
 
 function timeAgo(iso: string): string {
