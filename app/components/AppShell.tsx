@@ -28,21 +28,20 @@ function Shell({
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="bg-blue-700 text-white px-6 py-3 flex items-center justify-between shadow-md z-10">
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-xl tracking-tight">Ignite IMS</span>
-          <span className="text-blue-300 text-sm hidden sm:inline">
-            · Digital Media Tracker
-          </span>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--brand-bg)" }}>
+      <header className="brand-header brand-topbar px-6 py-4 flex items-center justify-between shadow-md z-10">
+        <div className="flex items-center gap-4">
+          <div className="brand-logo">
+            {/* Place a logo at /public/ignite-logo.png to show here; fallback to text */}
+            <div>
+              <div className="text-lg font-semibold">Ignite IMS</div>
+              <div className="kicker">Digital Media Equipment Tracker</div>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div
-            className="flex rounded overflow-hidden border border-blue-500"
-            role="group"
-            aria-label="Class period selector"
-          >
+          <div role="group" aria-label="Class period selector" className="flex overflow-hidden rounded-lg border border-transparent">
             {(["AM", "PM"] as const).map((p) => (
               <button
                 key={p}
@@ -50,59 +49,48 @@ function Shell({
                 aria-pressed={period === p}
                 className={`px-4 py-1.5 text-sm font-semibold transition-colors ${
                   period === p
-                    ? "bg-white text-blue-700"
-                    : "hover:bg-blue-600 text-white"
-                }`}
+                    ? "bg-white text-[var(--ignite-navy)]"
+                    : "text-white/90 hover:bg-white/10"
+                } rounded`}
               >
                 {p}
               </button>
             ))}
           </div>
 
-          <span className="text-sm text-blue-200 hidden lg:inline truncate max-w-[200px]">
-            {user.email}
-          </span>
+          <div className="text-sm text-white/90 hidden lg:inline truncate max-w-[220px]">{user.email}</div>
 
-          <button
-            onClick={onLogout}
-            className="text-sm bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded transition-colors"
-          >
-            Logout
-          </button>
+          <button onClick={onLogout} className="btn-ghost">Logout</button>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <nav
-          className="w-48 shrink-0 bg-white border-r border-gray-200 py-2"
-          aria-label="Main navigation"
-        >
+        <nav className="w-56 shrink-0 bg-white border-r border-gray-100 py-4" aria-label="Main navigation">
+          <div className="px-4 pb-3 text-xs uppercase tracking-wide text-muted">Navigation</div>
           {(() => {
-            // Limit navigation for student users: students should only see Dashboard, Equipment, and Checkout
             const role = (user as unknown as { user_metadata?: { role?: string } }).user_metadata?.role;
             const allowedForStudent = new Set(["/", "/equipment", "/checkout"]);
             const links = role === "Student" ? NAV_LINKS.filter((l) => allowedForStudent.has(l.href)) : NAV_LINKS;
             return links.map(({ href, label }) => {
-            const active =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`block px-5 py-3 text-sm font-medium border-r-2 transition-colors ${
-                  active
-                    ? "bg-blue-50 text-blue-700 border-blue-700"
-                    : "text-gray-600 border-transparent hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                {label}
-              </Link>
-            );
+              const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`block px-6 py-3 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-[var(--ignite-navy)]/5 text-[var(--ignite-navy)] border-r-4 border-[var(--ignite-mint)]"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
             });
           })()}
         </nav>
 
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-8">{children}</main>
       </div>
     </div>
   );

@@ -113,14 +113,14 @@ export default function EmailPasswordDemo({ user }: Props) {
     };
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(180deg, var(--brand-bg), #f7fbfb)' }}>
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-            <h2 className="text-xl font-semibold">Welcome</h2>
-            <p className="mt-2 text-sm text-gray-600">Signed in as <strong>{user.email}</strong></p>
+          <div className="card text-center">
+            <h2 className="page-title">Welcome</h2>
+            <p className="kicker mt-2">Signed in as <strong>{user.email}</strong></p>
             <div className="mt-4 flex justify-center gap-3">
-              <button onClick={handleSignOut} className="px-4 py-2 rounded bg-red-600 text-white">Sign out</button>
-              <Link href="/" className="px-4 py-2 rounded bg-blue-600 text-white">Go to Dashboard</Link>
+              <button onClick={handleSignOut} className="btn-primary">Sign out</button>
+              <Link href="/" className="btn-primary" style={{ background: 'linear-gradient(180deg,var(--ignite-gold), #f0a800)' }}>Go to Dashboard</Link>
             </div>
           </div>
         </div>
@@ -129,15 +129,15 @@ export default function EmailPasswordDemo({ user }: Props) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(180deg, var(--brand-bg), #f7fbfb)' }}>
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-blue-700">Ignite IMS</h1>
-          <p className="text-gray-500 mt-1 text-sm">Digital Media Equipment Tracker</p>
+          <h1 className="text-3xl font-bold text-[var(--ignite-navy)]">Ignite IMS</h1>
+          <p className="kicker mt-1">Digital Media Equipment Tracker</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="card">
+          <h2 className="text-lg font-semibold text-[var(--ignite-navy)] mb-4">
             {mode === "signIn" ? "Sign in to your account" : "Create an account"}
           </h2>
 
@@ -159,7 +159,7 @@ export default function EmailPasswordDemo({ user }: Props) {
                     required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="form-input w-full text-sm text-black focus:outline-none focus:ring-2 focus:ring-[var(--ignite-teal)]"
                     placeholder="First name"
                   />
                 </div>
@@ -171,7 +171,7 @@ export default function EmailPasswordDemo({ user }: Props) {
                     required
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="form-input w-full text-sm text-black focus:outline-none focus:ring-2 focus:ring-[var(--ignite-teal)]"
                     placeholder="Last name"
                   />
                 </div>
@@ -216,7 +216,7 @@ export default function EmailPasswordDemo({ user }: Props) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="form-input w-full text-sm text-black focus:outline-none focus:ring-2 focus:ring-[var(--ignite-teal)]"
                 placeholder="you@bentonvillek12.org"
               />
             </div>
@@ -235,11 +235,7 @@ export default function EmailPasswordDemo({ user }: Props) {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-blue-700 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold rounded-lg transition-colors text-sm"
-            >
+            <button type="submit" disabled={loading} className="w-full btn-primary">
               {loading ? (mode === "signIn" ? "Signing in…" : "Creating…") : mode === "signIn" ? "Sign in" : "Create account"}
             </button>
 

@@ -5,6 +5,24 @@
   --foreground: #171717;
 }
 
+/* Ignite Professional Studies color system (from provided palette) */
+:root {
+  --ignite-navy: #002c51; /* primary */
+  --ignite-teal: #0097a4; /* accent */
+  --ignite-deep-teal: #00582e;
+  --ignite-deep: #0f2437;
+  --ignite-offwhite: #fafafa;
+  --ignite-gray: #6e7b87;
+  --ignite-mint: #07eccc3; /* light mint */
+  --ignite-gold: #f5b700; /* gold accent */
+  --ignite-amber: #e07a2d; /* orange accent */
+
+  --brand-bg: var(--ignite-offwhite);
+  --brand-fg: #052033;
+  --card-bg: #ffffff;
+  --muted: var(--ignite-gray);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -20,7 +38,71 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--brand-bg);
+  color: var(--brand-fg);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
+
+/* Brand utilities */
+.brand-header {
+  background: linear-gradient(180deg, var(--ignite-navy), var(--ignite-deep));
+  color: white;
+}
+
+.brand-topbar {
+  border-bottom: 4px solid var(--ignite-mint);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo img {
+  height: 44px;
+  width: auto;
+  display: block;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid rgba(2,8,23,0.06);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 6px 18px rgba(2,8,23,0.06);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg,var(--ignite-teal),#008b94);
+  color: white;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: white;
+  padding: 0.45rem 0.8rem;
+  border-radius: 8px;
+}
+
+.accent-gold { color: var(--ignite-gold); }
+.accent-amber { color: var(--ignite-amber); }
+
+.muted { color: var(--muted); }
+
+/* Form inputs */
+.form-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e6eef0;
+  border-radius: 8px;
+  background: white;
+}
+
+/* small helpers */
+.kicker { font-size: 0.85rem; color: var(--muted); }
+.page-title { font-size: 1.5rem; font-weight: 700; color: var(--ignite-navy); }
+
