@@ -370,53 +370,55 @@ function StudentsContent() {
             </p>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Student ID</th>
-                <th>Period</th>
-                <th>Added</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s) => (
-                <tr key={s.id}>
-                  <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{s.name}</td>
-                  <td>
-                    <span className="font-mono text-sm" style={{ color: "#374151" }}>
-                      {s.student_id ?? <span style={{ color: "var(--muted)" }}>—</span>}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className="badge"
-                      style={{ background: "#e8f0fe", color: "#1a3c78" }}
-                    >
-                      {s.period}
-                    </span>
-                  </td>
-                  <td className="text-sm" style={{ color: "var(--muted)" }}>
-                    {new Date(s.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                  </td>
-                  <td>
-                    {currentUser?.user_metadata?.role !== "Student" ? (
-                      <button
-                        onClick={() => handleDeactivate(s.id)}
-                        className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
-                        style={{ color: "#dc2626" }}
-                      >
-                        Remove
-                      </button>
-                    ) : (
-                      <span style={{ color: "var(--muted)" }}>—</span>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Student ID</th>
+                  <th>Period</th>
+                  <th>Added</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((s) => (
+                  <tr key={s.id}>
+                    <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{s.name}</td>
+                    <td>
+                      <span className="font-mono text-sm" style={{ color: "#374151" }}>
+                        {s.student_id ?? <span style={{ color: "var(--muted)" }}>—</span>}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className="badge"
+                        style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                      >
+                        {s.period}
+                      </span>
+                    </td>
+                    <td className="text-sm whitespace-nowrap" style={{ color: "var(--muted)" }}>
+                      {new Date(s.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                    </td>
+                    <td>
+                      {currentUser?.user_metadata?.role !== "Student" ? (
+                        <button
+                          onClick={() => handleDeactivate(s.id)}
+                          className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
+                          style={{ color: "#dc2626" }}
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <span style={{ color: "var(--muted)" }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

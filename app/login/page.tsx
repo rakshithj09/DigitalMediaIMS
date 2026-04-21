@@ -41,7 +41,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold" style={{ color: "var(--navy)" }}>Ignite Digital Media</h1>
+            <h1 className="text-xl font-bold" style={{ color: "var(--navy)" }}>Digital Media</h1>
             <p className="text-sm text-slate-500 mt-0.5">Equipment Tracker</p>
           </div>
         </div>
@@ -64,7 +64,7 @@ export default function LoginPage() {
               </label>
               <input id="email" type="email" autoComplete="email" required
                 value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@bentonvillek12.org"
+                placeholder="email@bentonvillek12.org"
                 className="w-full px-3 py-2.5 rounded-lg text-sm text-slate-900 bg-white placeholder:text-slate-400
                            border border-slate-200 focus:outline-none focus:border-[#002c51] focus:ring-2 focus:ring-[#002c51]/10"/>
             </div>

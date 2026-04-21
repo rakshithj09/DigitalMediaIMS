@@ -131,8 +131,18 @@ function CheckoutContent() {
       createSupabaseBrowserClient().from("equipment").select("*").eq("is_active", true).order("name"),
       createSupabaseBrowserClient().from("checkouts").select("equipment_id, quantity").is("checked_in_at", null),
       activeCheckoutsQuery,
-    ]).then(([{ data: stuData }, { data: eqData }, { data: coSums }, { data: coData }]) => {
+    ]).then(([{ data: stuData, error: stuError }, { data: eqData, error: eqError }, { data: coSums, error: sumsError }, { data: coData, error: coError }]) => {
       if (cancelled) return;
+      const loadError = stuError ?? eqError ?? sumsError ?? coError;
+      if (loadError) {
+        setSubmitError(loadError.message ?? "Unable to load checkout data.");
+        setStudents([]);
+        setEquipment([]);
+        setActiveCheckouts([]);
+        setLoadingData(false);
+        return;
+      }
+
       setStudents((stuData as Student[]) ?? []);
 
       const checkedOutMap = new Map<string, number>();
@@ -174,7 +184,7 @@ function CheckoutContent() {
     const checkoutResp = await fetch("/api/checkouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: finalStudentId, equipmentId, quantity: qty, notes, period }),
+      body: JSON.stringify({ studentId: finalStudentId, equipmentId, quantity: qty, notes, period: checkoutPeriod }),
     });
 
     if (!checkoutResp.ok) {

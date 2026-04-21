@@ -76,7 +76,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
     <div className="min-h-screen flex flex-col" style={{ background: "var(--brand-bg)" }}>
 
       {/* ── Header ────────────────────────────────────── */}
-      <header className="brand-header h-14 px-5 flex items-center justify-between z-20 sticky top-0">
+      <header className="brand-header min-h-14 px-3 sm:px-5 py-2 flex items-center justify-between gap-3 z-20 sticky top-0">
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
@@ -86,14 +86,14 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
               <polygon points="13,2 4,14 12,14 11,22 20,10 12,10" fill="#002c51"/>
             </svg>
           </div>
-          <div>
-            <p className="text-sm font-bold text-white leading-tight">Ignite Digital Media</p>
-            <p className="text-kicker">Equipment Tracker</p>
+          <div className="hidden sm:block min-w-0">
+            <p className="text-sm font-bold text-white leading-tight">Digital Media</p>
+            <p className="text-kicker hidden sm:block">Equipment Tracker</p>
           </div>
         </div>
 
         {/* Right controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {role === "Student" ? (
             <span className="text-xs font-semibold px-3 py-1 rounded-full"
               style={{ background: "rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.9)" }}>
@@ -105,7 +105,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
               style={{ background: "rgba(255,255,255,0.12)" }}>
               {(["AM", "PM"] as const).map(p => (
                 <button key={p} onClick={() => setPeriod(p)} aria-pressed={period === p}
-                  className="px-4 py-1.5 text-xs font-bold transition-all"
+                  className="px-2.5 sm:px-4 py-1.5 text-xs font-bold transition-all"
                   style={period === p
                     ? { background: "var(--mint)", color: "var(--navy)" }
                     : { color: "rgba(255,255,255,0.6)" }}>
@@ -124,7 +124,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
           </div>
 
           <button onClick={onLogout}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors"
             style={{ border: "1px solid rgba(255,255,255,0.22)", color: "rgba(255,255,255,0.9)" }}
             onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
             onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -136,7 +136,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Sidebar ───────────────────────────────────── */}
-        <nav className="w-56 shrink-0 flex flex-col py-4 overflow-y-auto"
+        <nav className="hidden md:flex w-56 shrink-0 flex-col py-4 overflow-y-auto"
           style={{ background: "var(--navy)" }} aria-label="Main navigation">
 
           <p className="px-5 pb-3 text-kicker font-semibold uppercase tracking-widest"
@@ -173,8 +173,31 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
         </nav>
 
         {/* ── Content ───────────────────────────────────── */}
-        <main className="flex-1 overflow-auto p-8">{children}</main>
+        <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 pb-24 md:pb-8">{children}</main>
       </div>
+
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 grid border-t bg-white"
+        style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))`, borderColor: "#e2e8f0" }}
+        aria-label="Mobile navigation"
+      >
+        {links.map(({ href, label }) => {
+          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[0.68rem] font-semibold"
+              style={active ? { color: "var(--navy)" } : { color: "#64748b" }}
+            >
+              <span className="h-5 flex items-center" style={{ color: active ? "var(--navy)" : "#94a3b8" }}>
+                {ICONS[href]}
+              </span>
+              <span className="max-w-full truncate">{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

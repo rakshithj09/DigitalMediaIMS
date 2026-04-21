@@ -121,7 +121,7 @@ export default function EmailPasswordDemo({ user }: Props) {
             </svg>
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold" style={{ color: "var(--navy)" }}>Ignite Digital Media</h1>
+            <h1 className="text-xl font-bold" style={{ color: "var(--navy)" }}>Digital Media</h1>
             <p className="text-sm text-slate-500 mt-0.5">Equipment Tracker</p>
           </div>
         </div>
@@ -224,7 +224,7 @@ export default function EmailPasswordDemo({ user }: Props) {
               </label>
               <input id="email" type="email" autoComplete="email" required
                 value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@bentonvillek12.org" className={INPUT}/>
+                placeholder="email@bentonvillek12.org" className={INPUT}/>
             </div>
 
             <div>
