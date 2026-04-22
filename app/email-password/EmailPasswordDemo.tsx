@@ -78,10 +78,6 @@ export default function EmailPasswordDemo({ user }: Props) {
           setError(String(data?.error?.message ?? data?.error ?? "Account creation failed."));
           return;
         }
-        if (data?.warning) {
-          setError(String(data.warning));
-          return;
-        }
         setMessage("Account created. Check your email and verify your account before signing in.");
         setMode("signIn");
         setPassword("");

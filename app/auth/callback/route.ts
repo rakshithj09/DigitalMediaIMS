@@ -1,6 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
+import { ensureVerifiedStudentRosterRow } from "@/lib/auth/student-roster";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://digital-media-ims.vercel.app";
 
@@ -39,6 +40,36 @@ export async function GET(request: NextRequest) {
         reason: "invalid_or_expired",
       })
     );
+  }
+
+  if (type === "signup" || type === "email") {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(
+        redirectUrl("/login", {
+          verified: "error",
+          reason: "missing_user",
+        })
+      );
+    }
+
+    try {
+      await ensureVerifiedStudentRosterRow(user);
+    } catch (rosterError) {
+      console.error("Failed to complete verified student roster setup", rosterError);
+      await supabase.auth.signOut();
+      return NextResponse.redirect(
+        redirectUrl("/login", {
+          verified: "error",
+          reason: "roster_setup_failed",
+        })
+      );
+    }
   }
 
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient, User } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
 type Body = {
   email?: string;
@@ -19,20 +20,6 @@ function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function getSupabaseAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!url || !serviceRole) return null;
-
-  return createClient(url, serviceRole, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
 function getSupabasePublicClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
   const anonKey =
@@ -50,53 +37,9 @@ function getSupabasePublicClient() {
   });
 }
 
-async function ensureStudentRosterRow(
-  user: User,
-  firstName: string,
-  lastName: string,
-  email: string,
-  period: "AM" | "PM",
-  studentId: string
-) {
-  const admin = getSupabaseAdminClient();
-  if (!admin) throw new Error("Server is missing Supabase service configuration.");
-
-  const studentBody = {
-    name: `${firstName} ${lastName}`,
-    period,
-    student_id: studentId,
-    email,
-    user_id: user.id,
-    is_active: true,
-  };
-
-  const { data: existing, error: lookupError } = await admin
-    .from("students")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (lookupError) {
-    throw new Error(
-      `${lookupError.message}. If this mentions user_id or email, run supabase/student-account-link.sql in Supabase SQL Editor.`
-    );
-  }
-
-  if (existing?.id) {
-    const { error } = await admin.from("students").update(studentBody).eq("id", existing.id);
-    if (error) throw new Error(error.message);
-    return;
-  }
-
-  const { error } = await admin.from("students").insert(studentBody);
-  if (error) throw new Error(error.message);
-}
-
 export async function POST(req: Request) {
-  const admin = getSupabaseAdminClient();
   const supabase = getSupabasePublicClient();
-  if (!admin || !supabase) {
+  if (!supabase) {
     return NextResponse.json({ error: "Server is missing Supabase configuration." }, { status: 500 });
   }
 
@@ -160,26 +103,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Supabase did not return a usable user id for this account." }, { status: 500 });
   }
 
-  try {
-    if (role === "Student") {
-      if (period !== "AM" && period !== "PM") {
-        return NextResponse.json({ error: "Students must select AM or PM period." }, { status: 400 });
-      }
-      await ensureStudentRosterRow(user, firstName, lastName, email, period, studentId);
-    }
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Account exists, but roster setup failed: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 500 }
-    );
-  }
-
   if (signUpData.session) {
+    const admin = getSupabaseAdminClient();
+    if (admin) {
+      await admin.auth.admin.deleteUser(user.id, false);
+    }
     await supabase.auth.signOut();
     return NextResponse.json({
-      ok: true,
-      warning: "Account created, but Supabase email confirmation appears to be disabled. Enable Confirm email in Supabase Authentication settings before release.",
-    });
+      error: "Supabase email confirmation appears to be disabled. Enable Confirm email before allowing self-service account creation.",
+    }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, requiresEmailConfirmation: true });

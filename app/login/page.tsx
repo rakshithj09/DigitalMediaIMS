@@ -39,6 +39,10 @@ export default function LoginPage() {
           setError(
             reason === "missing_token"
               ? "Verification link was missing required information. Please request a new verification email."
+              : reason === "missing_user"
+                ? "Verification succeeded, but we could not load your account. Please try signing in."
+                : reason === "roster_setup_failed"
+                  ? "Email verified, but your student roster setup could not be completed. Please contact your teacher."
               : "Verification link is invalid or expired. Please request a new verification email."
           ),
         0
