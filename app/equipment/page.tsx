@@ -8,7 +8,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
 
-type EquipmentWithAvail = Equipment & { available: number };
+type EquipmentWithAvail = Equipment & { available: number; checkedOutSerials: string[] };
 type EquipmentCategory = (typeof EQUIPMENT_CATEGORIES)[number];
 
 function isEquipmentCategory(value: string): value is EquipmentCategory {
@@ -86,20 +86,27 @@ function EquipmentContent() {
         .order("name"),
       createSupabaseBrowserClient()
         .from("checkouts")
-        .select("equipment_id, quantity")
+        .select("equipment_id, quantity, serial_number")
         .is("checked_in_at", null),
     ]).then(([{ data: eqData, error: eqErr }, { data: coData }]) => {
       if (cancelled) return;
       if (eqErr) { setError(eqErr.message); return; }
 
       const checkedOutMap = new Map<string, number>();
-      (coData ?? []).forEach((c: { equipment_id: string; quantity: number }) => {
+      const checkedOutSerialsMap = new Map<string, Set<string>>();
+      (coData ?? []).forEach((c: { equipment_id: string; quantity: number; serial_number?: string | null }) => {
         checkedOutMap.set(c.equipment_id, (checkedOutMap.get(c.equipment_id) ?? 0) + c.quantity);
+        if (c.serial_number) {
+          const serials = checkedOutSerialsMap.get(c.equipment_id) ?? new Set<string>();
+          serials.add(c.serial_number.trim().toLowerCase());
+          checkedOutSerialsMap.set(c.equipment_id, serials);
+        }
       });
 
       const withAvail = ((eqData ?? []) as Equipment[]).map((e) => ({
         ...e,
         available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
+        checkedOutSerials: Array.from(checkedOutSerialsMap.get(e.id) ?? []),
       }));
       setEquipment(withAvail);
     });
@@ -695,6 +702,8 @@ function EquipmentContent() {
                       : pct < 0.5
                       ? { background: "#fef9c3", color: "#ca8a04" }
                       : { background: "#dcfce7", color: "#16a34a" };
+                  const availableSerials = parseSerialNumbers(e.serial_number)
+                    .filter((serial) => !e.checkedOutSerials.includes(serial.toLowerCase()));
 
                   return (
                     <tr key={e.id}>
@@ -715,8 +724,8 @@ function EquipmentContent() {
                       </td>
                       <td className="text-sm" style={{ color: "#374151" }}>{e.total_quantity}</td>
                       <td className="font-mono text-xs" style={{ color: "var(--muted)" }}>
-                        {categorySupportsSerialNumbers(e.category) && parseSerialNumbers(e.serial_number).length > 0
-                          ? parseSerialNumbers(e.serial_number).join(", ")
+                        {categorySupportsSerialNumbers(e.category) && availableSerials.length > 0
+                          ? availableSerials.join(", ")
                           : "—"}
                       </td>
                       <td className="max-w-[180px] truncate text-sm" style={{ color: "var(--muted)" }}>
