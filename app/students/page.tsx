@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, FormEvent } from "react";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -28,6 +29,7 @@ function StudentsContent() {
   const [newStudentId, setNewStudentId] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -356,15 +358,27 @@ function StudentsContent() {
                 <label className="block text-sm font-medium mb-1.5" htmlFor="s-password" style={{ color: "#374151" }}>
                   Temporary password <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                <input
-                  id="s-password"
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Set a temp password"
-                  className="form-input"
-                />
+                <div className="relative">
+                  <input
+                    id="s-password"
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Set a temp password"
+                    className="form-input"
+                    style={{ paddingRight: "2.75rem" }}
+                  />
+                  <button
+                    type="button"
+                    aria-label={showNewPassword ? "Hide temporary password" : "Show temporary password"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
+                    style={{ color: "#94a3b8" }}
+                    onClick={() => setShowNewPassword((value) => !value)}
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
                 <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
                   Students should change this after first sign in.
                 </p>
