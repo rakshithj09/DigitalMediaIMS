@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { EQUIPMENT_CATEGORIES } from "@/app/lib/types";
+import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
 
 type CreateBody = {
   name?: string;
@@ -33,6 +34,20 @@ function getSupabaseAdminClient() {
       persistSession: false,
     },
   });
+}
+
+function validateSerialNumbers(
+  serialNumber: string | null | undefined,
+  category: string | null | undefined,
+  totalQuantity: number
+): string | null {
+  if (categorySupportsSerialNumbers(category) && parseSerialNumbers(serialNumber).length < totalQuantity) {
+    return "Each item must have a serial number.";
+  }
+  if ((serialNumber ?? "").length > 1000) {
+    return "Serial/asset tags must be 1000 characters or fewer.";
+  }
+  return null;
 }
 
 async function requireTeacher() {
@@ -80,6 +95,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Quantity must be between 1 and 999." }, { status: 400 });
   }
 
+  const serialError = validateSerialNumbers(body.serialNumber, category, totalQuantity);
+  if (serialError) {
+    return NextResponse.json({ error: serialError }, { status: 400 });
+  }
+
   const { error } = await admin.from("equipment").insert({
     name,
     category,
@@ -110,6 +130,20 @@ export async function PATCH(req: Request) {
   const body = (await req.json().catch(() => ({}))) as UpdateBody;
   if (!body.id) {
     return NextResponse.json({ error: "Equipment id is required." }, { status: 400 });
+  }
+
+  const { data: currentEquipment, error: currentError } = await admin
+    .from("equipment")
+    .select("total_quantity, serial_number, category")
+    .eq("id", body.id)
+    .maybeSingle();
+
+  if (currentError) {
+    return NextResponse.json({ error: currentError.message }, { status: 400 });
+  }
+
+  if (!currentEquipment) {
+    return NextResponse.json({ error: "Equipment item was not found." }, { status: 404 });
   }
 
   const update: Record<string, unknown> = {};
@@ -144,6 +178,17 @@ export async function PATCH(req: Request) {
 
   if (body.serialNumber !== undefined) {
     update.serial_number = body.serialNumber?.trim() || null;
+  }
+
+  if (body.totalQuantity !== undefined || body.serialNumber !== undefined || body.category !== undefined) {
+    const nextCategory = String(update.category ?? currentEquipment.category);
+    const nextQuantity = Number(update.total_quantity ?? currentEquipment.total_quantity);
+    const nextSerialNumber =
+      body.serialNumber === undefined ? currentEquipment.serial_number : body.serialNumber;
+    const serialError = validateSerialNumbers(nextSerialNumber, nextCategory, nextQuantity);
+    if (serialError) {
+      return NextResponse.json({ error: serialError }, { status: 400 });
+    }
   }
 
   if (body.conditionNotes !== undefined) {

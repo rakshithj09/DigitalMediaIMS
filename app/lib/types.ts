@@ -28,6 +28,7 @@ export interface Checkout {
   student_id: string;
   equipment_id: string;
   quantity: number;
+  serial_number?: string | null;
   checked_out_at: string;
   checked_in_at?: string | null;
   notes?: string | null;

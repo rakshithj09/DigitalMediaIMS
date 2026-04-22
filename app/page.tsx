@@ -43,7 +43,7 @@ function DashboardContent() {
     createSupabaseBrowserClient()
       .from("checkouts")
       .select(
-        `id, student_id, quantity, checked_out_at, notes, period,
+        `id, student_id, quantity, serial_number, checked_out_at, notes, period,
          student:students(id, name, student_id),
          equipment:equipment(id, name, category)`
       )
@@ -213,6 +213,7 @@ function DashboardContent() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{c.equipment?.name ?? "Equipment"}</p>
                           <span className="badge badge-neutral">qty {c.quantity}</span>
+                          {c.serial_number && <span className="badge" style={{ background: "#e8f0fe", color: "#1a3c78" }}>{c.serial_number}</span>}
                           <span
                             className="badge"
                             style={overdue ? { background: "#fee2e2", color: "#dc2626" } : warning ? { background: "#fef9c3", color: "#ca8a04" } : { background: "#dcfce7", color: "#16a34a" }}
@@ -406,6 +407,14 @@ function DashboardContent() {
                             style={{ background: "#f1f5f9", color: "var(--muted)" }}
                           >
                             {c.equipment.category}
+                          </span>
+                        )}
+                        {c.serial_number && (
+                          <span
+                            className="ml-2 text-xs px-1.5 py-0.5 rounded-full font-medium"
+                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                          >
+                            {c.serial_number}
                           </span>
                         )}
                       </td>

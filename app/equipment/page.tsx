@@ -6,6 +6,7 @@ import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
+import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
 
 type EquipmentWithAvail = Equipment & { available: number };
 
@@ -102,6 +103,11 @@ function EquipmentContent() {
     const qty = parseInt(form.total_quantity, 10);
     if (!form.name.trim()) { setSaveError("Name is required."); setSaving(false); return; }
     if (isNaN(qty) || qty < 1) { setSaveError("Quantity must be at least 1."); setSaving(false); return; }
+    if (categorySupportsSerialNumbers(form.category) && parseSerialNumbers(form.serial_number).length < qty) {
+      setSaveError("Each item must have a serial number.");
+      setSaving(false);
+      return;
+    }
 
     const resp = await fetch("/api/equipment", {
       method: "POST",
@@ -110,7 +116,7 @@ function EquipmentContent() {
         name: form.name.trim(),
         category: form.category,
         totalQuantity: qty,
-        serialNumber: form.serial_number.trim() || null,
+        serialNumber: categorySupportsSerialNumbers(form.category) ? form.serial_number.trim() || null : null,
         conditionNotes: form.condition_notes.trim() || null,
       }),
     });
@@ -157,6 +163,10 @@ function EquipmentContent() {
     const qty = parseInt(editForm.total_quantity, 10);
     if (!editForm.name.trim()) { setEditError("Name is required."); return; }
     if (isNaN(qty) || qty < 1) { setEditError("Quantity must be at least 1."); return; }
+    if (categorySupportsSerialNumbers(editForm.category) && parseSerialNumbers(editForm.serial_number).length < qty) {
+      setEditError("Each item must have a serial number.");
+      return;
+    }
 
     setEditSaving(true);
     setEditError(null);
@@ -169,7 +179,7 @@ function EquipmentContent() {
         name: editForm.name.trim(),
         category: editForm.category,
         totalQuantity: qty,
-        serialNumber: editForm.serial_number.trim() || null,
+        serialNumber: categorySupportsSerialNumbers(editForm.category) ? editForm.serial_number.trim() || null : null,
         conditionNotes: editForm.condition_notes.trim() || null,
       }),
     });
@@ -188,13 +198,16 @@ function EquipmentContent() {
   const filtered = (equipment ?? []).filter((e) => {
     const matchSearch =
       e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.category.toLowerCase().includes(search.toLowerCase());
+      e.category.toLowerCase().includes(search.toLowerCase()) ||
+      (categorySupportsSerialNumbers(e.category) ? e.serial_number ?? "" : "").toLowerCase().includes(search.toLowerCase());
     const matchCat = categoryFilter === "All" || e.category === categoryFilter;
     return matchSearch && matchCat;
   });
 
   const loading = equipment === null && error === null;
   const isTeacher = currentUser?.user_metadata?.role !== "Student";
+  const addCategoryHasSerials = categorySupportsSerialNumbers(form.category);
+  const editCategoryHasSerials = categorySupportsSerialNumbers(editForm.category);
 
   return (
     <div>
@@ -300,20 +313,27 @@ function EquipmentContent() {
                   className="form-input"
                 />
               </div>
+              {addCategoryHasSerials && (
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="eq-serial" style={{ color: "#374151" }}>
-                  Serial / Asset Tag{" "}
-                  <span className="font-normal" style={{ color: "var(--muted)" }}>(optional)</span>
+                  Serial / Asset Tags <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                <input
+                <textarea
                   id="eq-serial"
-                  type="text"
-                  maxLength={50}
+                  rows={3}
+                  maxLength={1000}
                   value={form.serial_number}
                   onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
+                  placeholder="One per line"
                   className="form-input"
                 />
+                {parseInt(form.total_quantity, 10) > 1 && (
+                  <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
+                    {parseSerialNumbers(form.serial_number).length} / {form.total_quantity || "0"} tags entered
+                  </p>
+                )}
               </div>
+              )}
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1.5" htmlFor="eq-notes" style={{ color: "#374151" }}>
                   Condition Notes{" "}
@@ -419,19 +439,27 @@ function EquipmentContent() {
                   className="form-input"
                 />
               </div>
+              {editCategoryHasSerials && (
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-serial" style={{ color: "#374151" }}>
-                  Serial / Asset Tag
+                  Serial / Asset Tags <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                <input
+                <textarea
                   id="edit-eq-serial"
-                  type="text"
-                  maxLength={50}
+                  rows={3}
+                  maxLength={1000}
                   value={editForm.serial_number}
                   onChange={(e) => setEditForm((f) => ({ ...f, serial_number: e.target.value }))}
+                  placeholder="One per line"
                   className="form-input"
                 />
+                {parseInt(editForm.total_quantity, 10) > 1 && (
+                  <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
+                    {parseSerialNumbers(editForm.serial_number).length} / {editForm.total_quantity || "0"} tags entered
+                  </p>
+                )}
               </div>
+              )}
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-notes" style={{ color: "#374151" }}>
                   Condition Notes
@@ -560,7 +588,9 @@ function EquipmentContent() {
                       </td>
                       <td className="text-sm" style={{ color: "#374151" }}>{e.total_quantity}</td>
                       <td className="font-mono text-xs" style={{ color: "var(--muted)" }}>
-                        {e.serial_number ?? "—"}
+                        {categorySupportsSerialNumbers(e.category) && parseSerialNumbers(e.serial_number).length > 0
+                          ? parseSerialNumbers(e.serial_number).join(", ")
+                          : "—"}
                       </td>
                       <td className="max-w-[180px] truncate text-sm" style={{ color: "var(--muted)" }}>
                         {e.condition_notes ?? "—"}

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
+import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
 
 type CheckoutBody = {
   studentId?: string;
   equipmentId?: string;
   quantity?: number;
+  serialNumber?: string | null;
   notes?: string | null;
   period?: string;
 };
@@ -18,7 +20,9 @@ type StudentRow = {
 
 type EquipmentRow = {
   id: string;
+  category: string;
   total_quantity: number;
+  serial_number: string | null;
   is_active: boolean;
 };
 
@@ -63,27 +67,42 @@ async function getStudent(studentId: string): Promise<StudentRow | null> {
   return data[0] ?? null;
 }
 
-async function getAvailableQuantity(equipmentId: string): Promise<number> {
+async function getEquipmentAvailability(equipmentId: string): Promise<{
+  available: number;
+  serials: string[];
+  activeSerials: Set<string>;
+}> {
   const url = restUrl();
   const h = headers();
   if (!url || !h) throw new Error("Server is missing Supabase service configuration.");
 
   const equipmentRes = await fetch(
-    `${url}/rest/v1/equipment?select=id,total_quantity,is_active&id=eq.${encodeURIComponent(equipmentId)}&is_active=eq.true&limit=1`,
+    `${url}/rest/v1/equipment?select=id,category,total_quantity,serial_number,is_active&id=eq.${encodeURIComponent(equipmentId)}&is_active=eq.true&limit=1`,
     { headers: h }
   );
   const equipment = (await equipmentRes.json().catch(() => [])) as EquipmentRow[];
   if (!equipmentRes.ok || !equipment[0]) throw new Error("Selected equipment is not available.");
 
   const checkoutsRes = await fetch(
-    `${url}/rest/v1/checkouts?select=quantity&equipment_id=eq.${encodeURIComponent(equipmentId)}&checked_in_at=is.null`,
+    `${url}/rest/v1/checkouts?select=quantity,serial_number&equipment_id=eq.${encodeURIComponent(equipmentId)}&checked_in_at=is.null`,
     { headers: h }
   );
-  const checkouts = (await checkoutsRes.json().catch(() => [])) as Array<{ quantity: number }>;
+  const checkouts = (await checkoutsRes.json().catch(() => [])) as Array<{ quantity: number; serial_number: string | null }>;
   if (!checkoutsRes.ok) throw new Error("Unable to validate equipment availability.");
 
   const checkedOut = checkouts.reduce((sum, row) => sum + row.quantity, 0);
-  return equipment[0].total_quantity - checkedOut;
+  const activeSerials = new Set(
+    checkouts
+      .map((row) => normalizeSerialNumber(row.serial_number))
+      .filter((serial): serial is string => Boolean(serial))
+      .map((serial) => serial.toLowerCase())
+  );
+
+  return {
+    available: equipment[0].total_quantity - checkedOut,
+    serials: categorySupportsSerialNumbers(equipment[0].category) ? parseSerialNumbers(equipment[0].serial_number) : [],
+    activeSerials,
+  };
 }
 
 export async function POST(req: Request) {
@@ -105,6 +124,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as CheckoutBody;
   const role = user.user_metadata?.role;
   const requestedQuantity = Number(body.quantity);
+  const selectedSerial = normalizeSerialNumber(body.serialNumber);
 
   if (!body.equipmentId || !Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
     return NextResponse.json({ error: "Equipment and a valid quantity are required." }, { status: 400 });
@@ -126,7 +146,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please select a valid student." }, { status: 400 });
     }
 
-    const available = await getAvailableQuantity(body.equipmentId);
+    const availability = await getEquipmentAvailability(body.equipmentId);
+    const requiresSerial = availability.serials.length > 0;
+    if (requiresSerial) {
+      if (requestedQuantity !== 1) {
+        return NextResponse.json({ error: "Check out one serialized unit at a time." }, { status: 400 });
+      }
+      if (!selectedSerial) {
+        return NextResponse.json({ error: "Please select a serial/asset tag for this checkout." }, { status: 400 });
+      }
+
+      const validSerial = availability.serials.some((serial) => serial.toLowerCase() === selectedSerial.toLowerCase());
+      if (!validSerial) {
+        return NextResponse.json({ error: "Please select a valid serial/asset tag for this equipment." }, { status: 400 });
+      }
+
+      if (availability.activeSerials.has(selectedSerial.toLowerCase())) {
+        return NextResponse.json({ error: "That serial/asset tag is already checked out." }, { status: 409 });
+      }
+    }
+
+    const checkoutSerial = selectedSerial ?? (availability.serials.length === 1 ? availability.serials[0] : null);
+    const available = availability.available;
     if (requestedQuantity > available) {
       return NextResponse.json({ error: `Only ${available} unit(s) available.` }, { status: 409 });
     }
@@ -142,6 +183,7 @@ export async function POST(req: Request) {
           student_id: student.id,
           equipment_id: body.equipmentId,
           quantity: requestedQuantity,
+          serial_number: checkoutSerial,
           notes: body.notes?.trim() || null,
           period: student.period,
         },

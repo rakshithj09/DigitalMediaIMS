@@ -6,8 +6,9 @@ import AppShell from "@/app/components/AppShell";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Student, Equipment, Checkout } from "@/app/lib/types";
+import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
 
-type EquipmentWithAvail = Equipment & { available: number };
+type EquipmentWithAvail = Equipment & { available: number; availableSerialNumbers: string[] };
 
 function CheckoutContent() {
   const { period } = usePeriod();
@@ -29,10 +30,12 @@ function CheckoutContent() {
   const [ownStudentPeriod, setOwnStudentPeriod] = useState<"AM" | "PM" | null>(null);
   const [equipmentId, setEquipmentId] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [serialNumber, setSerialNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [returnNotes, setReturnNotes] = useState<Record<string, string>>({});
@@ -86,6 +89,7 @@ function CheckoutContent() {
 
     let cancelled = false;
     const isStudent = currentRole === "Student";
+    queueMicrotask(() => setLoadFailed(false));
 
     if (isStudent && !ownStudentId) {
       queueMicrotask(() => {
@@ -114,7 +118,7 @@ function CheckoutContent() {
     const activeCheckoutsQuery = createSupabaseBrowserClient()
       .from("checkouts")
       .select(
-        `id, student_id, equipment_id, quantity, checked_out_at, notes, period,
+        `id, student_id, equipment_id, quantity, serial_number, checked_out_at, notes, period,
          student:students(id, name, student_id),
          equipment:equipment(id, name, category)`
       )
@@ -129,13 +133,19 @@ function CheckoutContent() {
     Promise.all([
       studentsQuery,
       createSupabaseBrowserClient().from("equipment").select("*").eq("is_active", true).order("name"),
-      createSupabaseBrowserClient().from("checkouts").select("equipment_id, quantity").is("checked_in_at", null),
+      createSupabaseBrowserClient().from("checkouts").select("equipment_id, quantity, serial_number").is("checked_in_at", null),
       activeCheckoutsQuery,
     ]).then(([{ data: stuData, error: stuError }, { data: eqData, error: eqError }, { data: coSums, error: sumsError }, { data: coData, error: coError }]) => {
       if (cancelled) return;
       const loadError = stuError ?? eqError ?? sumsError ?? coError;
       if (loadError) {
-        setSubmitError(loadError.message ?? "Unable to load checkout data.");
+        const message = loadError.message ?? "Unable to load checkout data.";
+        setSubmitError(
+          message.includes("checkouts.serial_number")
+            ? "Database update needed: run supabase/checkout-serial-number.sql in Supabase, then refresh this page."
+            : message
+        );
+        setLoadFailed(true);
         setStudents([]);
         setEquipment([]);
         setActiveCheckouts([]);
@@ -146,12 +156,24 @@ function CheckoutContent() {
       setStudents((stuData as Student[]) ?? []);
 
       const checkedOutMap = new Map<string, number>();
-      (coSums ?? []).forEach((c: { equipment_id: string; quantity: number }) => {
+      const checkedOutSerials = new Map<string, Set<string>>();
+      (coSums ?? []).forEach((c: { equipment_id: string; quantity: number; serial_number?: string | null }) => {
         checkedOutMap.set(c.equipment_id, (checkedOutMap.get(c.equipment_id) ?? 0) + c.quantity);
+        const serial = normalizeSerialNumber(c.serial_number);
+        if (serial) {
+          const serials = checkedOutSerials.get(c.equipment_id) ?? new Set<string>();
+          serials.add(serial.toLowerCase());
+          checkedOutSerials.set(c.equipment_id, serials);
+        }
       });
       const withAvail = ((eqData ?? []) as Equipment[]).map((e) => ({
         ...e,
         available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
+        availableSerialNumbers: categorySupportsSerialNumbers(e.category)
+          ? parseSerialNumbers(e.serial_number).filter(
+              (serial) => !(checkedOutSerials.get(e.id) ?? new Set<string>()).has(serial.toLowerCase())
+            )
+          : [],
       }));
       setEquipment(withAvail);
       setActiveCheckouts((coData as unknown as Checkout[]) ?? []);
@@ -163,6 +185,8 @@ function CheckoutContent() {
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const maxQty = selectedEquipment?.available ?? 0;
+  const serialOptions = selectedEquipment?.availableSerialNumbers ?? [];
+  const requiresSerialSelection = serialOptions.length > 0;
   const visibleActiveCheckouts = (activeCheckouts ?? []).filter((c) => {
     if (currentRole === "Student") return c.student_id === ownStudentId;
     return true;
@@ -180,11 +204,12 @@ function CheckoutContent() {
     if (!equipmentId) { setSubmitError("Please select an equipment item."); setSubmitting(false); return; }
     if (isNaN(qty) || qty < 1) { setSubmitError("Quantity must be at least 1."); setSubmitting(false); return; }
     if (qty > maxQty) { setSubmitError(`Only ${maxQty} unit(s) available.`); setSubmitting(false); return; }
+    if (requiresSerialSelection && !serialNumber) { setSubmitError("Please select a serial/asset tag."); setSubmitting(false); return; }
 
     const checkoutResp = await fetch("/api/checkouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: finalStudentId, equipmentId, quantity: qty, notes, period: checkoutPeriod }),
+      body: JSON.stringify({ studentId: finalStudentId, equipmentId, quantity: qty, serialNumber: serialNumber || null, notes, period: checkoutPeriod }),
     });
 
     if (!checkoutResp.ok) {
@@ -195,6 +220,7 @@ function CheckoutContent() {
       if (!ownStudentId) setStudentId("");
       setEquipmentId("");
       setQuantity("1");
+      setSerialNumber("");
       setNotes("");
       setSubmitSuccess(true);
       refresh();
@@ -320,7 +346,7 @@ function CheckoutContent() {
                         </option>
                       ))}
                     </select>
-                    {students.length === 0 && (
+                    {students.length === 0 && !loadFailed && (
                       <p className="text-xs mt-1.5" style={{ color: "#ca8a04" }}>
                         No students in {checkoutPeriod} roster. Add students first.
                       </p>
@@ -336,7 +362,7 @@ function CheckoutContent() {
                 <select
                   id="co-eq"
                   value={equipmentId}
-                  onChange={(e) => { setEquipmentId(e.target.value); setQuantity("1"); }}
+                  onChange={(e) => { setEquipmentId(e.target.value); setQuantity("1"); setSerialNumber(""); }}
                   className="form-input"
                 >
                   <option value="">Select equipment…</option>
@@ -348,12 +374,32 @@ function CheckoutContent() {
                 </select>
               </div>
 
+              {requiresSerialSelection && (
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" htmlFor="co-serial" style={{ color: "#374151" }}>
+                    Serial / Asset Tag <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <select
+                    id="co-serial"
+                    value={serialNumber}
+                    onChange={(e) => setSerialNumber(e.target.value)}
+                    className="form-input"
+                    disabled={serialOptions.length === 0}
+                  >
+                    <option value="">Select serial/asset tag...</option>
+                    {serialOptions.map((serial) => (
+                      <option key={serial} value={serial}>{serial}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="co-qty" style={{ color: "#374151" }}>
                   Quantity <span style={{ color: "#ef4444" }}>*</span>
                   {selectedEquipment && (
                     <span className="ml-2 font-normal text-xs" style={{ color: "var(--muted)" }}>
-                      (max {maxQty} available)
+                      {requiresSerialSelection ? "(serial checkouts are one at a time)" : `(max ${maxQty} available)`}
                     </span>
                   )}
                 </label>
@@ -361,9 +407,10 @@ function CheckoutContent() {
                   id="co-qty"
                   type="number"
                   min={1}
-                  max={maxQty || 1}
-                  value={quantity}
+                  max={requiresSerialSelection ? 1 : maxQty || 1}
+                  value={requiresSerialSelection ? "1" : quantity}
                   onChange={(e) => setQuantity(e.target.value)}
+                  disabled={requiresSerialSelection}
                   className="form-input"
                 />
               </div>
@@ -479,6 +526,14 @@ function CheckoutContent() {
                         >
                           qty {c.quantity}
                         </span>
+                        {c.serial_number && (
+                          <span
+                            className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                          >
+                            {c.serial_number}
+                          </span>
+                        )}
                       </p>
                       {c.notes && (
                         <p className="text-xs mt-1 italic" style={{ color: "#94a3b8" }}>{c.notes}</p>

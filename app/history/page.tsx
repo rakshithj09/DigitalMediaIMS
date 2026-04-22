@@ -33,7 +33,7 @@ function HistoryContent() {
     supabase
       .from("checkouts")
       .select(
-        `id, student_id, quantity, checked_out_at, checked_in_at, notes, return_notes, period,
+        `id, student_id, quantity, serial_number, checked_out_at, checked_in_at, notes, return_notes, period,
          student:students(id, name, student_id),
          equipment:equipment(id, name, category)`
       )
@@ -237,6 +237,14 @@ function HistoryContent() {
                           style={{ background: "#f1f5f9", color: "var(--muted)" }}
                         >
                           {c.equipment.category}
+                        </span>
+                      )}
+                      {c.serial_number && (
+                        <span
+                          className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium"
+                          style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                        >
+                          {c.serial_number}
                         </span>
                       )}
                     </td>
