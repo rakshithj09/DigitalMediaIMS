@@ -278,7 +278,7 @@ function StudentsContent() {
                 setTeacherApprovalMessage(null);
               }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity"
-              style={{ background: "#e8f0fe", color: "var(--ignite-navy)" }}
+              style={{ background: "var(--mint)", color: "var(--navy-deep)", boxShadow: "0 2px 8px rgba(255,210,31,0.22)" }}
             >
               {showTeacherApproval ? "Cancel" : "Approve Teacher"}
             </button>
