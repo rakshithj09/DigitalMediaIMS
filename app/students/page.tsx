@@ -260,27 +260,7 @@ function StudentsContent() {
             Students
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            <span
-              className="period-view-pill"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "#dbeafe",
-                color: "#1e40af",
-                border: "2px solid #bfdbfe",
-                borderRadius: "9999px",
-                minHeight: "1.7rem",
-                padding: "0.24rem 0.95rem",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                letterSpacing: "0.01em",
-                lineHeight: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {period} period
-            </span>{" "}
+            <span className="badge badge-period">{period} period</span>{" "}
             roster — {(students ?? []).length} student{(students ?? []).length !== 1 ? "s" : ""}
           </p>
         </div>
