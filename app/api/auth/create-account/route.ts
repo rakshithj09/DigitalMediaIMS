@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
 type Body = {
@@ -37,9 +37,28 @@ function getSupabasePublicClient() {
   });
 }
 
+async function authUserExists(admin: SupabaseClient, email: string) {
+  const normalizedEmail = email.toLowerCase();
+  const perPage = 1000;
+
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) throw new Error(error.message);
+
+    if (data.users.some((user) => user.email?.toLowerCase() === normalizedEmail)) {
+      return true;
+    }
+
+    if (data.users.length < perPage) return false;
+  }
+
+  throw new Error("Unable to check existing accounts because the user list is too large.");
+}
+
 export async function POST(req: Request) {
   const supabase = getSupabasePublicClient();
-  if (!supabase) {
+  const admin = getSupabaseAdminClient();
+  if (!supabase || !admin) {
     return NextResponse.json({ error: "Server is missing Supabase configuration." }, { status: 500 });
   }
 
@@ -76,6 +95,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid teacher verification code." }, { status: 403 });
   }
 
+  try {
+    if (await authUserExists(admin, email)) {
+      return NextResponse.json(
+        { error: "An account with this email already exists. Please sign in instead." },
+        { status: 409 },
+      );
+    }
+  } catch (lookupError) {
+    return NextResponse.json(
+      {
+        error: `Unable to check whether this account already exists: ${
+          lookupError instanceof Error ? lookupError.message : String(lookupError)
+        }`,
+      },
+      { status: 500 },
+    );
+  }
+
   const metadata: Record<string, string> = {
     first_name: firstName,
     last_name: lastName,
@@ -104,10 +141,7 @@ export async function POST(req: Request) {
   }
 
   if (signUpData.session) {
-    const admin = getSupabaseAdminClient();
-    if (admin) {
-      await admin.auth.admin.deleteUser(user.id, false);
-    }
+    await admin.auth.admin.deleteUser(user.id, false);
     await supabase.auth.signOut();
     return NextResponse.json({
       error: "Supabase email confirmation appears to be disabled. Enable Confirm email before allowing self-service account creation.",

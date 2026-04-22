@@ -117,6 +117,7 @@ export default function EmailPasswordDemo({ user }: Props) {
   }
 
   const isSignUp = mode === "signUp";
+  const accountExistsError = error?.toLowerCase().includes("already exists");
 
   return (
     <LoginSignupFrame cardClassName={isSignUp ? "max-w-md" : undefined}>
@@ -134,7 +135,12 @@ export default function EmailPasswordDemo({ user }: Props) {
           role="alert"
           className="mb-5 rounded-lg border border-red-400/30 bg-red-950/50 px-4 py-3 text-sm text-red-200"
         >
-          {error}
+          <span>{error}</span>
+          {accountExistsError && (
+            <Link href="/login" className="ml-1 font-semibold underline">
+              Sign in
+            </Link>
+          )}
         </div>
       )}
 
