@@ -261,8 +261,12 @@ function StudentsContent() {
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             <span
-              className="font-semibold px-2 py-0.5 rounded-full text-xs"
-              style={{ background: "#e8f0fe", color: "#005a78" }}
+              className="period-view-pill"
+              style={{
+                background: "#dbeafe",
+                color: "#1e40af",
+                border: "2px solid #bfdbfe",
+              }}
             >
               {period} period
             </span>{" "}
