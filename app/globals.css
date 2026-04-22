@@ -75,6 +75,43 @@ body {
 .data-table tbody tr:hover { background: #f8fafc; }
 .data-table td { padding: 0.8rem 1.25rem; }
 
+.history-item-cell {
+  min-width: 340px;
+  max-width: 440px;
+}
+.history-item-name {
+  display: block;
+  line-height: 1.35;
+  margin-bottom: 0.4rem;
+}
+.history-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.history-item-tag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 1.45rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.history-notes {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  min-width: 220px;
+  max-width: 440px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* ── Badge ───────────────────────────────────────── */
 .badge {
   display: inline-flex;

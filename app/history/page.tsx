@@ -229,24 +229,26 @@ function HistoryContent() {
                     <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
                       {c.student?.name ?? "—"}
                     </td>
-                    <td style={{ color: "#374151" }}>
-                      <span className="font-medium">{c.equipment?.name ?? "—"}</span>
-                      {c.equipment?.category && (
-                        <span
-                          className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ background: "#f1f5f9", color: "var(--muted)" }}
-                        >
-                          {c.equipment.category}
-                        </span>
-                      )}
-                      {c.serial_number && (
-                        <span
-                          className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ background: "#e8f0fe", color: "#1a3c78" }}
-                        >
-                          {c.serial_number}
-                        </span>
-                      )}
+                    <td className="history-item-cell" style={{ color: "#374151" }}>
+                      <span className="font-medium history-item-name">{c.equipment?.name ?? "—"}</span>
+                      <div className="history-item-tags">
+                        {c.equipment?.category && (
+                          <span
+                            className="history-item-tag"
+                            style={{ background: "#f1f5f9", color: "var(--muted)" }}
+                          >
+                            {c.equipment.category}
+                          </span>
+                        )}
+                        {c.serial_number && (
+                          <span
+                            className="history-item-tag"
+                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                          >
+                            {c.serial_number}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="text-sm" style={{ color: "#374151" }}>{c.quantity}</td>
                     <td>
@@ -295,8 +297,8 @@ function HistoryContent() {
                         </span>
                       )}
                     </td>
-                    <td className="max-w-[160px] truncate text-xs" style={{ color: "#94a3b8" }}>
-                      {[c.notes, c.return_notes].filter(Boolean).join(" · ") || "—"}
+                    <td className="history-notes" style={{ color: "#94a3b8" }}>
+                      {[c.notes, c.return_notes].filter(Boolean).join(" | ") || "—"}
                     </td>
                   </tr>
                 ))}
