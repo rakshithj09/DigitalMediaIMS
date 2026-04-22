@@ -108,10 +108,18 @@ function EquipmentContent() {
     const qty = parseInt(form.total_quantity, 10);
     if (!form.name.trim()) { setSaveError("Name is required."); setSaving(false); return; }
     if (isNaN(qty) || qty < 1) { setSaveError("Quantity must be at least 1."); setSaving(false); return; }
-    if (categorySupportsSerialNumbers(form.category) && parseSerialNumbers(form.serial_number).length < qty) {
-      setSaveError("Each item must have a serial number.");
-      setSaving(false);
-      return;
+    if (categorySupportsSerialNumbers(form.category)) {
+      const serialCount = parseSerialNumbers(form.serial_number).length;
+      if (serialCount < qty) {
+        setSaveError("Each item must have a serial number.");
+        setSaving(false);
+        return;
+      }
+      if (serialCount > qty) {
+        setSaveError("Serial tags cannot be more than the quantity.");
+        setSaving(false);
+        return;
+      }
     }
 
     const resp = await fetch("/api/equipment", {
@@ -174,9 +182,16 @@ function EquipmentContent() {
     const qty = parseInt(editForm.total_quantity, 10);
     if (!editForm.name.trim()) { setEditError("Name is required."); return; }
     if (isNaN(qty) || qty < 1) { setEditError("Quantity must be at least 1."); return; }
-    if (categorySupportsSerialNumbers(editForm.category) && parseSerialNumbers(editForm.serial_number).length < qty) {
-      setEditError("Each item must have a serial number.");
-      return;
+    if (categorySupportsSerialNumbers(editForm.category)) {
+      const serialCount = parseSerialNumbers(editForm.serial_number).length;
+      if (serialCount < qty) {
+        setEditError("Each item must have a serial number.");
+        return;
+      }
+      if (serialCount > qty) {
+        setEditError("Serial tags cannot be more than the quantity.");
+        return;
+      }
     }
 
     setEditSaving(true);

@@ -41,8 +41,14 @@ function validateSerialNumbers(
   category: string | null | undefined,
   totalQuantity: number
 ): string | null {
-  if (categorySupportsSerialNumbers(category) && parseSerialNumbers(serialNumber).length < totalQuantity) {
-    return "Each item must have a serial number.";
+  if (categorySupportsSerialNumbers(category)) {
+    const serialCount = parseSerialNumbers(serialNumber).length;
+    if (serialCount < totalQuantity) {
+      return "Each item must have a serial number.";
+    }
+    if (serialCount > totalQuantity) {
+      return "Serial tags cannot be more than the quantity.";
+    }
   }
   if ((serialNumber ?? "").length > 1000) {
     return "Serial/asset tags must be 1000 characters or fewer.";
