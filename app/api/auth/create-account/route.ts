@@ -10,10 +10,8 @@ type Body = {
   role?: "Teacher" | "Student";
   period?: "AM" | "PM";
   studentId?: string;
-  teacherCode?: string;
 };
 
-const TEACHER_VERIFICATION_CODE = "2015";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://digital-media-ims.vercel.app";
 
 function cleanString(value: unknown) {
@@ -108,6 +106,39 @@ async function syncTeacherProfile(
   return lastError;
 }
 
+async function getTeacherApproval(admin: SupabaseClient, email: string) {
+  const { data, error } = await admin
+    .from("approved_teachers")
+    .select("email, used_at")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === "42P01") {
+      throw new Error("Database update needed: run supabase/approved-teachers.sql in Supabase, then try again.");
+    }
+    throw new Error(error.message);
+  }
+
+  return data as { email: string; used_at: string | null } | null;
+}
+
+async function markTeacherApprovalUsed(admin: SupabaseClient, email: string, userId: string) {
+  const { error } = await admin
+    .from("approved_teachers")
+    .update({
+      approved_user_id: userId,
+      used_at: new Date().toISOString(),
+    })
+    .eq("email", email);
+
+  if (error && error.code !== "42P01") {
+    return error.message;
+  }
+
+  return null;
+}
+
 export async function POST(req: Request) {
   const supabase = getSupabasePublicClient();
   const admin = getSupabaseAdminClient();
@@ -144,10 +175,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Student ID must be 20 characters or fewer." }, { status: 400 });
   }
 
-  if (role === "Teacher" && cleanString(body.teacherCode) !== TEACHER_VERIFICATION_CODE) {
-    return NextResponse.json({ error: "Invalid teacher verification code." }, { status: 403 });
-  }
-
   try {
     if (await authUserExists(admin, email)) {
       return NextResponse.json(
@@ -164,6 +191,26 @@ export async function POST(req: Request) {
       },
       { status: 500 },
     );
+  }
+
+  if (role === "Teacher") {
+    try {
+      const approval = await getTeacherApproval(admin, email);
+      if (!approval) {
+        return NextResponse.json({
+          error: "This teacher email has not been approved yet. Ask an existing teacher to approve it first.",
+        }, { status: 403 });
+      }
+      if (approval.used_at) {
+        return NextResponse.json({
+          error: "This teacher approval has already been used.",
+        }, { status: 403 });
+      }
+    } catch (approvalError) {
+      return NextResponse.json({
+        error: approvalError instanceof Error ? approvalError.message : String(approvalError),
+      }, { status: 500 });
+    }
   }
 
   const metadata: Record<string, string> = {
@@ -202,6 +249,13 @@ export async function POST(req: Request) {
   }
 
   if (role === "Teacher") {
+    const approvalError = await markTeacherApprovalUsed(admin, email, user.id);
+    if (approvalError) {
+      return NextResponse.json({
+        error: `Account was created, but the teacher approval could not be marked used: ${approvalError}`,
+      }, { status: 500 });
+    }
+
     const profileError = await syncTeacherProfile(admin, user.id, email, firstName, lastName);
     if (profileError) {
       return NextResponse.json({

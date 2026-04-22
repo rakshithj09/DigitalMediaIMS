@@ -22,6 +22,7 @@ function StudentsContent() {
   }, []);
 
   const [showAdd, setShowAdd] = useState(false);
+  const [showTeacherApproval, setShowTeacherApproval] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -40,6 +41,10 @@ function StudentsContent() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteSaving, setDeleteSaving] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [teacherApprovalEmail, setTeacherApprovalEmail] = useState("");
+  const [teacherApprovalSaving, setTeacherApprovalSaving] = useState(false);
+  const [teacherApprovalError, setTeacherApprovalError] = useState<string | null>(null);
+  const [teacherApprovalMessage, setTeacherApprovalMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authResolved) return;
@@ -215,6 +220,29 @@ function StudentsContent() {
     setEditSaving(false);
   };
 
+  const handleTeacherApproval = async (e: FormEvent) => {
+    e.preventDefault();
+    setTeacherApprovalSaving(true);
+    setTeacherApprovalError(null);
+    setTeacherApprovalMessage(null);
+
+    const resp = await fetch("/api/admin/teacher-approvals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: teacherApprovalEmail }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      setTeacherApprovalError(String(data?.error?.message ?? data?.error ?? "Unable to approve teacher email."));
+    } else {
+      setTeacherApprovalMessage(`${data.email ?? teacherApprovalEmail.trim()} can now create a teacher account.`);
+      setTeacherApprovalEmail("");
+    }
+
+    setTeacherApprovalSaving(false);
+  };
+
   const filtered = (students ?? []).filter(
     (s) =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -242,27 +270,40 @@ function StudentsContent() {
           </p>
         </div>
         {currentUser?.user_metadata?.role !== "Student" && (
-          <button
-            onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
-            style={{ background: "var(--navy)" }}
-          >
-            {showAdd ? (
-              <>
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-                Cancel
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add Student
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                setShowTeacherApproval((value) => !value);
+                setTeacherApprovalError(null);
+                setTeacherApprovalMessage(null);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity"
+              style={{ background: "#e8f0fe", color: "var(--ignite-navy)" }}
+            >
+              {showTeacherApproval ? "Cancel" : "Approve Teacher"}
+            </button>
+            <button
+              onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
+              style={{ background: "var(--navy)" }}
+            >
+              {showAdd ? (
+                <>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                  Cancel
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Add Student
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
@@ -402,6 +443,47 @@ function StudentsContent() {
             </div>
           </form>
         </div>
+      )}
+
+      {showTeacherApproval && (
+      <div
+        className="bg-white rounded-2xl p-6 mb-6"
+        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+      >
+        <h3 className="font-semibold text-base mb-4" style={{ color: "var(--ignite-navy)" }}>
+          Approve Teacher
+        </h3>
+        {teacherApprovalError && (
+          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+            {teacherApprovalError}
+          </div>
+        )}
+        {teacherApprovalMessage && (
+          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}>
+            {teacherApprovalMessage}
+          </div>
+        )}
+        <form onSubmit={handleTeacherApproval} className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="email"
+            required
+            maxLength={200}
+            value={teacherApprovalEmail}
+            onChange={(event) => setTeacherApprovalEmail(event.target.value)}
+            placeholder="teacher@bentonvillek12.org"
+            className="form-input"
+            style={{ maxWidth: 360 }}
+          />
+          <button
+            type="submit"
+            disabled={teacherApprovalSaving}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+            style={{ background: "var(--navy)" }}
+          >
+            {teacherApprovalSaving ? "Approving..." : "Approve Teacher"}
+          </button>
+        </form>
+      </div>
       )}
 
       {/* Edit form */}

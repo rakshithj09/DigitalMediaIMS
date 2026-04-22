@@ -27,14 +27,12 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [studentId, setStudentId] = useState("");
   const [role, setRole] = useState<"Teacher" | "Student">("Student");
   const [periodSel, setPeriodSel] = useState<"AM" | "PM">("AM");
-  const [teacherCode, setTeacherCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
-  const TEACHER_VERIFICATION_CODE = "2015";
 
   const domainAllowed = (e: string) => e.toLowerCase().endsWith("@bentonvillek12.org");
 
@@ -48,10 +46,6 @@ export default function EmailPasswordDemo({ user }: Props) {
     if (mode === "signUp") {
       if (!firstName || !lastName) { setError("Please provide your first and last name."); return; }
       if (role === "Student" && !studentId.trim()) { setError("Please provide your student ID."); return; }
-      if (role === "Teacher") {
-        if (!teacherCode.trim()) { setError("Please provide your teacher verification code."); return; }
-        if (teacherCode.trim() !== TEACHER_VERIFICATION_CODE) { setError("Invalid teacher verification code."); return; }
-      }
     }
 
     if (!domainAllowed(email)) { setError("Email must be a @bentonvillek12.org address."); return; }
@@ -70,7 +64,6 @@ export default function EmailPasswordDemo({ user }: Props) {
             email, password, firstName, lastName, role,
             period: role === "Student" ? periodSel : undefined,
             studentId: role === "Student" ? studentId.trim() : undefined,
-            teacherCode: role === "Teacher" ? teacherCode.trim() : undefined,
           }),
         });
         const data = await resp.json().catch(() => ({}));
@@ -203,9 +196,8 @@ export default function EmailPasswordDemo({ user }: Props) {
                 <option value="Teacher">Teacher</option>
               </select>
             </div>
-            <div className="grid gap-2">
-              {role === "Student" ? (
-                <>
+            {role === "Student" && (
+              <div className="grid gap-2">
                   <Label htmlFor="period" className="text-slate-700">
                     Class period
                   </Label>
@@ -218,23 +210,8 @@ export default function EmailPasswordDemo({ user }: Props) {
                     <option value="AM">AM</option>
                     <option value="PM">PM</option>
                   </select>
-                </>
-              ) : (
-                <>
-                  <Label htmlFor="teacherCode" className="text-slate-700">
-                    Verification code
-                  </Label>
-                  <Input
-                    id="teacherCode"
-                    type="text"
-                    value={teacherCode}
-                    onChange={(e) => setTeacherCode(e.target.value)}
-                    placeholder="Staff code"
-                    className={authInputClassName}
-                  />
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
