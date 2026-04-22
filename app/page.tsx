@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
+import PeriodBadge from "@/app/components/PeriodBadge";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Checkout } from "@/app/lib/types";
@@ -134,7 +135,7 @@ function DashboardContent() {
               My Equipment
             </h2>
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              Your active checkouts for <span className="period-badge">{period} period</span>
+              Your active checkouts for <PeriodBadge>{period} period</PeriodBadge>
             </p>
           </div>
           <Link
@@ -252,7 +253,7 @@ function DashboardContent() {
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             Active checkouts for{" "}
-            <span className="period-badge">{period} period</span>
+            <PeriodBadge>{period} period</PeriodBadge>
           </p>
         </div>
         <button

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, FormEvent } from "react";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
+import PeriodBadge from "@/app/components/PeriodBadge";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Student, Equipment, Checkout } from "@/app/lib/types";
@@ -261,7 +262,7 @@ function CheckoutContent() {
         </h2>
         <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
           Check equipment in or out for{" "}
-          <span className="period-badge">{checkoutPeriod} period</span>
+          <PeriodBadge>{checkoutPeriod} period</PeriodBadge>
         </p>
       </div>
 

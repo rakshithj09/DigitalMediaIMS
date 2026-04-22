@@ -5,6 +5,7 @@ import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
+import PeriodBadge from "@/app/components/PeriodBadge";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Period, Student } from "@/app/lib/types";
@@ -260,7 +261,7 @@ function StudentsContent() {
             Students
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            <span className="period-badge">{period} period</span>{" "}
+            <PeriodBadge>{period} period</PeriodBadge>{" "}
             roster — {(students ?? []).length} student{(students ?? []).length !== 1 ? "s" : ""}
           </p>
         </div>
