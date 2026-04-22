@@ -15,6 +15,7 @@ type CreateBody = {
 type UpdateBody = {
   id?: string;
   isActive?: boolean;
+  teacherPassword?: string;
   name?: string;
   category?: string;
   totalQuantity?: number;
@@ -29,6 +30,23 @@ function getSupabaseAdminClient() {
   if (!url || !serviceRole) return null;
 
   return createClient(url, serviceRole, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+function getSupabasePublicClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
+
+  if (!url || !anonKey) return null;
+
+  return createClient(url, anonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -71,6 +89,26 @@ async function requireTeacher() {
   }
 
   return { user };
+}
+
+async function verifyTeacherPassword(email: string | undefined, password: string | undefined) {
+  if (!email || !password?.trim()) {
+    return "Teacher password is required.";
+  }
+
+  const supabase = getSupabasePublicClient();
+  if (!supabase) {
+    return "Server is missing Supabase public auth configuration.";
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  await supabase.auth.signOut();
+
+  if (error) {
+    return "Teacher password was incorrect.";
+  }
+
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -155,6 +193,12 @@ export async function PATCH(req: Request) {
   const update: Record<string, unknown> = {};
 
   if (typeof body.isActive === "boolean") {
+    if (body.isActive === false) {
+      const passwordError = await verifyTeacherPassword(auth.user.email, body.teacherPassword);
+      if (passwordError) {
+        return NextResponse.json({ error: passwordError }, { status: 403 });
+      }
+    }
     update.is_active = body.isActive;
   }
 

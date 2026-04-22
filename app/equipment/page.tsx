@@ -59,6 +59,10 @@ function EquipmentContent() {
   });
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [removingEquipment, setRemovingEquipment] = useState<EquipmentWithAvail | null>(null);
+  const [removePassword, setRemovePassword] = useState("");
+  const [removeSaving, setRemoveSaving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -158,16 +162,33 @@ function EquipmentContent() {
     setSaving(false);
   };
 
-  const handleDeactivate = async (id: string) => {
-    if (!confirm("Remove this item from inventory? Checkout history is preserved.")) return;
+  const openRemove = (item: EquipmentWithAvail) => {
+    setRemovingEquipment(item);
+    setRemovePassword("");
+    setRemoveError(null);
+  };
+
+  const handleDeactivate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!removingEquipment) return;
+
+    setRemoveSaving(true);
+    setRemoveError(null);
+
     const resp = await fetch("/api/equipment", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, isActive: false }),
+      body: JSON.stringify({ id: removingEquipment.id, isActive: false, teacherPassword: removePassword }),
     });
     const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) alert("Error: " + String(data?.error?.message ?? data?.error ?? "Unable to remove equipment."));
-    else refresh();
+    if (!resp.ok) {
+      setRemoveError(String(data?.error?.message ?? data?.error ?? "Unable to remove equipment."));
+    } else {
+      setRemovingEquipment(null);
+      setRemovePassword("");
+      refresh();
+    }
+    setRemoveSaving(false);
   };
 
   const openEdit = (item: EquipmentWithAvail) => {
@@ -532,6 +553,62 @@ function EquipmentContent() {
         </div>
       )}
 
+      {/* Remove confirmation */}
+      {removingEquipment && (
+        <div
+          className="bg-white rounded-2xl p-6 mb-6"
+          style={{ border: "1px solid #fecaca", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        >
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div>
+              <h3 className="font-semibold text-base" style={{ color: "#b91c1c" }}>
+                Remove Equipment
+              </h3>
+              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                This removes {removingEquipment.name} from active inventory. Checkout history stays saved.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRemovingEquipment(null)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+            >
+              Cancel
+            </button>
+          </div>
+          {removeError && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+              {removeError}
+            </div>
+          )}
+          <form onSubmit={handleDeactivate} className="space-y-4">
+            <div className="max-w-sm">
+              <label className="block text-sm font-medium mb-1.5" htmlFor="remove-equipment-password" style={{ color: "#374151" }}>
+                Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <input
+                id="remove-equipment-password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={removePassword}
+                onChange={(event) => setRemovePassword(event.target.value)}
+                className="form-input"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={removeSaving}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: "#dc2626" }}
+            >
+              {removeSaving ? "Removing…" : "Remove Equipment"}
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">
         <div className="relative">
@@ -652,7 +729,7 @@ function EquipmentContent() {
                               Edit
                             </button>
                             <button
-                              onClick={() => handleDeactivate(e.id)}
+                              onClick={() => openRemove(e)}
                               className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
                               style={{ color: "#dc2626" }}
                             >
