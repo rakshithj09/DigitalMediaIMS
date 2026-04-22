@@ -104,8 +104,8 @@ function HistoryContent() {
 
       {/* Filters bar */}
       <div
-        className="bg-white rounded-2xl p-4 mb-5 flex flex-wrap items-center gap-3"
-        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.04)" }}
+        className="rounded-2xl p-4 mb-5 flex flex-wrap items-center gap-3"
+        style={{ background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 4px 16px rgba(15,36,55,0.05)" }}
       >
         <div className="relative">
           <svg
@@ -180,8 +180,8 @@ function HistoryContent() {
 
       {/* Table */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
       >
         {loading ? (
           <div className="px-6 py-16 text-center">

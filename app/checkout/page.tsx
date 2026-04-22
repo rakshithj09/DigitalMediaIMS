@@ -268,8 +268,8 @@ function CheckoutContent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── Checkout form ─────────────────────────────── */}
         <div
-          className="bg-white rounded-2xl p-6"
-          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+          className="rounded-2xl p-6"
+          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
         >
           <div className="flex items-center gap-2.5 mb-5">
             <div
@@ -435,7 +435,7 @@ function CheckoutContent() {
                 type="submit"
                 disabled={submitting || maxQty === 0}
                 className="w-full inline-flex items-center justify-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-                style={{ background: "var(--navy)", fontSize: "0.9375rem" }}
+                style={{ background: "linear-gradient(135deg, #002c51 0%, #003563 100%)", boxShadow: "0 2px 10px rgba(0,44,81,0.25)", fontSize: "0.9375rem" }}
               >
                 {submitting ? (
                   <>
@@ -453,8 +453,8 @@ function CheckoutContent() {
 
         {/* ── Check-in list ──────────────────────────────── */}
         <div
-          className="bg-white rounded-2xl p-6"
-          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+          className="rounded-2xl p-6"
+          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
         >
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">

@@ -291,7 +291,7 @@ function EquipmentContent() {
           <button
             onClick={openAddForm}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
-            style={{ background: "var(--navy)" }}
+            style={{ background: "linear-gradient(135deg, #002c51 0%, #003563 100%)", boxShadow: "0 2px 8px rgba(0,44,81,0.25)" }}
           >
             {showAdd ? (
               <>
@@ -315,8 +315,8 @@ function EquipmentContent() {
       {/* Add form */}
       {showAdd && (
         <div
-          className="bg-white rounded-2xl p-6 mb-6"
-          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+          className="rounded-2xl p-6 mb-6"
+          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
         >
           <h3 className="font-semibold text-base mb-5" style={{ color: "var(--ignite-navy)" }}>
             New Equipment
@@ -439,8 +439,8 @@ function EquipmentContent() {
       {/* Edit form */}
       {editingEquipment && (
         <div
-          className="bg-white rounded-2xl p-6 mb-6"
-          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+          className="rounded-2xl p-6 mb-6"
+          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
         >
           <div className="flex items-center justify-between gap-3 mb-5">
             <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
@@ -556,8 +556,8 @@ function EquipmentContent() {
       {/* Remove confirmation */}
       {removingEquipment && (
         <div
-          className="bg-white rounded-2xl p-6 mb-6"
-          style={{ border: "1px solid #fecaca", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+          className="rounded-2xl p-6 mb-6"
+          style={{ background: "linear-gradient(135deg, #fff5f5 0%, #fff8f8 100%)", border: "1.5px solid #fecaca", boxShadow: "0 1px 3px rgba(185,28,28,0.06), 0 6px 24px rgba(185,28,28,0.06)" }}
         >
           <div className="flex items-start justify-between gap-3 mb-5">
             <div>
@@ -644,8 +644,8 @@ function EquipmentContent() {
 
       {/* Table */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
       >
         {loading ? (
           <div className="px-6 py-16 text-center">

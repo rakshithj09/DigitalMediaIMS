@@ -140,7 +140,7 @@ function DashboardContent() {
           <Link
             href="/checkout"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
-            style={{ background: "var(--navy)" }}
+            style={{ background: "linear-gradient(135deg, #002c51 0%, #003563 100%)", boxShadow: "0 2px 8px rgba(0,44,81,0.25)" }}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
@@ -178,10 +178,10 @@ function DashboardContent() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-          <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}>
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #f1f5f9" }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1.5px solid #f1f5f9", background: "linear-gradient(to bottom, #fafcff, #f8fafc)" }}>
               <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>What You Have Out</h3>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#e8f0fe", color: "#1a3c78" }}>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#dbeafe", color: "#1e40af", border: "1px solid rgba(59,130,246,0.18)" }}>
                 {list.length} active
               </span>
             </div>
@@ -238,7 +238,7 @@ function DashboardContent() {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl p-5 h-fit" style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}>
+          <div className="rounded-2xl p-5 h-fit" style={{ background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
             <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>Quick Actions</h3>
             <div className="mt-4 grid gap-2">
               <Link href="/equipment" className="px-3 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "#f8fafc", color: "var(--ignite-navy)" }}>
@@ -332,14 +332,14 @@ function DashboardContent() {
       </div>
 
       {/* Active checkouts table */}
-      <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}>
-        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #f1f5f9" }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
+        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1.5px solid #f1f5f9", background: "linear-gradient(to bottom, #fafcff, #f8fafc)" }}>
           <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
             Active Checkouts
           </h3>
           <span
             className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: list.length > 0 ? "#e8f0fe" : "#f1f5f9", color: list.length > 0 ? "#1a3c78" : "var(--muted)" }}
+            style={{ background: list.length > 0 ? "#dbeafe" : "#f1f5f9", color: list.length > 0 ? "#1e40af" : "var(--muted)", border: list.length > 0 ? "1px solid rgba(59,130,246,0.18)" : "1px solid rgba(148,163,184,0.3)" }}
           >
             {list.length} active
           </span>
@@ -480,22 +480,33 @@ function StatCard({
 }) {
   return (
     <div
-      className="bg-white rounded-2xl p-5"
+      className="rounded-2xl p-5 relative overflow-hidden"
       style={{
-        border: "1px solid #e9eef5",
-        boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
+        border: "1px solid rgba(226,232,240,0.9)",
+        boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.07)",
       }}
     >
+      {/* Decorative corner glow */}
+      <div
+        className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${accentColor}20 0%, transparent 70%)` }}
+      />
+
       <div className="flex items-start justify-between mb-4">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: iconBg, color: iconColor }}
+          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: iconBg, color: iconColor, boxShadow: `0 2px 10px ${iconBg}` }}
         >
           {icon}
         </div>
         <div
-          className="w-1.5 h-8 rounded-full"
-          style={{ background: accentColor, opacity: 0.3 }}
+          className="rounded-full"
+          style={{
+            width: "5px",
+            height: "32px",
+            background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}44 100%)`,
+          }}
         />
       </div>
       <p className="text-3xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.03em" }}>
