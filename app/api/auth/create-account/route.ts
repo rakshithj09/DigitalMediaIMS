@@ -55,6 +55,59 @@ async function authUserExists(admin: SupabaseClient, email: string) {
   throw new Error("Unable to check existing accounts because the user list is too large.");
 }
 
+async function syncTeacherProfile(
+  admin: SupabaseClient,
+  userId: string,
+  email: string,
+  firstName: string,
+  lastName: string,
+) {
+  const attempts: Array<Record<string, unknown>> = [
+    {
+      id: userId,
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      role: "staff",
+      is_staff: true,
+    },
+    {
+      id: userId,
+      email,
+      role: "staff",
+      is_staff: true,
+    },
+    {
+      id: userId,
+      email,
+      is_staff: true,
+    },
+    {
+      id: userId,
+      email,
+      role: "staff",
+    },
+  ];
+
+  let lastError: string | null = null;
+
+  for (const profile of attempts) {
+    const { error } = await admin
+      .from("profiles")
+      .upsert(profile, { onConflict: "id" });
+
+    if (!error) return null;
+
+    if (error.code === "42P01") {
+      return null;
+    }
+
+    lastError = error.message;
+  }
+
+  return lastError;
+}
+
 export async function POST(req: Request) {
   const supabase = getSupabasePublicClient();
   const admin = getSupabaseAdminClient();
@@ -146,6 +199,15 @@ export async function POST(req: Request) {
     return NextResponse.json({
       error: "Supabase email confirmation appears to be disabled. Enable Confirm email before allowing self-service account creation.",
     }, { status: 500 });
+  }
+
+  if (role === "Teacher") {
+    const profileError = await syncTeacherProfile(admin, user.id, email, firstName, lastName);
+    if (profileError) {
+      return NextResponse.json({
+        error: `Account was created, but the staff profile could not be updated: ${profileError}`,
+      }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ ok: true, requiresEmailConfirmation: true });
