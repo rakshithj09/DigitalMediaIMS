@@ -463,9 +463,7 @@ function CheckoutContent() {
                 style={{ background: "#dcfce7" }}
               >
                 <svg width="16" height="16" fill="none" stroke="#16a34a" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
+                  <path d="M3 3 15 15" /><path d="M10 15h5v-5" /><path d="M21 9v11a2 2 0 0 1-2 2H8" />
                 </svg>
               </div>
               <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
