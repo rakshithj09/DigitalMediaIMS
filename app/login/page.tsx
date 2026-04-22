@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,6 +17,30 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const router   = useRouter();
   const supabase = createSupabaseBrowserClient();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verified = params.get("verified");
+    const reason = params.get("reason");
+
+    if (verified === "success") {
+      setTimeout(() => setMessage("Email verified. You can continue to your dashboard."), 0);
+      window.history.replaceState(null, "", "/login");
+    }
+
+    if (verified === "error") {
+      setTimeout(
+        () =>
+          setError(
+            reason === "missing_token"
+              ? "Verification link was missing required information. Please request a new verification email."
+              : "Verification link is invalid or expired. Please request a new verification email."
+          ),
+        0
+      );
+      window.history.replaceState(null, "", "/login");
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -51,7 +75,7 @@ export default function LoginPage() {
     }
 
     setResetLoading(true);
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? window.location.origin}/reset-password`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(emailToReset, { redirectTo });
 
     if (resetError) {

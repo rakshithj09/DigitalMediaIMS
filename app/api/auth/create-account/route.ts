@@ -13,6 +13,7 @@ type Body = {
 };
 
 const TEACHER_VERIFICATION_CODE = "2015";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://digital-media-ims.vercel.app";
 
 function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -141,13 +142,12 @@ export async function POST(req: Request) {
   if (role === "Student" && period) metadata.period = period;
   if (role === "Student" && studentId) metadata.student_id = studentId;
 
-  const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const { data: signUpData, error: createError } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: metadata,
-      emailRedirectTo: `${origin.replace(/\/+$/, "")}/login`,
+      emailRedirectTo: `${SITE_URL}/auth/callback`,
     },
   });
 
