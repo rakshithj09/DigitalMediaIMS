@@ -276,7 +276,7 @@ function CheckoutContent() {
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
               style={{ background: "#e8f0fe" }}
             >
-              <svg width="16" height="16" fill="none" stroke="#1a3c78" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" fill="none" stroke="#005a78" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M16 3h5v5" /><path d="M21 3 9 15" /><path d="M3 9v11a2 2 0 0 0 2 2h11" />
               </svg>
             </div>
@@ -435,7 +435,7 @@ function CheckoutContent() {
                 type="submit"
                 disabled={submitting || maxQty === 0}
                 className="w-full inline-flex items-center justify-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, #002c51 0%, #003563 100%)", boxShadow: "0 2px 10px rgba(0,44,81,0.25)", fontSize: "0.9375rem" }}
+                style={{ background: "var(--navy)", boxShadow: "0 2px 10px rgba(0,90,120,0.22)", fontSize: "0.9375rem" }}
               >
                 {submitting ? (
                   <>
@@ -473,7 +473,7 @@ function CheckoutContent() {
             {visibleActiveCheckouts.length > 0 && (
               <span
                 className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                style={{ background: "#e8f0fe", color: "#005a78" }}
               >
                 {visibleActiveCheckouts.length} out
               </span>
@@ -527,7 +527,7 @@ function CheckoutContent() {
                         {c.serial_number && (
                           <span
                             className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
-                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                            style={{ background: "#e8f0fe", color: "#005a78" }}
                           >
                             {c.serial_number}
                           </span>

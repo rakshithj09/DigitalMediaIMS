@@ -2,13 +2,13 @@
 
 /* ── Brand color tokens ───────────────────────────── */
 :root {
-  --navy:        #002c51;
-  --navy-hover:  #003d6e;
-  --navy-deep:   #001224;
-  --mint:        #07eccb;
+  --navy:        #005a78;
+  --navy-hover:  #00708f;
+  --navy-deep:   #08243a;
+  --mint:        #ffd21f;
   --brand-bg:    #e8eef6;
   /* Aliases used across content pages */
-  --ignite-navy: #002c51;
+  --ignite-navy: #005a78;
   --muted:       #64748b;
 }
 
@@ -22,7 +22,7 @@ body {
 
 /* ── App header (used in AppShell only) ───────────── */
 .brand-header {
-  background: linear-gradient(135deg, #001224 0%, #001e3c 40%, #002c51 80%, #003563 100%);
+  background: var(--navy);
   color: white;
   border-bottom: 2px solid var(--mint);
   box-shadow: 0 2px 24px rgba(0, 0, 0, 0.22);
@@ -50,8 +50,8 @@ body {
   box-shadow: 0 1px 2px rgba(15, 36, 55, 0.04);
 }
 .form-input:focus {
-  border-color: #002c51;
-  box-shadow: 0 0 0 3px rgba(0, 44, 81, 0.1), 0 1px 2px rgba(0, 0, 0, 0.04);
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(0, 90, 120, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .form-input::placeholder { color: #94a3b8; }
 .form-input:is(select) {

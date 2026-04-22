@@ -291,7 +291,7 @@ function EquipmentContent() {
           <button
             onClick={openAddForm}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
-            style={{ background: "linear-gradient(135deg, #002c51 0%, #003563 100%)", boxShadow: "0 2px 8px rgba(0,44,81,0.25)" }}
+            style={{ background: "var(--navy)", boxShadow: "0 2px 8px rgba(0,90,120,0.22)" }}
           >
             {showAdd ? (
               <>
@@ -740,7 +740,7 @@ function EquipmentContent() {
                           <Link
                             href={`/checkout?eq=${e.id}`}
                             className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
-                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                            style={{ background: "#e8f0fe", color: "#005a78" }}
                           >
                             Checkout
                           </Link>

@@ -115,7 +115,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
 
           <div className="hidden lg:flex items-center gap-2">
             <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-              style={{ background: "linear-gradient(135deg, rgba(7,236,203,0.55) 0%, rgba(7,236,203,0.28) 100%)", color: "white" }}>
+              style={{ background: "rgba(255,210,31,0.92)", color: "var(--navy-deep)" }}>
               {initials}
             </div>
             <span className="text-xs font-medium text-white/80 max-w-[150px] truncate">{displayName}</span>
@@ -135,7 +135,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
 
         {/* ── Sidebar ───────────────────────────────────── */}
         <nav className="hidden md:flex w-56 h-full shrink-0 flex-col py-4 overflow-y-auto"
-          style={{ background: "linear-gradient(180deg, #001224 0%, #001e3b 35%, #002651 65%, #002c51 100%)" }} aria-label="Main navigation">
+          style={{ background: "linear-gradient(180deg, #004f6b 0%, #005a78 100%)" }} aria-label="Main navigation">
 
           <p className="px-5 pb-3 text-kicker font-semibold uppercase tracking-widest"
             style={{ color: "rgba(255,255,255,0.3)" }}>
@@ -149,7 +149,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
                 <Link key={href} href={href}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
                   style={active
-                    ? { background: "linear-gradient(90deg, rgba(7,236,203,0.14) 0%, rgba(7,236,203,0.04) 100%)", color: "#fff", boxShadow: "inset 3px 0 0 var(--mint)" }
+                    ? { background: "rgba(255,210,31,0.14)", color: "#fff", boxShadow: "inset 3px 0 0 var(--mint)" }
                     : { color: "rgba(255,255,255,0.62)" }}
                   onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)"; }}
                   onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = ""; }}>
@@ -162,7 +162,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
 
           {/* Period pill at bottom */}
           <div className="mx-3 mt-4 px-3 py-2.5 rounded-lg"
-            style={{ background: "linear-gradient(135deg, rgba(7,236,203,0.09) 0%, rgba(7,236,203,0.03) 100%)", border: "1px solid rgba(7,236,203,0.2)" }}>
+            style={{ background: "rgba(255,210,31,0.10)", border: "1px solid rgba(255,210,31,0.28)" }}>
             <p className="text-xs" style={{ color: "rgba(255,255,255,0.42)" }}>Active period</p>
             <p className="text-sm font-bold mt-0.5" style={{ color: "var(--mint)" }}>
               {activePeriod} Period
@@ -232,7 +232,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const handleLogout = async () => { await supabase.auth.signOut(); router.replace("/login"); };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #001224 0%, #002040 50%, #002c51 100%)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #004f6b 0%, #005a78 100%)" }}>
       <div className="text-center">
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
           style={{ background: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>

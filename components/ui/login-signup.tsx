@@ -13,10 +13,10 @@ type LoginSignupFrameProps = {
 };
 
 export const authInputClassName =
-  "auth-input h-10 rounded-lg border-slate-200 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-[#002c51] focus-visible:ring-[#002c51]/10";
+  "auth-input h-10 rounded-lg border-slate-200 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-[#005a78] focus-visible:ring-[#005a78]/10";
 
 export const authSelectClassName =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-shadow focus:border-[#002c51] focus:ring-[3px] focus:ring-[#002c51]/10 disabled:cursor-not-allowed disabled:opacity-50";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-shadow focus:border-[#005a78] focus:ring-[3px] focus:ring-[#005a78]/10 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function LoginSignupFrame({ children, className, cardClassName }: LoginSignupFrameProps) {
   return (

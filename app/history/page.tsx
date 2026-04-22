@@ -243,7 +243,7 @@ function HistoryContent() {
                         {c.serial_number && (
                           <span
                             className="history-item-tag"
-                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                            style={{ background: "#e8f0fe", color: "#005a78" }}
                           >
                             {c.serial_number}
                           </span>
@@ -254,7 +254,7 @@ function HistoryContent() {
                     <td>
                       <span
                         className="badge"
-                        style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                        style={{ background: "#e8f0fe", color: "#005a78" }}
                       >
                         {c.period}
                       </span>

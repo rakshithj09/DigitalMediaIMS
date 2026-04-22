@@ -140,7 +140,7 @@ function DashboardContent() {
           <Link
             href="/checkout"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
-            style={{ background: "linear-gradient(135deg, #002c51 0%, #003563 100%)", boxShadow: "0 2px 8px rgba(0,44,81,0.25)" }}
+            style={{ background: "var(--navy)", boxShadow: "0 2px 8px rgba(0,90,120,0.22)" }}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
@@ -155,8 +155,8 @@ function DashboardContent() {
             value={totalItemsOut}
             icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>}
             iconBg="#e8f0fe"
-            iconColor="#1a3c78"
-            accentColor="#3b82f6"
+            iconColor="#005a78"
+            accentColor="#005a78"
           />
           <StatCard
             label="Needs Attention"
@@ -181,7 +181,7 @@ function DashboardContent() {
           <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1.5px solid #f1f5f9", background: "linear-gradient(to bottom, #fafcff, #f8fafc)" }}>
               <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>What You Have Out</h3>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#dbeafe", color: "#1e40af", border: "1px solid rgba(59,130,246,0.18)" }}>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#dbeafe", color: "#005a78", border: "1px solid rgba(59,130,246,0.18)" }}>
                 {list.length} active
               </span>
             </div>
@@ -213,7 +213,7 @@ function DashboardContent() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{c.equipment?.name ?? "Equipment"}</p>
                           <span className="badge badge-neutral">qty {c.quantity}</span>
-                          {c.serial_number && <span className="badge" style={{ background: "#e8f0fe", color: "#1a3c78" }}>{c.serial_number}</span>}
+                          {c.serial_number && <span className="badge" style={{ background: "#e8f0fe", color: "#005a78" }}>{c.serial_number}</span>}
                           <span
                             className="badge"
                             style={overdue ? { background: "#fee2e2", color: "#dc2626" } : warning ? { background: "#fef9c3", color: "#ca8a04" } : { background: "#dcfce7", color: "#16a34a" }}
@@ -296,8 +296,8 @@ function DashboardContent() {
             </svg>
           }
           iconBg="#dbeafe"
-          iconColor="#2563eb"
-          accentColor="#3b82f6"
+          iconColor="#005a78"
+          accentColor="#005a78"
         />
         <StatCard
           label="Students with Items"
@@ -324,7 +324,7 @@ function DashboardContent() {
           </h3>
           <span
             className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: list.length > 0 ? "#dbeafe" : "#f1f5f9", color: list.length > 0 ? "#1e40af" : "var(--muted)", border: list.length > 0 ? "1px solid rgba(59,130,246,0.18)" : "1px solid rgba(148,163,184,0.3)" }}
+            style={{ background: list.length > 0 ? "#dbeafe" : "#f1f5f9", color: list.length > 0 ? "#005a78" : "var(--muted)", border: list.length > 0 ? "1px solid rgba(59,130,246,0.18)" : "1px solid rgba(148,163,184,0.3)" }}
           >
             {list.length} active
           </span>
@@ -397,7 +397,7 @@ function DashboardContent() {
                         {c.serial_number && (
                           <span
                             className="ml-2 text-xs px-1.5 py-0.5 rounded-full font-medium"
-                            style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                            style={{ background: "#e8f0fe", color: "#005a78" }}
                           >
                             {c.serial_number}
                           </span>

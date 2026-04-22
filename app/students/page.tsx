@@ -234,7 +234,7 @@ function StudentsContent() {
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             <span
               className="font-semibold px-2 py-0.5 rounded-full text-xs"
-              style={{ background: "#e8f0fe", color: "#1a3c78" }}
+              style={{ background: "#e8f0fe", color: "#005a78" }}
             >
               {period} period
             </span>{" "}
@@ -634,7 +634,7 @@ function StudentsContent() {
                     <td>
                       <span
                         className="badge"
-                        style={{ background: "#e8f0fe", color: "#1a3c78" }}
+                        style={{ background: "#e8f0fe", color: "#005a78" }}
                       >
                         {s.period}
                       </span>
