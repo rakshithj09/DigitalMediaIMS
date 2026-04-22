@@ -2,14 +2,19 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
+import { Eye, EyeOff, IdCard, Lock, Mail, UserRound } from "lucide-react";
+import LoginSignupFrame, {
+  authInputClassName,
+  authSelectClassName,
+} from "@/components/ui/login-signup";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { User } from "@supabase/supabase-js";
 
 type Props = { user?: User | null };
-
-const INPUT = "form-input";
 
 export default function EmailPasswordDemo({ user }: Props) {
   const searchParams = useSearchParams();
@@ -26,6 +31,7 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
   const TEACHER_VERIFICATION_CODE = "2015";
@@ -90,188 +96,244 @@ export default function EmailPasswordDemo({ user }: Props) {
 
   if (user) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--brand-bg)" }}>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 w-full max-w-sm text-center">
-          <p className="text-sm mb-1 text-slate-500">Signed in as</p>
-          <p className="font-semibold mb-6" style={{ color: "var(--navy)" }}>{user.email}</p>
+      <LoginSignupFrame>
+        <div className="text-center">
+          <p className="mb-1 text-sm text-slate-500">Signed in as</p>
+          <p className="mb-6 font-semibold" style={{ color: "var(--ignite-navy)" }}>{user.email}</p>
           <div className="flex justify-center gap-3">
-            <button
+            <Button
               onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
-              style={{ background: "var(--navy)" }}>
+              className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            >
               Sign out
-            </button>
-            <Link href="/"
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
-              style={{ background: "#0f766e" }}>
-              Dashboard
-            </Link>
+            </Button>
+            <Button
+              asChild
+              className="rounded-lg text-white hover:opacity-90"
+              style={{ background: "var(--navy)" }}
+            >
+              <Link href="/">Dashboard</Link>
+            </Button>
           </div>
         </div>
-      </div>
+      </LoginSignupFrame>
     );
   }
 
   const isSignUp = mode === "signUp";
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{ background: "var(--brand-bg)" }}>
-      <div className="w-full max-w-sm">
-
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8 gap-3">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{ background: "white", border: "1px solid #e2e8f0" }}>
-            <Image src="/ignite-logo.png" alt="Ignite logo" width={36} height={36} className="object-contain" priority />
-          </div>
-          <div className="text-center">
-            <h1 className="text-xl font-bold" style={{ color: "var(--navy)" }}>Digital Media</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Equipment Tracker</p>
-          </div>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-          <h2 className="text-lg font-semibold mb-6" style={{ color: "var(--navy)" }}>
-            {isSignUp ? "Create an account" : "Sign in"}
-          </h2>
-
-          {error && (
-            <div role="alert" className="mb-5 px-4 py-3 rounded-xl text-sm"
-              style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c" }}>
-              {error}
-            </div>
-          )}
-
-          {message && (
-            <div className="mb-5 px-4 py-3 rounded-xl text-sm"
-              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}>
-              {message}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-
-            {isSignUp && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium mb-1.5 text-slate-700">
-                    First name
-                  </label>
-                  <input id="firstName" type="text" required
-                    value={firstName} onChange={(e) => setFirstName(e.target.value)}
-                    className={INPUT} placeholder="First"/>
-                </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium mb-1.5 text-slate-700">
-                    Last name
-                  </label>
-                  <input id="lastName" type="text" required
-                    value={lastName} onChange={(e) => setLastName(e.target.value)}
-                    className={INPUT} placeholder="Last"/>
-                </div>
-              </div>
-            )}
-
-            {isSignUp && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="role" className="block text-sm font-medium mb-1.5 text-slate-700">Role</label>
-                  <select id="role" value={role}
-                    onChange={(e) => setRole(e.target.value as "Teacher" | "Student")}
-                    className={INPUT}>
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
-                  </select>
-                </div>
-                <div>
-                  {role === "Student" ? (
-                    <>
-                      <label htmlFor="period" className="block text-sm font-medium mb-1.5 text-slate-700">
-                        Class period
-                      </label>
-                      <select id="period" value={periodSel}
-                        onChange={(e) => setPeriodSel(e.target.value as "AM" | "PM")}
-                        className={INPUT}>
-                        <option value="AM">AM</option>
-                        <option value="PM">PM</option>
-                      </select>
-                    </>
-                  ) : (
-                    <>
-                      <label htmlFor="teacherCode" className="block text-sm font-medium mb-1.5 text-slate-700">
-                        Verification code
-                      </label>
-                      <input id="teacherCode" type="text"
-                        value={teacherCode} onChange={(e) => setTeacherCode(e.target.value)}
-                        placeholder="Staff code" className={INPUT}/>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {isSignUp && role === "Student" && (
-              <div>
-                <label htmlFor="studentId" className="block text-sm font-medium mb-1.5 text-slate-700">
-                  Student ID
-                </label>
-                <input id="studentId" type="text" required maxLength={20}
-                  value={studentId} onChange={(e) => setStudentId(e.target.value)}
-                  placeholder="e.g. 4000" className={INPUT}/>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-slate-700">
-                Email
-              </label>
-              <input id="email" type="email" autoComplete="email" required
-                value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@bentonvillek12.org" className={INPUT}/>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1.5 text-slate-700">
-                Password
-              </label>
-              <input id="password" type="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                required
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" className={INPUT}/>
-            </div>
-
-            <button type="submit" disabled={loading}
-              className="w-full py-2.5 rounded-lg text-sm font-semibold text-white mt-1
-                         transition-opacity disabled:opacity-50"
-              style={{ background: "var(--navy)" }}>
-              {loading
-                ? (isSignUp ? "Creating account…" : "Signing in…")
-                : (isSignUp ? "Create account" : "Sign in")}
-            </button>
-          </form>
-
-          <div className="mt-5 flex items-center justify-between text-sm">
-            {!forcedMode && (
-              <button type="button"
-                onClick={() => { setMode(isSignUp ? "signIn" : "signUp"); setError(null); setMessage(null); }}
-                className="font-semibold hover:underline"
-                style={{ color: "var(--navy)" }}>
-                {isSignUp ? "Back to sign in" : "Create an account"}
-              </button>
-            )}
-            <Link href="/login" className="text-xs hover:underline ml-auto text-slate-400">
-              Back to login
-            </Link>
-          </div>
-        </div>
-
-        <p className="mt-5 text-center text-xs text-slate-400">
-          Requires a <code className="bg-slate-100 px-1 rounded text-slate-500">@bentonvillek12.org</code> email
+    <LoginSignupFrame cardClassName={isSignUp ? "max-w-md" : undefined}>
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-bold leading-none" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+          {isSignUp ? "Create an account" : "Welcome back"}
+        </h1>
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          {isSignUp ? "Use your school details to request access" : "Sign in with your school account"}
         </p>
       </div>
-    </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="mb-5 rounded-lg border border-red-400/30 bg-red-950/50 px-4 py-3 text-sm text-red-200"
+        >
+          {error}
+        </div>
+      )}
+
+      {message && (
+        <div className="mb-5 rounded-lg border border-emerald-400/30 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200">
+          {message}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {isSignUp && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="firstName" className="text-slate-700">
+                First name
+              </Label>
+              <div className="relative">
+                <UserRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="firstName"
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className={`${authInputClassName} pl-10`}
+                  placeholder="First"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="lastName" className="text-slate-700">
+                Last name
+              </Label>
+              <Input
+                id="lastName"
+                type="text"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className={authInputClassName}
+                placeholder="Last"
+              />
+            </div>
+          </div>
+        )}
+
+        {isSignUp && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="role" className="text-slate-700">
+                Role
+              </Label>
+              <select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as "Teacher" | "Student")}
+                className={authSelectClassName}
+              >
+                <option value="Student">Student</option>
+                <option value="Teacher">Teacher</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              {role === "Student" ? (
+                <>
+                  <Label htmlFor="period" className="text-slate-700">
+                    Class period
+                  </Label>
+                  <select
+                    id="period"
+                    value={periodSel}
+                    onChange={(e) => setPeriodSel(e.target.value as "AM" | "PM")}
+                    className={authSelectClassName}
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </>
+              ) : (
+                <>
+                  <Label htmlFor="teacherCode" className="text-slate-700">
+                    Verification code
+                  </Label>
+                  <Input
+                    id="teacherCode"
+                    type="text"
+                    value={teacherCode}
+                    onChange={(e) => setTeacherCode(e.target.value)}
+                    placeholder="Staff code"
+                    className={authInputClassName}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isSignUp && role === "Student" && (
+          <div className="grid gap-2">
+            <Label htmlFor="studentId" className="text-slate-700">
+              Student ID
+            </Label>
+            <div className="relative">
+              <IdCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="studentId"
+                type="text"
+                required
+                maxLength={20}
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                placeholder="e.g. 4000"
+                className={`${authInputClassName} pl-10`}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="grid gap-2">
+          <Label htmlFor="email" className="text-slate-700">
+            Email
+          </Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@bentonvillek12.org"
+              className={`${authInputClassName} pl-10`}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="password" className="text-slate-700">
+            Password
+          </Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete={isSignUp ? "new-password" : "current-password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className={`${authInputClassName} pl-10 pr-10`}
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 hover:text-slate-700"
+              onClick={() => setShowPassword((value) => !value)}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        <Button
+          type="submit"
+          disabled={loading}
+          className="mt-1 h-10 w-full rounded-lg text-white hover:opacity-90"
+          style={{ background: "var(--navy)" }}
+        >
+          {loading
+            ? (isSignUp ? "Creating account..." : "Signing in...")
+            : (isSignUp ? "Create account" : "Sign in")}
+        </Button>
+      </form>
+
+      <div className="mt-5 flex items-center justify-between text-sm">
+        {!forcedMode && (
+          <button
+            type="button"
+            onClick={() => { setMode(isSignUp ? "signIn" : "signUp"); setError(null); setMessage(null); }}
+            className="font-semibold hover:underline"
+            style={{ color: "var(--navy)" }}
+          >
+            {isSignUp ? "Back to sign in" : "Create an account"}
+          </button>
+        )}
+        <Link href="/login" className="ml-auto text-xs text-slate-400 hover:text-slate-600 hover:underline">
+          Back to login
+        </Link>
+      </div>
+
+      <p className="mt-5 text-center text-xs text-slate-400">
+        Requires a <code className="rounded bg-slate-100 px-1 text-slate-500">@bentonvillek12.org</code> email
+      </p>
+    </LoginSignupFrame>
   );
 }
