@@ -39,12 +39,12 @@ export interface Checkout {
 }
 
 export const EQUIPMENT_CATEGORIES = [
-  "Camera",
-  "Microphone",
-  "Tripod",
+  "Camera Kits",
+  "Cameras",
+  "Lenses",
+  "Cinema Cameras",
+  "Technology",
   "Lighting",
-  "Memory Card",
-  "Lens",
-  "Accessory",
-  "Other",
+  "Stabilization",
+  "Miscellaneous",
 ] as const;
