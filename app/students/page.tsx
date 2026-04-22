@@ -260,7 +260,7 @@ function StudentsContent() {
             Students
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            <span className="badge badge-period">{period} period</span>{" "}
+            <span className="period-badge">{period} period</span>{" "}
             roster — {(students ?? []).length} student{(students ?? []).length !== 1 ? "s" : ""}
           </p>
         </div>

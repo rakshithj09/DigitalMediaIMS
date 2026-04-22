@@ -261,7 +261,7 @@ function CheckoutContent() {
         </h2>
         <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
           Check equipment in or out for{" "}
-          <span className="badge badge-period">{checkoutPeriod} period</span>
+          <span className="period-badge">{checkoutPeriod} period</span>
         </p>
       </div>
 

@@ -134,7 +134,7 @@ function DashboardContent() {
               My Equipment
             </h2>
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              Your active checkouts for <span className="badge badge-period">{period} period</span>
+              Your active checkouts for <span className="period-badge">{period} period</span>
             </p>
           </div>
           <Link
@@ -252,7 +252,7 @@ function DashboardContent() {
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             Active checkouts for{" "}
-            <span className="badge badge-period">{period} period</span>
+            <span className="period-badge">{period} period</span>
           </p>
         </div>
         <button
