@@ -596,7 +596,7 @@ function StudentsContent() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table students-table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -609,7 +609,9 @@ function StudentsContent() {
               <tbody>
                 {filtered.map((s) => (
                   <tr key={s.id}>
-                    <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{s.name}</td>
+                    <td>
+                      <span className="students-name" title={s.name}>{s.name}</span>
+                    </td>
                     <td>
                       <span className="font-mono text-sm" style={{ color: "#374151" }}>
                         {s.student_id ?? <span style={{ color: "var(--muted)" }}>—</span>}
@@ -628,7 +630,7 @@ function StudentsContent() {
                     </td>
                     <td>
                       {currentUser?.user_metadata?.role !== "Student" ? (
-                        <div className="flex items-center gap-2">
+                        <div className="students-actions">
                           <button
                             onClick={() => openEdit(s)}
                             className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"

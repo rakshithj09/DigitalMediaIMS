@@ -84,6 +84,46 @@ body {
 .data-table tbody tr:hover { background: #f8fafc; }
 .data-table td { padding: 0.8rem 1.25rem; }
 
+.students-table {
+  table-layout: fixed;
+  min-width: 980px;
+}
+.students-table th:nth-child(1),
+.students-table td:nth-child(1) {
+  width: 270px;
+}
+.students-table th:nth-child(2),
+.students-table td:nth-child(2) {
+  width: 210px;
+}
+.students-table th:nth-child(3),
+.students-table td:nth-child(3) {
+  width: 120px;
+}
+.students-table th:nth-child(4),
+.students-table td:nth-child(4) {
+  width: 190px;
+}
+.students-table th:nth-child(5),
+.students-table td:nth-child(5) {
+  width: 190px;
+}
+.students-name {
+  display: block;
+  max-width: 230px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ignite-navy);
+  font-weight: 700;
+}
+.students-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 150px;
+}
+
 .history-item-cell {
   min-width: 340px;
   max-width: 440px;
