@@ -40,10 +40,10 @@ export interface Checkout {
 }
 
 export const EQUIPMENT_CATEGORIES = [
-  "Camera Kits",
-  "Cameras",
-  "Lenses",
-  "Cinema Cameras",
+  "Camera Kit",
+  "Camera",
+  "Lens",
+  "Cinema Camera",
   "Technology",
   "Lighting",
   "Stabilization",

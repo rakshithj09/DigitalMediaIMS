@@ -1,8 +1,8 @@
 const SERIALIZED_CATEGORIES = new Set([
-  "Camera Kits",
-  "Cameras",
-  "Lenses",
-  "Cinema Cameras",
+  "Camera Kit",
+  "Camera",
+  "Lens",
+  "Cinema Camera",
   "Technology",
   "Lighting",
   "Stabilization",
