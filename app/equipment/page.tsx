@@ -30,13 +30,13 @@ function EquipmentContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [form, setForm] = useState<{
     name: string;
-    category: (typeof EQUIPMENT_CATEGORIES)[number];
+    category: EquipmentCategory | "";
     total_quantity: string;
     serial_number: string;
     condition_notes: string;
   }>({
     name: "",
-    category: EQUIPMENT_CATEGORIES[0],
+    category: "",
     total_quantity: "1",
     serial_number: "",
     condition_notes: "",
@@ -44,7 +44,13 @@ function EquipmentContent() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editingEquipment, setEditingEquipment] = useState<EquipmentWithAvail | null>(null);
-  const [editForm, setEditForm] = useState<typeof form>({
+  const [editForm, setEditForm] = useState<{
+    name: string;
+    category: EquipmentCategory;
+    total_quantity: string;
+    serial_number: string;
+    condition_notes: string;
+  }>({
     name: "",
     category: EQUIPMENT_CATEGORIES[0],
     total_quantity: "1",
@@ -107,6 +113,7 @@ function EquipmentContent() {
 
     const qty = parseInt(form.total_quantity, 10);
     if (!form.name.trim()) { setSaveError("Name is required."); setSaving(false); return; }
+    if (!isEquipmentCategory(form.category)) { setSaveError("Please select a category."); setSaving(false); return; }
     if (isNaN(qty) || qty < 1) { setSaveError("Quantity must be at least 1."); setSaving(false); return; }
     if (categorySupportsSerialNumbers(form.category)) {
       const serialCount = parseSerialNumbers(form.serial_number).length;
@@ -140,7 +147,7 @@ function EquipmentContent() {
     } else {
       setForm({
         name: "",
-        category: isEquipmentCategory(categoryFilter) ? categoryFilter : EQUIPMENT_CATEGORIES[0],
+        category: isEquipmentCategory(categoryFilter) ? categoryFilter : "",
         total_quantity: "1",
         serial_number: "",
         condition_notes: "",
@@ -237,7 +244,7 @@ function EquipmentContent() {
   const addCategoryHasSerials = categorySupportsSerialNumbers(form.category);
   const editCategoryHasSerials = categorySupportsSerialNumbers(editForm.category);
   const openAddForm = () => {
-    const selectedCategory = isEquipmentCategory(categoryFilter) ? categoryFilter : EQUIPMENT_CATEGORIES[0];
+    const selectedCategory = isEquipmentCategory(categoryFilter) ? categoryFilter : "";
     setForm((current) => ({
       ...current,
       category: selectedCategory,
@@ -317,7 +324,7 @@ function EquipmentContent() {
                   maxLength={100}
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Canon EOS R50"
+                  placeholder="e.g. Canon EOS R50"
                   className="form-input"
                 />
               </div>
@@ -328,9 +335,10 @@ function EquipmentContent() {
                 <select
                   id="eq-cat"
                   value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as (typeof EQUIPMENT_CATEGORIES)[number] }))}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as EquipmentCategory | "" }))}
                   className="form-input"
                 >
+                  <option value="">Select category</option>
                   {EQUIPMENT_CATEGORIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}

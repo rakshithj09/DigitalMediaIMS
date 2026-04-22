@@ -74,7 +74,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
   const activePeriod = role === "Student" && userPeriod ? userPeriod : period;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--brand-bg)" }}>
+    <div className="h-screen overflow-hidden flex flex-col" style={{ background: "var(--brand-bg)" }}>
 
       {/* ── Header ────────────────────────────────────── */}
       <header className="brand-header min-h-14 px-3 sm:px-5 py-2 flex items-center justify-between gap-3 z-20 sticky top-0">
@@ -131,10 +131,10 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* ── Sidebar ───────────────────────────────────── */}
-        <nav className="hidden md:flex w-56 shrink-0 flex-col py-4 overflow-y-auto"
+        <nav className="hidden md:flex w-56 h-full shrink-0 flex-col py-4 overflow-y-auto"
           style={{ background: "var(--navy)" }} aria-label="Main navigation">
 
           <p className="px-5 pb-3 text-kicker font-semibold uppercase tracking-widest"
@@ -171,7 +171,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
         </nav>
 
         {/* ── Content ───────────────────────────────────── */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8 pb-24 md:pb-8">{children}</main>
+        <main className="flex-1 min-h-0 overflow-auto p-4 sm:p-6 md:p-8 pb-24 md:pb-8">{children}</main>
       </div>
 
       <nav
