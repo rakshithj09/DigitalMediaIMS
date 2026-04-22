@@ -104,7 +104,7 @@ export default function LoginPage() {
           {showReset ? "Reset password" : "Welcome back"}
         </h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          {showReset ? "Send a reset link to your school email" : "Sign in to Digital Media Equipment Tracker"}
+          {showReset ? "Send a reset link to your school email" : "Sign in to Digital Media's Equipment Tracker"}
         </p>
       </div>
 
