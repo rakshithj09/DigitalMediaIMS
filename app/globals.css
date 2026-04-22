@@ -88,6 +88,41 @@ body {
 .data-table tbody tr:hover { background: #f0f6ff; }
 .data-table td { padding: 0.875rem 1.25rem; }
 
+.equipment-table {
+  table-layout: fixed;
+  min-width: 900px;
+}
+.equipment-table th:nth-child(1),
+.equipment-table td:nth-child(1) {
+  width: 24%;
+}
+.equipment-table th:nth-child(2),
+.equipment-table td:nth-child(2) {
+  width: 14%;
+}
+.equipment-table th:nth-child(3),
+.equipment-table td:nth-child(3) {
+  width: 12%;
+}
+.equipment-table th:nth-child(4),
+.equipment-table td:nth-child(4) {
+  width: 14%;
+}
+.equipment-table th:nth-child(5),
+.equipment-table td:nth-child(5) {
+  width: 22%;
+}
+.equipment-table th:nth-child(6),
+.equipment-table td:nth-child(6) {
+  width: 14%;
+}
+.equipment-serial-cell,
+.equipment-condition-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .students-table {
   table-layout: fixed;
   min-width: 980px;

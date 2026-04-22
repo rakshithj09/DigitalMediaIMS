@@ -681,13 +681,12 @@ function EquipmentContent() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table equipment-table">
               <thead>
                 <tr>
                   <th>Name</th>
                   <th>Category</th>
-                  <th>Available</th>
-                  <th>Total</th>
+                  <th>Availability</th>
                   <th>Serial</th>
                   <th>Condition</th>
                   <th>Action</th>
@@ -722,13 +721,12 @@ function EquipmentContent() {
                           {e.available} / {e.total_quantity}
                         </span>
                       </td>
-                      <td className="text-sm" style={{ color: "#374151" }}>{e.total_quantity}</td>
-                      <td className="font-mono text-xs" style={{ color: "var(--muted)" }}>
+                      <td className="equipment-serial-cell font-mono text-xs" style={{ color: "var(--muted)" }}>
                         {categorySupportsSerialNumbers(e.category) && availableSerials.length > 0
                           ? availableSerials.join(", ")
                           : "—"}
                       </td>
-                      <td className="max-w-[180px] truncate text-sm" style={{ color: "var(--muted)" }}>
+                      <td className="equipment-condition-cell text-sm" style={{ color: "var(--muted)" }}>
                         {e.condition_notes ?? "—"}
                       </td>
                       <td>
