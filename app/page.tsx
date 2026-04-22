@@ -177,7 +177,7 @@ function DashboardContent() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        <div>
           <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1.5px solid #f1f5f9", background: "linear-gradient(to bottom, #fafcff, #f8fafc)" }}>
               <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>What You Have Out</h3>
@@ -236,21 +236,6 @@ function DashboardContent() {
                 })}
               </div>
             )}
-          </div>
-
-          <div className="rounded-2xl p-5 h-fit" style={{ background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
-            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>Quick Actions</h3>
-            <div className="mt-4 grid gap-2">
-              <Link href="/equipment" className="px-3 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "#f8fafc", color: "var(--ignite-navy)" }}>
-                Browse available equipment
-              </Link>
-              <Link href="/checkout" className="px-3 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "#f8fafc", color: "var(--ignite-navy)" }}>
-                Check equipment in or out
-              </Link>
-            </div>
-            <p className="text-xs mt-4" style={{ color: "var(--muted)" }}>
-              Return items before leaving class unless your teacher tells you otherwise.
-            </p>
           </div>
         </div>
       </div>
