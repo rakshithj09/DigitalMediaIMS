@@ -698,7 +698,11 @@ function EquipmentContent() {
 
                   return (
                     <tr key={e.id}>
-                      <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{e.name}</td>
+                      <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
+                        <Link href={`/equipment/${e.id}`} className="hover:underline">
+                          {e.name}
+                        </Link>
+                      </td>
                       <td>
                         <span className="badge" style={{ background: "#f1f5f9", color: "var(--muted)" }}>
                           {e.category}
@@ -720,7 +724,7 @@ function EquipmentContent() {
                       </td>
                       <td>
                         {isTeacher ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
                             <button
                               onClick={() => openEdit(e)}
                               className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
