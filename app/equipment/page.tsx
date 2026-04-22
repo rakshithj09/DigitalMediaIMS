@@ -9,6 +9,11 @@ import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
 
 type EquipmentWithAvail = Equipment & { available: number };
+type EquipmentCategory = (typeof EQUIPMENT_CATEGORIES)[number];
+
+function isEquipmentCategory(value: string): value is EquipmentCategory {
+  return EQUIPMENT_CATEGORIES.includes(value as EquipmentCategory);
+}
 
 function EquipmentContent() {
   const [equipment, setEquipment] = useState<EquipmentWithAvail[] | null>(null);
@@ -125,7 +130,13 @@ function EquipmentContent() {
     if (!resp.ok) {
       setSaveError(String(data?.error?.message ?? data?.error ?? "Unable to add equipment."));
     } else {
-      setForm({ name: "", category: EQUIPMENT_CATEGORIES[0], total_quantity: "1", serial_number: "", condition_notes: "" });
+      setForm({
+        name: "",
+        category: isEquipmentCategory(categoryFilter) ? categoryFilter : EQUIPMENT_CATEGORIES[0],
+        total_quantity: "1",
+        serial_number: "",
+        condition_notes: "",
+      });
       setShowAdd(false);
       refresh();
     }
@@ -195,19 +206,31 @@ function EquipmentContent() {
   };
 
   const allCategories = ["All", ...EQUIPMENT_CATEGORIES];
-  const filtered = (equipment ?? []).filter((e) => {
-    const matchSearch =
-      e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.category.toLowerCase().includes(search.toLowerCase()) ||
-      (categorySupportsSerialNumbers(e.category) ? e.serial_number ?? "" : "").toLowerCase().includes(search.toLowerCase());
-    const matchCat = categoryFilter === "All" || e.category === categoryFilter;
-    return matchSearch && matchCat;
-  });
+  const filtered = (equipment ?? [])
+    .filter((e) => {
+      const matchSearch =
+        e.name.toLowerCase().includes(search.toLowerCase()) ||
+        e.category.toLowerCase().includes(search.toLowerCase()) ||
+        (categorySupportsSerialNumbers(e.category) ? e.serial_number ?? "" : "").toLowerCase().includes(search.toLowerCase());
+      const matchCat = categoryFilter === "All" || e.category === categoryFilter;
+      return matchSearch && matchCat;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 
   const loading = equipment === null && error === null;
   const isTeacher = currentUser?.user_metadata?.role !== "Student";
   const addCategoryHasSerials = categorySupportsSerialNumbers(form.category);
   const editCategoryHasSerials = categorySupportsSerialNumbers(editForm.category);
+  const openAddForm = () => {
+    const selectedCategory = isEquipmentCategory(categoryFilter) ? categoryFilter : EQUIPMENT_CATEGORIES[0];
+    setForm((current) => ({
+      ...current,
+      category: selectedCategory,
+      serial_number: current.category === selectedCategory ? current.serial_number : "",
+    }));
+    setShowAdd((visible) => !visible);
+    setSaveError(null);
+  };
 
   return (
     <div>
@@ -223,7 +246,7 @@ function EquipmentContent() {
         </div>
         {isTeacher && (
           <button
-            onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
+            onClick={openAddForm}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
             style={{ background: "var(--navy)" }}
           >
