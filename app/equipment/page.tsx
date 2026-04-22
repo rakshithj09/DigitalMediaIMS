@@ -734,8 +734,8 @@ function EquipmentContent() {
                             </button>
                             <button
                               onClick={() => openRemove(e)}
-                              className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors hover:bg-red-50"
-                              style={{ color: "#dc2626" }}
+                              className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
+                              style={{ color: "#dc2626", background: "rgba(220,38,38,0.08)" }}
                             >
                               Remove
                             </button>
