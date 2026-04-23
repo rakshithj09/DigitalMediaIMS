@@ -260,14 +260,11 @@ function DashboardContent() {
           </p>
         </div>
         <button
+          type="button"
           onClick={refresh}
-          className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-white"
-          style={{ color: "var(--ignite-navy)", border: "1px solid #e2e8f0" }}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold"
+          style={{ background: "#015a78", color: "#ffffff" }}
         >
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-          </svg>
           Refresh
         </button>
       </div>
