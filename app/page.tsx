@@ -9,6 +9,9 @@ import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Checkout } from "@/app/lib/types";
 
+const WARNING_MS = 2 * 60 * 60 * 1000;
+const NEEDS_ATTENTION_MS = 3 * 60 * 60 * 1000;
+
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(ms / 60000);
@@ -121,7 +124,7 @@ function DashboardContent() {
   const studentsWithCheckouts = new Set(list.map((c) => c.student_id)).size;
 
   if (currentRole === "Student") {
-    const overdueCount = list.filter((c) => durationMs(c.checked_out_at) > 3 * 60 * 60 * 1000).length;
+    const overdueCount = list.filter((c) => durationMs(c.checked_out_at) >= NEEDS_ATTENTION_MS).length;
     const oldestCheckout = list.reduce<Checkout | null>((oldest, c) => {
       if (!oldest) return c;
       return new Date(c.checked_out_at) < new Date(oldest.checked_out_at) ? c : oldest;
@@ -205,8 +208,8 @@ function DashboardContent() {
               <div className="divide-y divide-slate-100">
                 {list.map((c) => {
                   const ms = durationMs(c.checked_out_at);
-                  const overdue = ms > 3 * 60 * 60 * 1000;
-                  const warning = ms > 60 * 60 * 1000 && !overdue;
+                  const overdue = ms >= NEEDS_ATTENTION_MS;
+                  const warning = ms >= WARNING_MS && !overdue;
 
                   return (
                     <div key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -219,7 +222,7 @@ function DashboardContent() {
                             className="badge"
                             style={overdue ? { background: "#fee2e2", color: "#dc2626" } : warning ? { background: "#fef9c3", color: "#ca8a04" } : { background: "#dcfce7", color: "#16a34a" }}
                           >
-                            {overdue ? "Return soon" : warning ? "Keep track" : "Checked out"} · {timeAgo(c.checked_out_at)}
+                            {overdue ? "Needs attention" : warning ? "Keep track" : "Checked out"} · {timeAgo(c.checked_out_at)}
                           </span>
                         </div>
                         {c.notes && <p className="text-sm mt-1 truncate" style={{ color: "var(--muted)" }}>{c.notes}</p>}
@@ -358,8 +361,8 @@ function DashboardContent() {
               <tbody>
                 {list.map((c) => {
                   const ms = durationMs(c.checked_out_at);
-                  const overdue = ms > 3 * 60 * 60 * 1000;
-                  const warning = ms > 60 * 60 * 1000 && !overdue;
+                  const overdue = ms >= NEEDS_ATTENTION_MS;
+                  const warning = ms >= WARNING_MS && !overdue;
 
                   return (
                     <tr
