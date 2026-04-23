@@ -707,9 +707,13 @@ function EquipmentContent() {
                   return (
                     <tr key={e.id}>
                       <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
-                        <Link href={`/equipment/${e.id}`} className="hover:underline">
-                          {e.name}
-                        </Link>
+                        {isTeacher ? (
+                          <Link href={`/equipment/${e.id}`} className="hover:underline">
+                            {e.name}
+                          </Link>
+                        ) : (
+                          e.name
+                        )}
                       </td>
                       <td>
                         <span className="badge" style={{ background: "#f1f5f9", color: "var(--muted)" }}>
