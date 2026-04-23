@@ -37,6 +37,11 @@ const ICONS: Record<string, ReactNode> = {
       <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
     </svg>
   ),
+  "/profile": (
+    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/><path d="M18 7h3"/><path d="M19.5 5.5v3"/>
+    </svg>
+  ),
 };
 
 const NAV = [
@@ -45,11 +50,12 @@ const NAV = [
   { href: "/equipment", label: "Equipment" },
   { href: "/checkout",  label: "Checkout"  },
   { href: "/history",   label: "History"   },
+  { href: "/profile",   label: "Profile"   },
 ];
 const STUDENT_HREFS = new Set(["/", "/equipment", "/checkout"]);
 
 /* ── Shell ──────────────────────────────────────────── */
-function Shell({ user, children, onLogout }: { user: User; children: ReactNode; onLogout: () => void }) {
+function Shell({ user, children, onLogout, studentApproved }: { user: User; children: ReactNode; onLogout: () => void; studentApproved: boolean }) {
   const { period, setPeriod } = usePeriod();
   const router   = useRouter();
   const pathname = usePathname();
@@ -67,8 +73,16 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
   }, [role, userPeriod]);
 
   useEffect(() => {
+    if (role === "Student" && !studentApproved) {
+      if (pathname !== "/pending-approval") router.replace("/pending-approval");
+      return;
+    }
+    if (role === "Student" && studentApproved && pathname === "/pending-approval") {
+      router.replace("/checkout");
+      return;
+    }
     if (role === "Student" && !STUDENT_HREFS.has(pathname)) router.replace("/checkout");
-  }, [role, pathname, router]);
+  }, [role, pathname, router, studentApproved]);
 
   const links = role === "Student" ? NAV.filter(l => STUDENT_HREFS.has(l.href)) : NAV;
   const activePeriod = role === "Student" && userPeriod ? userPeriod : period;
@@ -204,6 +218,7 @@ function Shell({ user, children, onLogout }: { user: User; children: ReactNode; 
 export default function AppShell({ children }: { children: ReactNode }) {
   const [user,    setUser]    = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [studentApproved, setStudentApproved] = useState(true);
   const router   = useRouter();
   const supabase = createSupabaseBrowserClient();
 
@@ -213,16 +228,38 @@ export default function AppShell({ children }: { children: ReactNode }) {
       try {
         const res = await supabase.auth.getUser();
         if (!mounted) return;
-        if (!res.data?.user) router.replace("/login");
-        else setUser(res.data.user);
+        if (!res.data?.user) {
+          router.replace("/login");
+        } else {
+          setUser(res.data.user);
+          if (res.data.user.user_metadata?.role === "Student") {
+            const { data } = await supabase
+              .from("students")
+              .select("id")
+              .eq("user_id", res.data.user.id)
+              .eq("is_active", true)
+              .limit(1)
+              .maybeSingle();
+            if (!mounted) return;
+            setStudentApproved(Boolean(data?.id));
+          } else {
+            setStudentApproved(true);
+          }
+        }
       } finally {
         if (mounted) setLoading(false);
       }
     })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_: string, session: Session | null) => {
-      if (!session?.user) router.replace("/login");
-      else setUser(session.user);
+      if (!session?.user) {
+        router.replace("/login");
+      } else {
+        setUser(session.user);
+        if (session.user.user_metadata?.role !== "Student") {
+          setStudentApproved(true);
+        }
+      }
     });
 
     return () => { mounted = false; subscription.unsubscribe(); };
@@ -251,7 +288,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <PeriodProvider>
-      <Shell user={user} onLogout={handleLogout}>{children}</Shell>
+      <Shell user={user} onLogout={handleLogout} studentApproved={studentApproved}>{children}</Shell>
     </PeriodProvider>
   );
 }

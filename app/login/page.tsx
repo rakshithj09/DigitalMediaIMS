@@ -29,7 +29,15 @@ export default function LoginPage() {
     const reason = params.get("reason");
 
     if (verified === "success") {
-      setTimeout(() => setMessage("Email verified. You can continue to your dashboard."), 0);
+      setTimeout(
+        () =>
+          setMessage(
+            reason === "student_email_verified"
+              ? "Email verified. Student accounts still need teacher approval before they join the class roster."
+              : "Email verified. You can continue to your dashboard."
+          ),
+        0
+      );
       window.history.replaceState(null, "", "/login");
     }
 
@@ -41,8 +49,8 @@ export default function LoginPage() {
               ? "Verification link was missing required information. Please request a new verification email."
               : reason === "missing_user"
                 ? "Verification succeeded, but we could not load your account. Please try signing in."
-                : reason === "roster_setup_failed"
-                  ? "Email verified, but your student roster setup could not be completed. Please contact your teacher."
+                : reason === "approval_setup_failed"
+                  ? "Email verified, but your student approval request could not be updated. Please contact your teacher."
               : "Verification link is invalid or expired. Please request a new verification email."
           ),
         0

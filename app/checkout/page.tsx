@@ -318,6 +318,13 @@ function CheckoutContent() {
               </svg>
               <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>Loading…</p>
             </div>
+          ) : currentRole === "Student" && !ownStudentId ? (
+            <div
+              className="px-4 py-3 rounded-xl text-sm"
+              style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#c2410c" }}
+            >
+              Your email is verified, but your teacher still needs to approve your student account before you join the class roster.
+            </div>
           ) : (
             <form onSubmit={handleCheckout} className="space-y-4">
               <div>

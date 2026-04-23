@@ -1,7 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
-import { ensureVerifiedStudentRosterRow } from "@/lib/auth/student-roster";
+import { markStudentApprovalEmailVerified } from "@/lib/auth/student-approvals";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://digital-media-ims.vercel.app";
 
@@ -59,19 +59,28 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      await ensureVerifiedStudentRosterRow(user);
-    } catch (rosterError) {
-      console.error("Failed to complete verified student roster setup", rosterError);
+      await markStudentApprovalEmailVerified(user);
+    } catch (approvalError) {
+      console.error("Failed to update student approval after email verification", approvalError);
       await supabase.auth.signOut();
       return NextResponse.redirect(
         redirectUrl("/login", {
           verified: "error",
-          reason: "roster_setup_failed",
+          reason: "approval_setup_failed",
         })
       );
     }
+
+    const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+    const destination = user.user_metadata?.role === "Student" ? "/pending-approval" : safeNext;
+    return NextResponse.redirect(
+      redirectUrl(destination, {
+        verified: "success",
+        reason: user.user_metadata?.role === "Student" ? "student_email_verified" : "email_verified",
+      })
+    );
   }
 
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
-  return NextResponse.redirect(redirectUrl(safeNext, { verified: "success" }));
+  return NextResponse.redirect(redirectUrl(safeNext, { verified: "success", reason: "success" }));
 }

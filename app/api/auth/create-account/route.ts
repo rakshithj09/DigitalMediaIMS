@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import { createStudentApprovalRequest } from "@/lib/auth/student-approvals";
 
 type Body = {
   email?: string;
@@ -246,6 +247,17 @@ export async function POST(req: Request) {
     return NextResponse.json({
       error: "Supabase email confirmation appears to be disabled. Enable Confirm email before allowing self-service account creation.",
     }, { status: 500 });
+  }
+
+  if (role === "Student") {
+    try {
+      await createStudentApprovalRequest(user as typeof user & { id: string });
+    } catch (studentApprovalError) {
+      await admin.auth.admin.deleteUser(user.id, false);
+      return NextResponse.json({
+        error: studentApprovalError instanceof Error ? studentApprovalError.message : String(studentApprovalError),
+      }, { status: 500 });
+    }
   }
 
   if (role === "Teacher") {
