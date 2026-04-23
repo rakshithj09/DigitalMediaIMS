@@ -160,7 +160,6 @@ function DashboardContent() {
             icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>}
             iconBg="#e8f0fe"
             iconColor="#005a78"
-            accentColor="#005a78"
           />
           <StatCard
             label="Needs Attention"
@@ -168,7 +167,6 @@ function DashboardContent() {
             icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>}
             iconBg="#fee2e2"
             iconColor="#dc2626"
-            accentColor="#ef4444"
           />
           <StatCard
             label={oldestCheckout ? "Oldest Checkout" : "Ready To Go"}
@@ -177,7 +175,6 @@ function DashboardContent() {
             icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>}
             iconBg="#dcfce7"
             iconColor="#16a34a"
-            accentColor="#22c55e"
           />
         </div>
 
@@ -282,7 +279,6 @@ function DashboardContent() {
           }
           iconBg="#fef9c3"
           iconColor="#ca8a04"
-          accentColor="#f5b700"
         />
         <StatCard
           label="Students with Items"
@@ -297,7 +293,6 @@ function DashboardContent() {
           }
           iconBg="#dcfce7"
           iconColor="#16a34a"
-          accentColor="#22c55e"
         />
       </div>
 
@@ -439,7 +434,6 @@ function StatCard({
   icon,
   iconBg,
   iconColor,
-  accentColor,
   suffix = "",
 }: {
   label: string;
@@ -447,7 +441,6 @@ function StatCard({
   icon: React.ReactNode;
   iconBg: string;
   iconColor: string;
-  accentColor: string;
   suffix?: string;
 }) {
   return (
@@ -459,27 +452,13 @@ function StatCard({
         boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.07)",
       }}
     >
-      {/* Decorative corner glow */}
-      <div
-        className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none"
-        style={{ background: `radial-gradient(circle, ${accentColor}20 0%, transparent 70%)` }}
-      />
-
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start mb-4">
         <div
           className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: iconBg, color: iconColor, boxShadow: `0 2px 10px ${iconBg}` }}
         >
           {icon}
         </div>
-        <div
-          className="rounded-full"
-          style={{
-            width: "5px",
-            height: "32px",
-            background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}44 100%)`,
-          }}
-        />
       </div>
       <p className="text-3xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.03em" }}>
         {value}{suffix}
