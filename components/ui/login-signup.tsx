@@ -41,7 +41,7 @@ export function LoginSignupFrame({ children, className, cardClassName }: LoginSi
         @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
       `}</style>
 
-      <header className="brand-header absolute left-0 right-0 top-0 z-10 flex min-h-14 items-center px-3 py-2 sm:px-5">
+      <header className="brand-header sticky left-0 right-0 top-0 z-20 flex min-h-14 items-center px-3 py-2 sm:px-5">
         <Link href="/" className="flex items-center gap-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white">
             <Image
