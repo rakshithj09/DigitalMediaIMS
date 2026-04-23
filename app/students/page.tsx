@@ -40,9 +40,12 @@ function StudentsContent() {
   const [editError, setEditError] = useState<string | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deleteSaving, setDeleteSaving] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [teacherApprovalEmail, setTeacherApprovalEmail] = useState("");
+  const [teacherApprovalPassword, setTeacherApprovalPassword] = useState("");
+  const [showTeacherApprovalPassword, setShowTeacherApprovalPassword] = useState(false);
   const [teacherApprovalSaving, setTeacherApprovalSaving] = useState(false);
   const [teacherApprovalError, setTeacherApprovalError] = useState<string | null>(null);
   const [teacherApprovalMessage, setTeacherApprovalMessage] = useState<string | null>(null);
@@ -150,6 +153,7 @@ function StudentsContent() {
   const openDelete = (student: Student) => {
     setDeletingStudent(student);
     setDeletePassword("");
+    setShowDeletePassword(false);
     setDeleteError(null);
   };
 
@@ -230,7 +234,7 @@ function StudentsContent() {
     const resp = await fetch("/api/admin/teacher-approvals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: teacherApprovalEmail }),
+      body: JSON.stringify({ email: teacherApprovalEmail, teacherPassword: teacherApprovalPassword }),
     });
 
     const data = await resp.json().catch(() => ({}));
@@ -239,6 +243,8 @@ function StudentsContent() {
     } else {
       setTeacherApprovalMessage(`${data.email ?? teacherApprovalEmail.trim()} can now create a teacher account.`);
       setTeacherApprovalEmail("");
+      setTeacherApprovalPassword("");
+      setShowTeacherApprovalPassword(false);
     }
 
     setTeacherApprovalSaving(false);
@@ -459,7 +465,7 @@ function StudentsContent() {
             {teacherApprovalMessage}
           </div>
         )}
-        <form onSubmit={handleTeacherApproval} className="flex flex-col sm:flex-row gap-3">
+        <form onSubmit={handleTeacherApproval} className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_max-content] sm:items-stretch">
           <input
             type="email"
             required
@@ -468,12 +474,32 @@ function StudentsContent() {
             onChange={(event) => setTeacherApprovalEmail(event.target.value)}
             placeholder="teacher@bentonvillek12.org"
             className="form-input"
-            style={{ maxWidth: 360 }}
           />
+          <div className="relative">
+            <input
+              type={showTeacherApprovalPassword ? "text" : "password"}
+              required
+              value={teacherApprovalPassword}
+              onChange={(event) => setTeacherApprovalPassword(event.target.value)}
+              placeholder="Your teacher password"
+              autoComplete="current-password"
+              className="form-input"
+              style={{ paddingRight: "2.75rem" }}
+            />
+            <button
+              type="button"
+              aria-label={showTeacherApprovalPassword ? "Hide teacher password" : "Show teacher password"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
+              style={{ color: "#94a3b8" }}
+              onClick={() => setShowTeacherApprovalPassword((value) => !value)}
+            >
+              {showTeacherApprovalPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
           <button
             type="submit"
             disabled={teacherApprovalSaving}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+            className="inline-flex items-center justify-center justify-self-start sm:justify-self-end px-4 py-2 rounded-lg text-sm font-semibold text-white whitespace-nowrap disabled:opacity-50"
             style={{ background: "var(--navy)" }}
           >
             {teacherApprovalSaving ? "Approving..." : "Approve Teacher"}
@@ -611,15 +637,27 @@ function StudentsContent() {
               <label className="block text-sm font-medium mb-1.5" htmlFor="delete-password" style={{ color: "#374151" }}>
                 Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
               </label>
-              <input
-                id="delete-password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={deletePassword}
-                onChange={(event) => setDeletePassword(event.target.value)}
-                className="form-input"
-              />
+              <div className="relative">
+                <input
+                  id="delete-password"
+                  type={showDeletePassword ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={deletePassword}
+                  onChange={(event) => setDeletePassword(event.target.value)}
+                  className="form-input"
+                  style={{ paddingRight: "2.75rem" }}
+                />
+                <button
+                  type="button"
+                  aria-label={showDeletePassword ? "Hide teacher password" : "Show teacher password"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
+                  style={{ color: "#94a3b8" }}
+                  onClick={() => setShowDeletePassword((value) => !value)}
+                >
+                  {showDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <button
               type="submit"

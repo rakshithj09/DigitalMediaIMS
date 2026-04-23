@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, FormEvent } from "react";
 import Link from "next/link";
 import { User } from "@supabase/supabase-js";
+import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
@@ -61,6 +62,7 @@ function EquipmentContent() {
   const [editError, setEditError] = useState<string | null>(null);
   const [removingEquipment, setRemovingEquipment] = useState<EquipmentWithAvail | null>(null);
   const [removePassword, setRemovePassword] = useState("");
+  const [showRemovePassword, setShowRemovePassword] = useState(false);
   const [removeSaving, setRemoveSaving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
@@ -172,6 +174,7 @@ function EquipmentContent() {
   const openRemove = (item: EquipmentWithAvail) => {
     setRemovingEquipment(item);
     setRemovePassword("");
+    setShowRemovePassword(false);
     setRemoveError(null);
   };
 
@@ -594,15 +597,27 @@ function EquipmentContent() {
               <label className="block text-sm font-medium mb-1.5" htmlFor="remove-equipment-password" style={{ color: "#374151" }}>
                 Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
               </label>
-              <input
-                id="remove-equipment-password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={removePassword}
-                onChange={(event) => setRemovePassword(event.target.value)}
-                className="form-input"
-              />
+              <div className="relative">
+                <input
+                  id="remove-equipment-password"
+                  type={showRemovePassword ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={removePassword}
+                  onChange={(event) => setRemovePassword(event.target.value)}
+                  className="form-input"
+                  style={{ paddingRight: "2.75rem" }}
+                />
+                <button
+                  type="button"
+                  aria-label={showRemovePassword ? "Hide teacher password" : "Show teacher password"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
+                  style={{ color: "#94a3b8" }}
+                  onClick={() => setShowRemovePassword((value) => !value)}
+                >
+                  {showRemovePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <button
               type="submit"

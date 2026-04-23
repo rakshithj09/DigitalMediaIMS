@@ -1,13 +1,32 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
 type Body = {
   email?: string;
+  teacherPassword?: string;
 };
 
 function cleanEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function getSupabasePublicClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
+
+  if (!url || !anonKey) return null;
+
+  return createClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
 async function requireTeacher() {
@@ -27,6 +46,26 @@ async function requireTeacher() {
   return { user };
 }
 
+async function verifyTeacherPassword(email: string | undefined, password: string | undefined) {
+  if (!email || !password?.trim()) {
+    return "Teacher password is required.";
+  }
+
+  const supabase = getSupabasePublicClient();
+  if (!supabase) {
+    return "Server is missing Supabase public auth configuration.";
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  await supabase.auth.signOut();
+
+  if (error) {
+    return "Teacher password was incorrect.";
+  }
+
+  return null;
+}
+
 export async function POST(req: Request) {
   const auth = await requireTeacher();
   if ("error" in auth) {
@@ -40,6 +79,11 @@ export async function POST(req: Request) {
 
   const body = (await req.json().catch(() => ({}))) as Body;
   const email = cleanEmail(body.email);
+
+  const passwordError = await verifyTeacherPassword(auth.user.email, body.teacherPassword);
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 403 });
+  }
 
   if (!email) {
     return NextResponse.json({ error: "Teacher email is required." }, { status: 400 });
