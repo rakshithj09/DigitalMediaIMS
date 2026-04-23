@@ -347,7 +347,7 @@ function DashboardContent() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table">
+            <table className="data-table dashboard-checkouts-table">
               <thead>
                 <tr>
                   <th>Student</th>
@@ -369,27 +369,29 @@ function DashboardContent() {
                       key={c.id}
                       style={overdue ? { background: "#fef2f2" } : warning ? { background: "#fffbeb" } : undefined}
                     >
-                      <td className="font-medium" style={{ color: "var(--ignite-navy)" }}>
-                        {c.student?.name ?? "—"}
+                      <td className="dashboard-student-cell font-medium" style={{ color: "var(--ignite-navy)" }}>
+                        <span className="dashboard-cell-clip">{c.student?.name ?? "—"}</span>
                       </td>
-                      <td style={{ color: "#374151" }}>
-                        <span className="font-medium">{c.equipment?.name ?? "—"}</span>
-                        {c.equipment?.category && (
-                          <span
-                            className="ml-2 text-xs px-1.5 py-0.5 rounded-full font-medium"
-                            style={{ background: "#f1f5f9", color: "var(--muted)" }}
-                          >
-                            {c.equipment.category}
-                          </span>
-                        )}
-                        {c.serial_number && (
-                          <span
-                            className="ml-2 text-xs px-1.5 py-0.5 rounded-full font-medium"
-                            style={{ background: "#e8f0fe", color: "#005a78" }}
-                          >
-                            {c.serial_number}
-                          </span>
-                        )}
+                      <td className="dashboard-item-cell" style={{ color: "#374151" }}>
+                        <div className="dashboard-item-content">
+                          <span className="dashboard-item-name font-medium">{c.equipment?.name ?? "—"}</span>
+                          {c.equipment?.category && (
+                            <span
+                              className="dashboard-item-chip text-xs px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ background: "#f1f5f9", color: "var(--muted)" }}
+                            >
+                              {c.equipment.category}
+                            </span>
+                          )}
+                          {c.serial_number && (
+                            <span
+                              className="dashboard-item-chip text-xs px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ background: "#e8f0fe", color: "#005a78" }}
+                            >
+                              {c.serial_number}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ color: "#374151" }}>{c.quantity}</td>
                       <td>
@@ -406,8 +408,8 @@ function DashboardContent() {
                           {overdue && "⚠ "}{timeAgo(c.checked_out_at)}
                         </span>
                       </td>
-                      <td className="max-w-xs truncate text-sm" style={{ color: "var(--muted)" }}>
-                        {c.notes ?? "—"}
+                      <td className="dashboard-notes-cell text-sm" style={{ color: "var(--muted)" }}>
+                        <span className="dashboard-cell-clip">{c.notes ?? "—"}</span>
                       </td>
                       <td>
                         <button

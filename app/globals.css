@@ -123,6 +123,73 @@ body {
   white-space: nowrap;
 }
 
+.dashboard-checkouts-table {
+  table-layout: fixed;
+  min-width: 960px;
+  width: 100%;
+}
+.dashboard-checkouts-table th:nth-child(1),
+.dashboard-checkouts-table td:nth-child(1) {
+  width: 210px;
+}
+.dashboard-checkouts-table th:nth-child(2),
+.dashboard-checkouts-table td:nth-child(2) {
+  width: 330px;
+}
+.dashboard-checkouts-table th:nth-child(3),
+.dashboard-checkouts-table td:nth-child(3) {
+  width: 70px;
+}
+.dashboard-checkouts-table th:nth-child(4),
+.dashboard-checkouts-table td:nth-child(4) {
+  width: 150px;
+}
+.dashboard-checkouts-table th:nth-child(5),
+.dashboard-checkouts-table td:nth-child(5) {
+  width: 200px;
+}
+.dashboard-checkouts-table th:nth-child(6),
+.dashboard-checkouts-table td:nth-child(6) {
+  width: 120px;
+}
+.dashboard-student-cell,
+.dashboard-item-cell,
+.dashboard-notes-cell,
+.dashboard-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dashboard-item-cell {
+  display: table-cell;
+}
+.dashboard-cell-clip,
+.dashboard-item-content {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dashboard-item-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.dashboard-item-name {
+  display: inline-block;
+  min-width: 0;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.dashboard-item-chip {
+  flex: 0 0 auto;
+}
+
 .students-table {
   table-layout: fixed;
   min-width: 980px;
