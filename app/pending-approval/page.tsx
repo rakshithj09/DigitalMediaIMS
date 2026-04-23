@@ -68,9 +68,9 @@ export default function PendingApprovalPage() {
           style={{ background: "#fff7ed", color: "#c2410c" }}
         >
           <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5" />
-            <path d="M12 16h.01" />
+            <path d="M12 3 21 19H3L12 3Z" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 9v4" strokeLinecap="round" />
+            <path d="M12 16h.01" strokeLinecap="round" />
           </svg>
         </div>
 
