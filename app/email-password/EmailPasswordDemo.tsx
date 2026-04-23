@@ -22,6 +22,7 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [mode, setMode] = useState<"signIn" | "signUp">(forcedMode ? "signUp" : "signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [studentId, setStudentId] = useState("");
@@ -31,6 +32,7 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
 
@@ -46,6 +48,8 @@ export default function EmailPasswordDemo({ user }: Props) {
     if (mode === "signUp") {
       if (!firstName || !lastName) { setError("Please provide your first and last name."); return; }
       if (role === "Student" && !studentId.trim()) { setError("Please provide your student ID."); return; }
+      if (!confirmPassword) { setError("Please confirm your password."); return; }
+      if (password !== confirmPassword) { setError("Passwords do not match."); return; }
     }
 
     if (!domainAllowed(email)) { setError("Email must be a @bentonvillek12.org address."); return; }
@@ -74,6 +78,7 @@ export default function EmailPasswordDemo({ user }: Props) {
         setMessage("Account created. Check your email and verify your account before signing in.");
         setMode("signIn");
         setPassword("");
+        setConfirmPassword("");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -282,6 +287,35 @@ export default function EmailPasswordDemo({ user }: Props) {
           </div>
         </div>
 
+        {isSignUp && (
+          <div className="grid gap-2">
+            <Label htmlFor="confirm-password" className="text-slate-700">
+              Confirm password
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                className={`${authInputClassName} pl-10 pr-10`}
+              />
+              <button
+                type="button"
+                aria-label={showConfirmPassword ? "Hide confirmed password" : "Show confirmed password"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 hover:text-slate-700"
+                onClick={() => setShowConfirmPassword((value) => !value)}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+        )}
+
         <Button
           type="submit"
           disabled={loading}
@@ -298,7 +332,7 @@ export default function EmailPasswordDemo({ user }: Props) {
         {!forcedMode && (
           <button
             type="button"
-            onClick={() => { setMode(isSignUp ? "signIn" : "signUp"); setError(null); setMessage(null); }}
+            onClick={() => { setMode(isSignUp ? "signIn" : "signUp"); setError(null); setMessage(null); setConfirmPassword(""); }}
             className="font-semibold hover:underline"
             style={{ color: "var(--navy)" }}
           >
