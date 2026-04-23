@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthChangeEvent } from "@supabase/supabase-js";
+import { Eye, EyeOff, Lock } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 export default function ResetPasswordPage() {
@@ -12,6 +13,8 @@ export default function ResetPasswordPage() {
   const supabase = createSupabaseBrowserClient();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -95,31 +98,55 @@ export default function ResetPasswordPage() {
               <label htmlFor="new-password" className="block text-sm font-medium mb-1.5 text-slate-700">
                 New password
               </label>
-              <input
-                id="new-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                disabled={!ready || loading}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="form-input"
-              />
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="new-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  disabled={!ready || loading}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="form-input pl-10 pr-10"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!ready || loading}
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium mb-1.5 text-slate-700">
                 Confirm password
               </label>
-              <input
-                id="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                disabled={!ready || loading}
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="form-input"
-              />
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  disabled={!ready || loading}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  className="form-input pl-10 pr-10"
+                />
+                <button
+                  type="button"
+                  aria-label={showConfirmPassword ? "Hide confirmed password" : "Show confirmed password"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!ready || loading}
+                  onClick={() => setShowConfirmPassword((value) => !value)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <button
               type="submit"
