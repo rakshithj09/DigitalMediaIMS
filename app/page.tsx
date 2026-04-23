@@ -272,9 +272,10 @@ function DashboardContent() {
           label="Items Checked Out"
           value={totalItemsOut}
           icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M21 10H3M16 3h5v5M3 9V5a2 2 0 0 1 2-2h14" />
-              <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4" />
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" viewBox="0 0 24 24">
+              <path d="M4 8.5 12 5l8 3.5-8 3.5-8-3.5Z" />
+              <path d="M4 8.5V16l8 3 8-3V8.5" />
+              <path d="M12 12v7" />
             </svg>
           }
           iconBg="#fef9c3"
@@ -452,13 +453,11 @@ function StatCard({
         boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.07)",
       }}
     >
-      <div className="flex items-start mb-4">
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: iconBg, color: iconColor, boxShadow: `0 2px 10px ${iconBg}` }}
-        >
-          {icon}
-        </div>
+      <div
+        className="absolute top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+        style={{ background: iconBg, color: iconColor, boxShadow: `0 2px 10px ${iconBg}` }}
+      >
+        {icon}
       </div>
       <p className="text-3xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.03em" }}>
         {value}{suffix}
