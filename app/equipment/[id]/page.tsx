@@ -16,6 +16,7 @@ type CheckoutWithStudent = Checkout & {
   } | null;
 };
 
+
 function formatDateTime(value?: string | null) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("en-US", {
