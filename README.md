@@ -1,157 +1,226 @@
 # Digital Media Equipment Tracker
 
-A Next.js app for managing Ignite Digital Media equipment inventory, student rosters, checkouts, check-ins, and audit history.
+A web app for Ignite Professional Studies at Bentonville West High School that lets teachers manage equipment inventory and students check out/check in digital media gear.
 
-The app uses Supabase for authentication, database access, email verification, password reset, and server-side admin actions.
+Built with Next.js, React, Tailwind CSS, and Supabase.
+
+---
 
 ## Features
 
-- Teacher and student sign-in with Supabase Auth.
-- Email verification for self-created accounts.
-- Password reset by email.
-- Student dashboard focused on the student's active checkouts.
-- Teacher dashboard with active checkout totals and class-period filtering.
-- AM/PM period selector for teachers.
-- Student roster management:
-  - add students
-  - edit student name, ID, email, and period
-  - delete student account with teacher password confirmation
-- Equipment inventory management:
-  - add equipment
-  - edit equipment after creation
-  - remove equipment from active inventory
-- Checkout and check-in flows with return notes.
-- Checkout history/audit log.
+- Teacher and student sign-in via Supabase Auth
+- Email verification for self-created accounts
+- Password reset by email
+- AM/PM class period selector for teachers
+- **Teacher dashboard** — active checkout totals, class-period filtering, quick check-in
+- **Student dashboard** — view and check in their own active checkouts
+- **Equipment inventory** — add, edit, and remove equipment items with category, serial number, quantity, and condition notes
+- **Equipment detail page** — full item history and checkout list per equipment item
+- **Student roster** — add, edit, and delete students; teacher password confirmation required to delete
+- **Checkout flow** — check equipment out to a student with period and optional notes
+- **Check-in flow** — return equipment with optional return notes
+- **History / audit log** — full checkout and check-in history across all items and students
+
+---
 
 ## Tech Stack
 
-- Next.js App Router
-- React
-- Tailwind CSS
-- Supabase Auth
-- Supabase Postgres
-- `@supabase/ssr`
-- `@supabase/supabase-js`
+| Layer | Library / Service |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS v4 |
+| Components | Radix UI primitives, Lucide React icons |
+| Auth | Supabase Auth (`@supabase/ssr`) |
+| Database | Supabase Postgres (`@supabase/supabase-js`) |
+| Language | TypeScript 5 |
+| Deployment | Vercel |
+
+---
+
+## Project Structure
+
+```
+igniteims/
+├── app/                          # Next.js App Router pages and layouts
+│   ├── layout.tsx                # Root HTML layout (sets metadata, body styles)
+│   ├── globals.css               # Global CSS: brand tokens, utility classes, table/badge styles
+│   ├── page.tsx                  # Dashboard — active checkout stats, check-in button
+│   │
+│   ├── login/
+│   │   └── page.tsx              # Sign-in form + forgot password link
+│   ├── email-password/
+│   │   ├── page.tsx              # Account creation page
+│   │   └── EmailPasswordDemo.tsx # Sign-up form component
+│   ├── reset-password/
+│   │   └── page.tsx              # Set new password (after clicking reset email link)
+│   ├── pending-approval/
+│   │   └── page.tsx              # Shown to users whose account is awaiting teacher approval
+│   │
+│   ├── checkout/
+│   │   └── page.tsx              # Check-out and check-in flow
+│   ├── equipment/
+│   │   ├── page.tsx              # Equipment inventory list — add, edit, remove items
+│   │   └── [id]/
+│   │       └── page.tsx          # Individual equipment item detail — history, active checkouts
+│   ├── students/
+│   │   └── page.tsx              # Student roster — add, edit, delete students
+│   ├── history/
+│   │   └── page.tsx              # Full checkout/check-in audit log
+│   ├── profile/
+│   │   └── page.tsx              # Logged-in user's profile and account settings
+│   │
+│   ├── auth/
+│   │   └── callback/
+│   │       └── route.ts          # Supabase email verification callback (verifies OTP, sets session)
+│   │
+│   ├── api/                      # Next.js Route Handlers (server-side only)
+│   │   ├── auth/
+│   │   │   └── create-account/
+│   │   │       └── route.ts      # Creates a new student or teacher account via service role
+│   │   ├── checkouts/
+│   │   │   ├── route.ts          # POST: create a new checkout record
+│   │   │   └── check-in/
+│   │   │       └── route.ts      # POST: check equipment back in, record return notes
+│   │   ├── equipment/
+│   │   │   └── route.ts          # GET: fetch equipment list; POST: add new equipment
+│   │   └── admin/
+│   │       ├── students/
+│   │       │   └── route.ts      # GET/POST/PATCH/DELETE student records (teacher only)
+│   │       ├── create-student/
+│   │       │   └── route.ts      # Creates a student Auth account + students row together
+│   │       ├── add-student-roster/
+│   │       │   └── route.ts      # Bulk-adds students from a roster
+│   │       ├── student-approvals/
+│   │       │   └── route.ts      # GET/PATCH pending student approval requests
+│   │       └── teacher-approvals/
+│   │           └── route.ts      # GET/PATCH pending teacher approval requests
+│   │
+│   ├── components/               # Shared layout components (app-specific)
+│   │   ├── AppShell.tsx          # Sidebar navigation, header, period selector, logout button
+│   │   └── PeriodBadge.tsx       # AM/PM badge chip used in tables
+│   │
+│   └── lib/                      # App-level shared utilities
+│       ├── types.ts              # TypeScript types: Student, Equipment, Checkout, Period, EQUIPMENT_CATEGORIES
+│       ├── period-context.tsx    # React context that stores the selected AM/PM period across pages
+│       └── serials.ts            # Helpers for parsing and displaying serial numbers
+│
+├── components/
+│   └── ui/                       # Reusable headless/primitive UI components (shadcn-style)
+│       ├── button.tsx            # Button with size/variant props
+│       ├── card.tsx              # Card, CardHeader, CardContent, CardFooter
+│       ├── checkbox.tsx          # Radix Checkbox wrapper
+│       ├── input.tsx             # Styled text input
+│       ├── label.tsx             # Form label
+│       ├── separator.tsx         # Horizontal/vertical divider
+│       ├── tabs.tsx              # Radix Tabs wrapper (TabsList, TabsTrigger, TabsContent)
+│       └── login-signup.tsx      # LoginSignupFrame layout used on all auth pages
+│
+├── lib/                          # Root-level server utilities
+│   ├── utils.ts                  # cn() helper (clsx + tailwind-merge)
+│   ├── supabase/
+│   │   ├── browser-client.ts     # Supabase client for use in Client Components
+│   │   ├── server-client.ts      # Supabase client for use in Server Components and Route Handlers
+│   │   └── admin-client.ts       # Supabase service-role client for admin API routes (never exposed to browser)
+│   └── auth/
+│       ├── student-approvals.ts  # Server helpers for reading/updating student approval state
+│       └── student-roster.ts     # Server helpers for student roster queries
+│
+├── supabase/                     # SQL migration files — run these in the Supabase SQL Editor
+│   ├── student-account-link.sql  # Adds user_id and email columns to students table; creates indexes
+│   ├── student-approval-requests.sql  # Creates the student_approval_requests table and RLS policies
+│   ├── approved-teachers.sql     # Creates the approved_teachers table for teacher allow-list
+│   └── checkout-serial-number.sql    # Adds serial_number column to checkouts table
+│
+├── public/                       # Static assets served at /
+│   └── ignite-logo.png           # Logo shown in the app header
+│
+├── .env.example                  # Template for required environment variables
+├── .env.local                    # Local environment variables (not committed)
+├── next.config.ts                # Next.js configuration
+├── tsconfig.json                 # TypeScript configuration
+├── postcss.config.mjs            # PostCSS config for Tailwind CSS v4
+├── eslint.config.mjs             # ESLint configuration
+└── package.json                  # Dependencies and npm scripts
+```
+
+---
 
 ## Getting Started
 
-Install dependencies:
+**1. Install dependencies:**
 
 ```bash
 npm install
 ```
 
-Create a local environment file:
+**2. Create your local environment file:**
 
 ```bash
 cp .env.example .env.local
 ```
 
-Set the environment variables:
+**3. Fill in the environment variables:**
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_publishable_key
-NEXT_PUBLIC_SITE_URL=https://digital-media-ims.vercel.app
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-for-server-only-admin-routes
-```
-
-For local development, you can set `NEXT_PUBLIC_SITE_URL` to:
-
-```env
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-For production, set it to:
+> `SUPABASE_SERVICE_ROLE_KEY` is only used in server Route Handlers. It is never sent to the browser.
 
-```env
-NEXT_PUBLIC_SITE_URL=https://digital-media-ims.vercel.app
-```
-
-Run the development server:
+**4. Run the development server:**
 
 ```bash
 npm run dev
 ```
 
-Open:
+Open [http://localhost:3000](http://localhost:3000).
 
-```text
-http://localhost:3000
-```
+---
 
 ## Scripts
 
 ```bash
-npm run dev      # Start local dev server
-npm run build    # Build production app
-npm run start    # Start production server after build
+npm run dev      # Start local dev server with hot reload
+npm run build    # Build the production app
+npm run start    # Serve the production build locally
 npm run lint     # Run ESLint
 ```
 
+**To clear the Next.js build cache** (useful if old compiled output shows up after reverting code):
+
+```bash
+rm -rf .next && npm run dev
+```
+
+---
+
 ## Supabase Setup
 
-### Required Environment Values
+### 1. Run SQL Migrations
 
-In Supabase, get these values from Project Settings:
+Run each file in the Supabase SQL Editor in this order:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+| File | What it does |
+|---|---|
+| `supabase/student-account-link.sql` | Adds `user_id` and `email` to the `students` table so Auth accounts can be linked to roster entries |
+| `supabase/student-approval-requests.sql` | Creates the `student_approval_requests` table with RLS policies |
+| `supabase/approved-teachers.sql` | Creates the `approved_teachers` allow-list table |
+| `supabase/checkout-serial-number.sql` | Adds the `serial_number` column to the `checkouts` table |
 
-The service role key is used only in server routes for teacher/admin operations. Do not expose it in client components.
+### 2. Configure Supabase Auth URLs
 
-### Student Account Link SQL
+In **Supabase Dashboard → Authentication → URL Configuration**, set:
 
-Run this SQL file in the Supabase SQL Editor:
-
-```text
-supabase/student-account-link.sql
+**Site URL:**
 ```
-
-It adds the student/auth linking fields used by student self-checkout:
-
-- `students.user_id`
-- `students.email`
-- indexes for active linked student lookup
-
-## Authentication
-
-### Email Verification
-
-Self-created accounts use Supabase email verification.
-
-Signup is handled by:
-
-```text
-app/api/auth/create-account/route.ts
-```
-
-Email verification callback is handled by:
-
-```text
-app/auth/callback/route.ts
-```
-
-The callback reads `token_hash` and `type`, verifies the OTP with Supabase, persists the session through the server Supabase client, then redirects the user.
-
-### Supabase URL Configuration
-
-In Supabase Dashboard, set:
-
-```text
-Authentication -> URL Configuration
-```
-
-Site URL:
-
-```text
 https://digital-media-ims.vercel.app
 ```
 
-Redirect URLs:
-
-```text
+**Redirect URLs (add all of these):**
+```
 https://digital-media-ims.vercel.app/auth/callback
 https://digital-media-ims.vercel.app/login
 https://digital-media-ims.vercel.app/reset-password
@@ -160,17 +229,9 @@ http://localhost:3000/login
 http://localhost:3000/reset-password
 ```
 
-### Supabase Confirm Signup Email Template
+### 3. Update the Confirm Signup Email Template
 
-The confirmation email must send `token_hash` and `type` to the app callback route.
-
-In Supabase Dashboard:
-
-```text
-Authentication -> Email Templates -> Confirm signup
-```
-
-Use a link like:
+In **Supabase Dashboard → Authentication → Email Templates → Confirm signup**, use:
 
 ```html
 <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">
@@ -178,132 +239,86 @@ Use a link like:
 </a>
 ```
 
-The app sets `emailRedirectTo` to:
+This sends `token_hash` and `type` to `app/auth/callback/route.ts`, which verifies the OTP and establishes the session.
 
-```text
-https://digital-media-ims.vercel.app/auth/callback
-```
+---
+
+## Authentication Flow
+
+### Student / Teacher Sign-up
+- Self-created accounts go through `app/api/auth/create-account/route.ts`
+- Supabase sends a verification email; the link goes to `app/auth/callback/route.ts`
+- After verification, the user is redirected to the dashboard or pending-approval page
 
 ### Password Reset
-
-Password reset starts on the login page through `Forgot password?`.
-
-Reset destination:
-
-```text
-/reset-password
-```
-
-The reset page lets the user choose a new password and then redirects back to login.
+- User clicks **Forgot password?** on the login page
+- Supabase emails a reset link pointing to `/reset-password`
+- `app/reset-password/page.tsx` lets them set a new password, then redirects to login
 
 ### Teacher-Created Student Accounts
+- Teachers add students from the Students tab
+- `app/api/admin/create-student/route.ts` uses the service role to create both an Auth user and a `students` row in one step
 
-Teachers can create student accounts from the Students tab. These accounts are created by a server admin route and are linked to the `students` table.
+### Deleting a Student Account
+1. Teacher enters their own password to confirm
+2. Server verifies the password
+3. Deletes the student's `profiles` row (if present), the `students` row, and the Supabase Auth user
 
-### Deleting Student Accounts
+---
 
-When a teacher deletes a student:
+## Routes
 
-1. The teacher must enter their password.
-2. The server verifies that password.
-3. The linked profile row is deleted if a `profiles` table exists.
-4. The student row is deleted from `students`.
-5. The linked Supabase Auth user is deleted.
+| Route | Who sees it | What it does |
+|---|---|---|
+| `/` | Teachers & students | Dashboard with active checkout stats |
+| `/login` | Unauthenticated | Sign-in form and forgot-password link |
+| `/email-password` | Unauthenticated | Create a new account |
+| `/auth/callback` | — | Supabase email verification callback |
+| `/reset-password` | From email link | Set a new password |
+| `/pending-approval` | New users | Waiting screen while account is being approved |
+| `/checkout` | Teachers | Check equipment out to a student or check it back in |
+| `/equipment` | Teachers & students | Browse inventory; teachers can add/edit/remove |
+| `/equipment/[id]` | Teachers & students | Detail view for one item — full checkout history |
+| `/students` | Teachers | Manage student roster |
+| `/history` | Teachers | Full checkout and check-in audit log |
+| `/profile` | Teachers & students | Account settings |
 
-Checkout history may require database foreign keys that allow student deletion. If Supabase returns a foreign key constraint error, update the checkout foreign key behavior to match the desired history policy.
+---
 
-## Main Routes
+## Deployment (Vercel)
 
-```text
-/                    Dashboard
-/login               Sign in and password reset request
-/email-password      Account creation page
-/auth/callback       Supabase email verification callback
-/reset-password      Set new password from reset email
-/students            Teacher student roster management
-/equipment           Inventory management and student equipment browsing
-/checkout            Check equipment in/out
-/history             Checkout history
-```
+The production app runs at `https://digital-media-ims.vercel.app`.
 
-## Deployment
-
-The production app is intended to run on Vercel:
-
-```text
-https://digital-media-ims.vercel.app
-```
-
-Set these environment variables in Vercel:
+**Add these environment variables in your Vercel project settings:**
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 NEXT_PUBLIC_SITE_URL=https://digital-media-ims.vercel.app
-SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-After changing Supabase redirect settings or email templates, create a new test account and use a fresh verification email. Old verification emails can keep old URLs.
+After updating Supabase redirect settings or email templates, create a fresh test account — old verification emails may still contain old URLs.
 
-## Testing Checklist
-
-Before release, verify:
-
-1. Signup
-   - Create a student account with a `@bentonvillek12.org` email.
-   - Confirm the email points to `/auth/callback`, not localhost.
-
-2. Email confirmation
-   - Click the verification email.
-   - Confirm the user lands in the app and can access the dashboard.
-
-3. Login/logout
-   - Sign out.
-   - Sign back in with the verified account.
-
-4. Password reset
-   - Use `Forgot password?`.
-   - Confirm the email opens `/reset-password`.
-   - Set a new password and sign in.
-
-5. Teacher roster management
-   - Add a student.
-   - Edit the student.
-   - Delete the student after entering the teacher password.
-   - Confirm the student is removed from the list.
-
-6. Equipment flow
-   - Add equipment.
-   - Edit equipment.
-   - Check equipment out and back in.
-   - Confirm history records are created.
+---
 
 ## Troubleshooting
 
-### Verification Email Opens Localhost
+**Verification email opens localhost instead of production**
+- Check that `NEXT_PUBLIC_SITE_URL` in Vercel is set to `https://digital-media-ims.vercel.app`
+- Check that Supabase Site URL and redirect URLs include the production domain
+- Make sure the Confirm signup email template uses `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`
+- Old emails may still point to localhost — send a new one or create a new test account
 
-Check:
+**Email rate limit exceeded**
+- Supabase's default email sender has rate limits. For production, configure custom SMTP in Supabase Auth settings.
 
-- `NEXT_PUBLIC_SITE_URL` in Vercel is set to `https://digital-media-ims.vercel.app`
-- Supabase Site URL is set to `https://digital-media-ims.vercel.app`
-- Supabase redirect URLs include `/auth/callback`
-- The Confirm signup email template uses `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`
+**Invalid refresh token error**
+- The browser has a stale Supabase session. Clear site data for the app domain, or sign out and sign back in.
 
-Old emails may still point to old URLs. Send a new verification email or create a new test account.
+**Old UI still showing after reverting code changes**
+- Next.js caches compiled output in `.next/`. Clear it and restart: `rm -rf .next && npm run dev`
 
-### Email Rate Limit Exceeded
-
-Supabase's default email sender has rate limits. For production, configure custom SMTP in Supabase Auth settings.
-
-### Invalid Refresh Token
-
-This usually means the browser has a stale Supabase session. Clear site data for the app domain or sign out and sign back in.
-
-### Unable To Reach Supabase
-
-Verify:
-
-- Supabase project is active.
-- `NEXT_PUBLIC_SUPABASE_URL` is correct.
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is correct.
-- Local `.env.local` or Vercel env vars are set.
+**Cannot reach Supabase**
+- Verify the Supabase project is active (not paused)
+- Double-check `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`
