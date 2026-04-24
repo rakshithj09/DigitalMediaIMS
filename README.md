@@ -39,109 +39,144 @@ Built with Next.js, React, Tailwind CSS, and Supabase.
 
 ## Project Structure
 
-```
-igniteims/
-├── app/                          # Next.js App Router pages and layouts
-│   ├── layout.tsx                # Root HTML layout (sets metadata, body styles)
-│   ├── globals.css               # Global CSS: brand tokens, utility classes, table/badge styles
-│   ├── page.tsx                  # Dashboard — active checkout stats, check-in button
-│   │
-│   ├── login/
-│   │   └── page.tsx              # Sign-in form + forgot password link
-│   ├── email-password/
-│   │   ├── page.tsx              # Account creation page
-│   │   └── EmailPasswordDemo.tsx # Sign-up form component
-│   ├── reset-password/
-│   │   └── page.tsx              # Set new password (after clicking reset email link)
-│   ├── pending-approval/
-│   │   └── page.tsx              # Shown to users whose account is awaiting teacher approval
-│   │
-│   ├── checkout/
-│   │   └── page.tsx              # Check-out and check-in flow
-│   ├── equipment/
-│   │   ├── page.tsx              # Equipment inventory list — add, edit, remove items
-│   │   └── [id]/
-│   │       └── page.tsx          # Individual equipment item detail — history, active checkouts
-│   ├── students/
-│   │   └── page.tsx              # Student roster — add, edit, delete students
-│   ├── history/
-│   │   └── page.tsx              # Full checkout/check-in audit log
-│   ├── profile/
-│   │   └── page.tsx              # Logged-in user's profile and account settings
-│   │
+`igniteims/` contains the main app, shared UI, server utilities, database SQL, and project configuration. Expand any section below to inspect its files and descriptions.
+
+<details>
+<summary><code>app/</code> — Next.js App Router pages, layouts, route handlers, and app-level utilities</summary>
+
+```text
+app/
+├── layout.tsx                # Root HTML layout (sets metadata, body styles)
+├── globals.css               # Global CSS: brand tokens, utility classes, table/badge styles
+├── page.tsx                  # Dashboard — active checkout stats, check-in button
+├── login/
+│   └── page.tsx              # Sign-in form + forgot password link
+├── email-password/
+│   ├── page.tsx              # Account creation page
+│   └── EmailPasswordDemo.tsx # Sign-up form component
+├── reset-password/
+│   └── page.tsx              # Set new password (after clicking reset email link)
+├── pending-approval/
+│   └── page.tsx              # Shown to users whose account is awaiting teacher approval
+├── checkout/
+│   └── page.tsx              # Check-out and check-in flow
+├── equipment/
+│   ├── page.tsx              # Equipment inventory list — add, edit, remove items
+│   └── [id]/
+│       └── page.tsx          # Individual equipment item detail — history, active checkouts
+├── students/
+│   └── page.tsx              # Student roster — add, edit, delete students
+├── history/
+│   └── page.tsx              # Full checkout/check-in audit log
+├── profile/
+│   └── page.tsx              # Logged-in user's profile and account settings
+├── auth/
+│   └── callback/
+│       └── route.ts          # Supabase email verification callback (verifies OTP, sets session)
+├── api/                      # Next.js Route Handlers (server-side only)
 │   ├── auth/
-│   │   └── callback/
-│   │       └── route.ts          # Supabase email verification callback (verifies OTP, sets session)
-│   │
-│   ├── api/                      # Next.js Route Handlers (server-side only)
-│   │   ├── auth/
-│   │   │   └── create-account/
-│   │   │       └── route.ts      # Creates a new student or teacher account via service role
-│   │   ├── checkouts/
-│   │   │   ├── route.ts          # POST: create a new checkout record
-│   │   │   └── check-in/
-│   │   │       └── route.ts      # POST: check equipment back in, record return notes
-│   │   ├── equipment/
-│   │   │   └── route.ts          # GET: fetch equipment list; POST: add new equipment
-│   │   └── admin/
-│   │       ├── students/
-│   │       │   └── route.ts      # GET/POST/PATCH/DELETE student records (teacher only)
-│   │       ├── create-student/
-│   │       │   └── route.ts      # Creates a student Auth account + students row together
-│   │       ├── add-student-roster/
-│   │       │   └── route.ts      # Bulk-adds students from a roster
-│   │       ├── student-approvals/
-│   │       │   └── route.ts      # GET/PATCH pending student approval requests
-│   │       └── teacher-approvals/
-│   │           └── route.ts      # GET/PATCH pending teacher approval requests
-│   │
-│   ├── components/               # Shared layout components (app-specific)
-│   │   ├── AppShell.tsx          # Sidebar navigation, header, period selector, logout button
-│   │   └── PeriodBadge.tsx       # AM/PM badge chip used in tables
-│   │
-│   └── lib/                      # App-level shared utilities
-│       ├── types.ts              # TypeScript types: Student, Equipment, Checkout, Period, EQUIPMENT_CATEGORIES
-│       ├── period-context.tsx    # React context that stores the selected AM/PM period across pages
-│       └── serials.ts            # Helpers for parsing and displaying serial numbers
-│
-├── components/
-│   └── ui/                       # Reusable headless/primitive UI components (shadcn-style)
-│       ├── button.tsx            # Button with size/variant props
-│       ├── card.tsx              # Card, CardHeader, CardContent, CardFooter
-│       ├── checkbox.tsx          # Radix Checkbox wrapper
-│       ├── input.tsx             # Styled text input
-│       ├── label.tsx             # Form label
-│       ├── separator.tsx         # Horizontal/vertical divider
-│       ├── tabs.tsx              # Radix Tabs wrapper (TabsList, TabsTrigger, TabsContent)
-│       └── login-signup.tsx      # LoginSignupFrame layout used on all auth pages
-│
-├── lib/                          # Root-level server utilities
-│   ├── utils.ts                  # cn() helper (clsx + tailwind-merge)
-│   ├── supabase/
-│   │   ├── browser-client.ts     # Supabase client for use in Client Components
-│   │   ├── server-client.ts      # Supabase client for use in Server Components and Route Handlers
-│   │   └── admin-client.ts       # Supabase service-role client for admin API routes (never exposed to browser)
-│   └── auth/
-│       ├── student-approvals.ts  # Server helpers for reading/updating student approval state
-│       └── student-roster.ts     # Server helpers for student roster queries
-│
-├── supabase/                     # SQL migration files — run these in the Supabase SQL Editor
-│   ├── student-account-link.sql  # Adds user_id and email columns to students table; creates indexes
-│   ├── student-approval-requests.sql  # Creates the student_approval_requests table and RLS policies
-│   ├── approved-teachers.sql     # Creates the approved_teachers table for teacher allow-list
-│   └── checkout-serial-number.sql    # Adds serial_number column to checkouts table
-│
-├── public/                       # Static assets served at /
-│   └── ignite-logo.png           # Logo shown in the app header
-│
-├── .env.example                  # Template for required environment variables
-├── .env.local                    # Local environment variables (not committed)
-├── next.config.ts                # Next.js configuration
-├── tsconfig.json                 # TypeScript configuration
-├── postcss.config.mjs            # PostCSS config for Tailwind CSS v4
-├── eslint.config.mjs             # ESLint configuration
-└── package.json                  # Dependencies and npm scripts
+│   │   └── create-account/
+│   │       └── route.ts      # Creates a new student or teacher account via service role
+│   ├── checkouts/
+│   │   ├── route.ts          # POST: create a new checkout record
+│   │   └── check-in/
+│   │       └── route.ts      # POST: check equipment back in, record return notes
+│   ├── equipment/
+│   │   └── route.ts          # GET: fetch equipment list; POST: add new equipment
+│   └── admin/
+│       ├── students/
+│       │   └── route.ts      # GET/POST/PATCH/DELETE student records (teacher only)
+│       ├── create-student/
+│       │   └── route.ts      # Creates a student Auth account + students row together
+│       ├── add-student-roster/
+│       │   └── route.ts      # Bulk-adds students from a roster
+│       ├── student-approvals/
+│       │   └── route.ts      # GET/PATCH pending student approval requests
+│       └── teacher-approvals/
+│           └── route.ts      # GET/PATCH pending teacher approval requests
+├── components/               # Shared layout components (app-specific)
+│   ├── AppShell.tsx          # Sidebar navigation, header, period selector, logout button
+│   └── PeriodBadge.tsx       # AM/PM badge chip used in tables
+└── lib/                      # App-level shared utilities
+    ├── types.ts              # TypeScript types: Student, Equipment, Checkout, Period, EQUIPMENT_CATEGORIES
+    ├── period-context.tsx    # React context that stores the selected AM/PM period across pages
+    └── serials.ts            # Helpers for parsing and displaying serial numbers
 ```
+
+</details>
+
+<details>
+<summary><code>components/</code> — Reusable UI primitives shared across the app</summary>
+
+```text
+components/
+└── ui/                       # Reusable headless/primitive UI components (shadcn-style)
+    ├── button.tsx            # Button with size/variant props
+    ├── card.tsx              # Card, CardHeader, CardContent, CardFooter
+    ├── checkbox.tsx          # Radix Checkbox wrapper
+    ├── input.tsx             # Styled text input
+    ├── label.tsx             # Form label
+    ├── separator.tsx         # Horizontal/vertical divider
+    ├── tabs.tsx              # Radix Tabs wrapper (TabsList, TabsTrigger, TabsContent)
+    └── login-signup.tsx      # LoginSignupFrame layout used on all auth pages
+```
+
+</details>
+
+<details>
+<summary><code>lib/</code> — Root-level server utilities, auth helpers, and Supabase clients</summary>
+
+```text
+lib/
+├── utils.ts                  # cn() helper (clsx + tailwind-merge)
+├── supabase/
+│   ├── browser-client.ts     # Supabase client for use in Client Components
+│   ├── server-client.ts      # Supabase client for use in Server Components and Route Handlers
+│   └── admin-client.ts       # Supabase service-role client for admin API routes (never exposed to browser)
+└── auth/
+    ├── student-approvals.ts  # Server helpers for reading/updating student approval state
+    └── student-roster.ts     # Server helpers for student roster queries
+```
+
+</details>
+
+<details>
+<summary><code>supabase/</code> — SQL migration files to run in the Supabase SQL Editor</summary>
+
+```text
+supabase/
+├── student-account-link.sql      # Adds user_id and email columns to students table; creates indexes
+├── student-approval-requests.sql # Creates the student_approval_requests table and RLS policies
+├── approved-teachers.sql         # Creates the approved_teachers table for teacher allow-list
+└── checkout-serial-number.sql    # Adds serial_number column to checkouts table
+```
+
+</details>
+
+<details>
+<summary><code>public/</code> — Static assets served at <code>/</code></summary>
+
+```text
+public/
+└── ignite-logo.png           # Logo shown in the app header
+```
+
+</details>
+
+<details>
+<summary>Root config files — environment, build, lint, and package setup</summary>
+
+```text
+.env.example                  # Template for required environment variables
+.env.local                    # Local environment variables (not committed)
+next.config.ts                # Next.js configuration
+tsconfig.json                 # TypeScript configuration
+postcss.config.mjs            # PostCSS config for Tailwind CSS v4
+eslint.config.mjs             # ESLint configuration
+package.json                  # Dependencies and npm scripts
+```
+
+</details>
 
 ---
 
