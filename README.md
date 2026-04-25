@@ -459,6 +459,8 @@ rm -rf .next && npm run dev
 
 ---
 
-## To Do
+## Future Implementations
 
 - Create a custom domain and add email reminder notifications for upcoming due dates
+- Add restricted check in/check out dates and times for items
+- Add barcode scanning to replace serial tags
