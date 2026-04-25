@@ -195,7 +195,7 @@ function ProfileContent() {
               required
               value={teacherApprovalPassword}
               onChange={(event) => setTeacherApprovalPassword(event.target.value)}
-              placeholder="Your teacher password"
+              placeholder="Your password"
               autoComplete="current-password"
               className="form-input"
               style={{ paddingRight: "2.75rem" }}
