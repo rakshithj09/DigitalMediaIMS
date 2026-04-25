@@ -70,23 +70,47 @@ body {
   width: 100%;
   min-width: 720px;
   font-size: 0.875rem;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .data-table thead th {
-  padding: 0.75rem 1.25rem;
+  padding: 0.9rem 1.25rem;
   text-align: left;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #475569;
-  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
-  border-bottom: 1.5px solid #e2e8f0;
+  letter-spacing: 0.11em;
+  color: #526275;
+  background: linear-gradient(180deg, #f9fbfd 0%, #eef4f8 100%);
+  border-bottom: 1px solid #d9e4ee;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
-.data-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.12s ease; }
-.data-table tbody tr:last-child { border-bottom: none; }
-.data-table tbody tr:hover { background: #f0f6ff; }
-.data-table td { padding: 0.875rem 1.25rem; }
+.data-table thead th:first-child { border-top-left-radius: 0.95rem; }
+.data-table thead th:last-child { border-top-right-radius: 0.95rem; }
+.data-table tbody tr {
+  transition: transform 0.12s ease, background 0.14s ease, box-shadow 0.14s ease;
+}
+.data-table tbody tr:nth-child(even) td {
+  background: rgba(248, 250, 252, 0.72);
+}
+.data-table tbody tr:nth-child(odd) td {
+  background: rgba(255, 255, 255, 0.9);
+}
+.data-table tbody tr:hover td {
+  background: #eef7ff;
+}
+.data-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e8eef5;
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.data-table tbody tr:last-child td:first-child { border-bottom-left-radius: 0.95rem; }
+.data-table tbody tr:last-child td:last-child { border-bottom-right-radius: 0.95rem; }
 
 .equipment-table {
   table-layout: fixed;
@@ -228,6 +252,16 @@ body {
   align-items: center;
   gap: 0.75rem;
   min-width: 150px;
+}
+
+.data-table td button,
+.data-table td a {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+
+.data-table td button:hover,
+.data-table td a:hover {
+  transform: translateY(-1px);
 }
 
 .history-item-cell {

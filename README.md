@@ -12,12 +12,12 @@ Built with Next.js, React, Tailwind CSS, and Supabase.
 - Email verification for self-created accounts
 - Password reset by email
 - AM/PM class period selector for teachers
-- **Teacher dashboard** — active checkout totals, class-period filtering, quick check-in
-- **Student dashboard** — view and check in their own active checkouts
+- **Teacher dashboard** — active checkout totals, class-period filtering, quick check-in, deadline-based warning colors
+- **Student dashboard** — view and check in their own active checkouts with return deadlines
 - **Equipment inventory** — add, edit, and remove equipment items with category, serial number, quantity, and condition notes
 - **Equipment detail page** — full item history and checkout list per equipment item
 - **Student roster** — add, edit, and delete students; teacher password confirmation required to delete
-- **Checkout flow** — check equipment out to a student with period and optional notes
+- **Checkout flow** — check equipment out to a student with period, return date/time, and optional notes
 - **Check-in flow** — return equipment with optional return notes
 - **History / audit log** — full checkout and check-in history across all items and students
 
@@ -148,7 +148,8 @@ supabase/
 ├── student-account-link.sql      # Adds user_id and email columns to students table; creates indexes
 ├── student-approval-requests.sql # Creates the student_approval_requests table and RLS policies
 ├── approved-teachers.sql         # Creates the approved_teachers table for teacher allow-list
-└── checkout-serial-number.sql    # Adds serial_number column to checkouts table
+├── checkout-serial-number.sql    # Adds serial_number column to checkouts table
+└── checkout-return-deadline.sql  # Adds due_at to checkouts
 ```
 
 </details>
@@ -244,6 +245,7 @@ Run each file in the Supabase SQL Editor in this order:
 | `supabase/student-approval-requests.sql` | Creates the `student_approval_requests` table with RLS policies |
 | `supabase/approved-teachers.sql` | Creates the `approved_teachers` allow-list table |
 | `supabase/checkout-serial-number.sql` | Adds the `serial_number` column to the `checkouts` table |
+| `supabase/checkout-return-deadline.sql` | Adds a `due_at` column so checkouts can have return deadlines |
 
 ### 2. Configure Supabase Auth URLs
 

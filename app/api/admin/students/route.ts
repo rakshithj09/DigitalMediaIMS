@@ -164,6 +164,7 @@ export async function PATCH(req: Request) {
       period: student?.period,
       first_name: firstName,
       last_name: lastName,
+      student_id: student?.student_id,
     };
 
     const authUpdate: { user_metadata: Record<string, unknown>; email?: string } = { user_metadata: metadata };

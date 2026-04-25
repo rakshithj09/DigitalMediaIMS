@@ -8,8 +8,65 @@ import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Student, Equipment, Checkout } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
+import { formatDateTime, formatRemainingTime, getCheckoutDeadlineMeta } from "@/lib/checkout-deadlines";
 
 type EquipmentWithAvail = Equipment & { available: number; availableSerialNumbers: string[] };
+
+function toLocalDateInputValue(date: Date) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function padTime(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function roundUpToQuarterHour(date: Date) {
+  const rounded = new Date(date);
+  rounded.setSeconds(0, 0);
+  const remainder = rounded.getMinutes() % 15;
+  if (remainder !== 0) {
+    rounded.setMinutes(rounded.getMinutes() + (15 - remainder));
+  }
+  return rounded;
+}
+
+function createDefaultReturnDateTime() {
+  const date = roundUpToQuarterHour(new Date());
+  date.setDate(date.getDate() + 1);
+  return {
+    date: toLocalDateInputValue(date),
+    time: `${padTime(date.getHours())}:${padTime(date.getMinutes())}`,
+  };
+}
+
+function createMinimumReturnDate() {
+  return toLocalDateInputValue(new Date());
+}
+
+function createMinimumReturnTime(dateValue: string) {
+  if (dateValue !== toLocalDateInputValue(new Date())) return null;
+  const date = roundUpToQuarterHour(new Date());
+  return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+}
+
+function buildTimeOptions() {
+  const options: string[] = [];
+  for (let hour = 0; hour < 24; hour += 1) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      options.push(`${padTime(hour)}:${padTime(minute)}`);
+    }
+  }
+  return options;
+}
+
+function formatTimeOption(value: string) {
+  const [hoursString, minutesString] = value.split(":");
+  const hours = Number(hoursString);
+  const minutes = Number(minutesString);
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const normalizedHour = hours % 12 || 12;
+  return `${normalizedHour}:${padTime(minutes)} ${suffix}`;
+}
 
 function CheckoutContent() {
   const { period } = usePeriod();
@@ -33,6 +90,9 @@ function CheckoutContent() {
   const [quantity, setQuantity] = useState("1");
   const [serialNumber, setSerialNumber] = useState("");
   const [notes, setNotes] = useState("");
+  const [returnDate, setReturnDate] = useState(() => createDefaultReturnDateTime().date);
+  const [returnTime, setReturnTime] = useState(() => createDefaultReturnDateTime().time);
+  const [minimumReturnDate] = useState(createMinimumReturnDate);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -119,8 +179,8 @@ function CheckoutContent() {
     const activeCheckoutsQuery = createSupabaseBrowserClient()
       .from("checkouts")
       .select(
-        `id, student_id, equipment_id, quantity, serial_number, checked_out_at, notes, period,
-         student:students(id, name, student_id),
+        `id, student_id, equipment_id, quantity, serial_number, checked_out_at, due_at, notes, period,
+         student:students(id, name, student_id, email),
          equipment:equipment(id, name, category)`
       )
       .is("checked_in_at", null)
@@ -144,6 +204,8 @@ function CheckoutContent() {
         setSubmitError(
           message.includes("checkouts.serial_number")
             ? "Database update needed: run supabase/checkout-serial-number.sql in Supabase, then refresh this page."
+            : message.includes("checkouts.due_at")
+            ? "Database update needed: run supabase/checkout-return-deadline.sql in Supabase, then refresh this page."
             : message
         );
         setLoadFailed(true);
@@ -188,6 +250,12 @@ function CheckoutContent() {
   const maxQty = selectedEquipment?.available ?? 0;
   const serialOptions = selectedEquipment?.availableSerialNumbers ?? [];
   const requiresSerialSelection = serialOptions.length > 0;
+  const timeOptions = buildTimeOptions();
+  const minimumReturnTime = createMinimumReturnTime(returnDate);
+  const availableTimeOptions = timeOptions.filter((time) => !minimumReturnTime || time >= minimumReturnTime);
+  const selectedReturnTime = availableTimeOptions.includes(returnTime)
+    ? returnTime
+    : (availableTimeOptions[0] ?? "");
   const visibleActiveCheckouts = (activeCheckouts ?? []).filter((c) => {
     if (currentRole === "Student") return c.student_id === ownStudentId;
     return true;
@@ -206,11 +274,26 @@ function CheckoutContent() {
     if (isNaN(qty) || qty < 1) { setSubmitError("Quantity must be at least 1."); setSubmitting(false); return; }
     if (qty > maxQty) { setSubmitError(`Only ${maxQty} unit(s) available.`); setSubmitting(false); return; }
     if (requiresSerialSelection && !serialNumber) { setSubmitError("Please select a serial/asset tag."); setSubmitting(false); return; }
+    if (!returnDate || !selectedReturnTime) { setSubmitError("Please choose when the item should be returned."); setSubmitting(false); return; }
+    const returnBy = new Date(`${returnDate}T${selectedReturnTime}:00`);
+    if (Number.isNaN(returnBy.getTime()) || returnBy.getTime() <= Date.now()) {
+      setSubmitError("Return time must be in the future.");
+      setSubmitting(false);
+      return;
+    }
 
     const checkoutResp = await fetch("/api/checkouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: finalStudentId, equipmentId, quantity: qty, serialNumber: serialNumber || null, notes, period: checkoutPeriod }),
+      body: JSON.stringify({
+        studentId: finalStudentId,
+        equipmentId,
+        quantity: qty,
+        serialNumber: serialNumber || null,
+        notes,
+        period: checkoutPeriod,
+        returnBy: returnBy.toISOString(),
+      }),
     });
 
     if (!checkoutResp.ok) {
@@ -223,6 +306,11 @@ function CheckoutContent() {
       setQuantity("1");
       setSerialNumber("");
       setNotes("");
+      {
+        const nextDefault = createDefaultReturnDateTime();
+        setReturnDate(nextDefault.date);
+        setReturnTime(nextDefault.time);
+      }
       setSubmitSuccess(true);
       refresh();
     }
@@ -424,6 +512,36 @@ function CheckoutContent() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="co-return-date" style={{ color: "#374151" }}>
+                  Return By <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-3">
+                  <input
+                    id="co-return-date"
+                    type="date"
+                    required
+                    value={returnDate}
+                    min={minimumReturnDate}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                    className="form-input"
+                  />
+                  <select
+                    id="co-return-time"
+                    value={selectedReturnTime}
+                    onChange={(e) => setReturnTime(e.target.value)}
+                    className="form-input"
+                    disabled={availableTimeOptions.length === 0}
+                  >
+                    {availableTimeOptions.map((time) => (
+                      <option key={time} value={time}>
+                        {formatTimeOption(time)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="co-notes" style={{ color: "#374151" }}>
                   Notes{" "}
                   <span className="font-normal" style={{ color: "var(--muted)" }}>(optional)</span>
@@ -513,63 +631,81 @@ function CheckoutContent() {
             </div>
           ) : (
             <div className="space-y-3">
-              {visibleActiveCheckouts.map((c) => (
-                <div
-                  key={c.id}
-                  className="rounded-xl p-3.5"
-                  style={{ border: "1px solid #e9eef5", background: "#fafbfd" }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm leading-tight" style={{ color: "var(--ignite-navy)" }}>
-                        {c.student?.name ?? "—"}
-                      </p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                        {c.equipment?.name ?? "—"}
-                        <span
-                          className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
-                          style={{ background: "#f1f5f9", color: "var(--muted)" }}
-                        >
-                          qty {c.quantity}
-                        </span>
-                        {c.serial_number && (
+              {visibleActiveCheckouts.map((c) => {
+                const deadline = getCheckoutDeadlineMeta(c.checked_out_at, c.due_at ?? null);
+                const state = deadline?.state ?? "healthy";
+                const statusStyle =
+                  state === "warning"
+                    ? { background: "#fef3c7", color: "#b45309" }
+                    : state === "danger" || state === "overdue"
+                    ? { background: "#fee2e2", color: "#dc2626" }
+                    : { background: "#dcfce7", color: "#15803d" };
+
+                return (
+                  <div
+                    key={c.id}
+                    className="rounded-xl p-3.5"
+                    style={{ border: "1px solid #e9eef5", background: "#fafbfd" }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm leading-tight" style={{ color: "var(--ignite-navy)" }}>
+                          {c.student?.name ?? "—"}
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                          {c.equipment?.name ?? "—"}
                           <span
                             className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
-                            style={{ background: "#e8f0fe", color: "#005a78" }}
+                            style={{ background: "#f1f5f9", color: "var(--muted)" }}
                           >
-                            {c.serial_number}
+                            qty {c.quantity}
                           </span>
+                          {c.serial_number && (
+                            <span
+                              className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                              style={{ background: "#e8f0fe", color: "#005a78" }}
+                            >
+                              {c.serial_number}
+                            </span>
+                          )}
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium" style={statusStyle}>
+                            {state === "overdue" ? "Overdue" : state === "danger" ? "75% elapsed" : state === "warning" ? "50% elapsed" : "On track"}
+                          </span>
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                          Due {formatDateTime(c.due_at ?? null)}
+                          {deadline ? ` · ${deadline.remainingMs > 0 ? `${formatRemainingTime(deadline.remainingMs)} left` : `${formatRemainingTime(deadline.remainingMs)} overdue`}` : ""}
+                        </p>
+                        {c.notes && (
+                          <p className="text-xs mt-1 italic" style={{ color: "#94a3b8" }}>{c.notes}</p>
                         )}
-                      </p>
-                      {c.notes && (
-                        <p className="text-xs mt-1 italic" style={{ color: "#94a3b8" }}>{c.notes}</p>
-                      )}
+                      </div>
+                      <button
+                        onClick={() => handleCheckIn(c.id)}
+                        disabled={checkingIn === c.id}
+                        className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                        style={{
+                          background: checkingIn === c.id ? "#d1fae5" : "#059669",
+                          color: checkingIn === c.id ? "#059669" : "white",
+                        }}
+                      >
+                        {checkingIn === c.id ? "…" : "Check In"}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleCheckIn(c.id)}
-                      disabled={checkingIn === c.id}
-                      className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
-                      style={{
-                        background: checkingIn === c.id ? "#d1fae5" : "#059669",
-                        color: checkingIn === c.id ? "#059669" : "white",
-                      }}
-                    >
-                      {checkingIn === c.id ? "…" : "Check In"}
-                    </button>
+                    <div className="mt-2.5">
+                      <input
+                        type="text"
+                        maxLength={200}
+                        placeholder="Return notes (optional)"
+                        value={returnNotes[c.id] ?? ""}
+                        onChange={(e) => setReturnNotes((r) => ({ ...r, [c.id]: e.target.value }))}
+                        className="form-input text-xs py-1.5"
+                        style={{ fontSize: "0.75rem" }}
+                      />
+                    </div>
                   </div>
-                  <div className="mt-2.5">
-                    <input
-                      type="text"
-                      maxLength={200}
-                      placeholder="Return notes (optional)"
-                      value={returnNotes[c.id] ?? ""}
-                      onChange={(e) => setReturnNotes((r) => ({ ...r, [c.id]: e.target.value }))}
-                      className="form-input text-xs py-1.5"
-                      style={{ fontSize: "0.75rem" }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

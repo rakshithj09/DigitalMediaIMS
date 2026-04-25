@@ -9,6 +9,7 @@ type CheckoutBody = {
   serialNumber?: string | null;
   notes?: string | null;
   period?: string;
+  returnBy?: string;
 };
 
 type StudentRow = {
@@ -125,9 +126,14 @@ export async function POST(req: Request) {
   const role = user.user_metadata?.role;
   const requestedQuantity = Number(body.quantity);
   const selectedSerial = normalizeSerialNumber(body.serialNumber);
+  const dueAt = body.returnBy ? new Date(body.returnBy) : null;
 
   if (!body.equipmentId || !Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
     return NextResponse.json({ error: "Equipment and a valid quantity are required." }, { status: 400 });
+  }
+
+  if (!dueAt || Number.isNaN(dueAt.getTime()) || dueAt.getTime() <= Date.now()) {
+    return NextResponse.json({ error: "A valid future return date and time is required." }, { status: 400 });
   }
 
   try {
@@ -186,6 +192,7 @@ export async function POST(req: Request) {
           serial_number: checkoutSerial,
           notes: body.notes?.trim() || null,
           period: student.period,
+          due_at: dueAt.toISOString(),
         },
       ]),
     });

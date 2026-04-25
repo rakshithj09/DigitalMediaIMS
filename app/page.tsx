@@ -8,23 +8,7 @@ import PeriodBadge from "@/app/components/PeriodBadge";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Checkout } from "@/app/lib/types";
-
-const WARNING_MS = 2 * 60 * 60 * 1000;
-const NEEDS_ATTENTION_MS = 3 * 60 * 60 * 1000;
-
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ${mins % 60}m ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
-function durationMs(iso: string): number {
-  return Date.now() - new Date(iso).getTime();
-}
+import { formatDateTime, formatRemainingTime, getCheckoutDeadlineMeta } from "@/lib/checkout-deadlines";
 
 function DashboardContent() {
   const { period } = usePeriod();
@@ -47,8 +31,8 @@ function DashboardContent() {
     createSupabaseBrowserClient()
       .from("checkouts")
       .select(
-        `id, student_id, quantity, serial_number, checked_out_at, notes, period,
-         student:students(id, name, student_id),
+        `id, student_id, quantity, serial_number, checked_out_at, due_at, notes, period,
+         student:students(id, name, student_id, email),
          equipment:equipment(id, name, category)`
       )
       .is("checked_in_at", null)
@@ -124,11 +108,16 @@ function DashboardContent() {
   const studentsWithCheckouts = new Set(list.map((c) => c.student_id)).size;
 
   if (currentRole === "Student") {
-    const overdueCount = list.filter((c) => durationMs(c.checked_out_at) >= NEEDS_ATTENTION_MS).length;
-    const oldestCheckout = list.reduce<Checkout | null>((oldest, c) => {
-      if (!oldest) return c;
-      return new Date(c.checked_out_at) < new Date(oldest.checked_out_at) ? c : oldest;
+    const attentionCount = list.filter((c) => {
+      const deadline = getCheckoutDeadlineMeta(c.checked_out_at, c.due_at ?? null);
+      return deadline?.state === "warning" || deadline?.state === "danger" || deadline?.state === "overdue";
+    }).length;
+    const nextDueCheckout = list.reduce<Checkout | null>((soonest, c) => {
+      if (!c.due_at) return soonest;
+      if (!soonest?.due_at) return c;
+      return new Date(c.due_at) < new Date(soonest.due_at) ? c : soonest;
     }, null);
+    const nextDueMeta = nextDueCheckout ? getCheckoutDeadlineMeta(nextDueCheckout.checked_out_at, nextDueCheckout.due_at ?? null) : null;
 
     return (
       <div>
@@ -163,15 +152,15 @@ function DashboardContent() {
           />
           <StatCard
             label="Needs Attention"
-            value={overdueCount}
+            value={attentionCount}
             icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5" /><path d="M12 16h.01" /></svg>}
             iconBg="#fee2e2"
             iconColor="#dc2626"
           />
           <StatCard
-            label={oldestCheckout ? "Oldest Checkout" : "Ready To Go"}
-            value={oldestCheckout ? Math.max(1, Math.floor(durationMs(oldestCheckout.checked_out_at) / 60000)) : 0}
-            suffix={oldestCheckout ? "m" : ""}
+            label={nextDueCheckout ? "Next Due" : "Ready To Go"}
+            value={nextDueMeta ? Math.max(1, Math.round(Math.abs(nextDueMeta.remainingMs) / 3600000)) : 0}
+            suffix={nextDueCheckout ? "h" : ""}
             icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>}
             iconBg="#dcfce7"
             iconColor="#16a34a"
@@ -204,9 +193,10 @@ function DashboardContent() {
             ) : (
               <div className="divide-y divide-slate-100">
                 {list.map((c) => {
-                  const ms = durationMs(c.checked_out_at);
-                  const overdue = ms >= NEEDS_ATTENTION_MS;
-                  const warning = ms >= WARNING_MS && !overdue;
+                  const deadline = getCheckoutDeadlineMeta(c.checked_out_at, c.due_at ?? null);
+                  const state = deadline?.state ?? "healthy";
+                  const needsRed = state === "danger" || state === "overdue";
+                  const needsYellow = state === "warning";
 
                   return (
                     <div key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -217,11 +207,15 @@ function DashboardContent() {
                           {c.serial_number && <span className="badge" style={{ background: "#e8f0fe", color: "#005a78" }}>{c.serial_number}</span>}
                           <span
                             className="badge"
-                            style={overdue ? { background: "#fee2e2", color: "#dc2626" } : warning ? { background: "#fef9c3", color: "#ca8a04" } : { background: "#dcfce7", color: "#16a34a" }}
+                            style={needsRed ? { background: "#fee2e2", color: "#dc2626" } : needsYellow ? { background: "#fef9c3", color: "#ca8a04" } : { background: "#dcfce7", color: "#16a34a" }}
                           >
-                            {overdue ? "Needs attention" : warning ? "Keep track" : "Checked out"} · {timeAgo(c.checked_out_at)}
+                            {state === "overdue" ? "Overdue" : state === "danger" ? "75% elapsed" : state === "warning" ? "50% elapsed" : "On track"}
                           </span>
                         </div>
+                        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                          Due {formatDateTime(c.due_at ?? null)}
+                          {deadline ? ` · ${deadline.remainingMs > 0 ? `${formatRemainingTime(deadline.remainingMs)} left` : `${formatRemainingTime(deadline.remainingMs)} overdue`}` : ""}
+                        </p>
                         {c.notes && <p className="text-sm mt-1 truncate" style={{ color: "var(--muted)" }}>{c.notes}</p>}
                       </div>
                       <button
@@ -346,21 +340,22 @@ function DashboardContent() {
                   <th>Student</th>
                   <th>Item</th>
                   <th>Qty</th>
-                  <th>Checked Out</th>
+                  <th>Return By</th>
                   <th>Notes</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {list.map((c) => {
-                  const ms = durationMs(c.checked_out_at);
-                  const overdue = ms >= NEEDS_ATTENTION_MS;
-                  const warning = ms >= WARNING_MS && !overdue;
+                  const deadline = getCheckoutDeadlineMeta(c.checked_out_at, c.due_at ?? null);
+                  const state = deadline?.state ?? "healthy";
+                  const needsRed = state === "danger" || state === "overdue";
+                  const needsYellow = state === "warning";
 
                   return (
                     <tr
                       key={c.id}
-                      style={overdue ? { background: "#fef2f2" } : warning ? { background: "#fffbeb" } : undefined}
+                      style={needsRed ? { background: "#fef2f2" } : needsYellow ? { background: "#fffbeb" } : undefined}
                     >
                       <td className="dashboard-student-cell font-medium" style={{ color: "var(--ignite-navy)" }}>
                         <span className="dashboard-cell-clip">{c.student?.name ?? "—"}</span>
@@ -391,15 +386,19 @@ function DashboardContent() {
                         <span
                           className="text-xs font-semibold px-2 py-0.5 rounded-full"
                           style={
-                            overdue
+                            needsRed
                               ? { background: "#fee2e2", color: "#dc2626" }
-                              : warning
+                              : needsYellow
                               ? { background: "#fef9c3", color: "#ca8a04" }
                               : { background: "#f0fdf4", color: "#16a34a" }
                           }
                         >
-                          {overdue && "⚠ "}{timeAgo(c.checked_out_at)}
+                          {state === "overdue" ? "Overdue" : state === "danger" ? "75% elapsed" : state === "warning" ? "50% elapsed" : "On track"}
                         </span>
+                        <div className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                          {formatDateTime(c.due_at ?? null)}
+                          {deadline ? ` · ${deadline.remainingMs > 0 ? `${formatRemainingTime(deadline.remainingMs)} left` : `${formatRemainingTime(deadline.remainingMs)} overdue`}` : ""}
+                        </div>
                       </td>
                       <td className="dashboard-notes-cell text-sm" style={{ color: "var(--muted)" }}>
                         <span className="dashboard-cell-clip">{c.notes ?? "—"}</span>

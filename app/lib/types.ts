@@ -30,12 +30,13 @@ export interface Checkout {
   quantity: number;
   serial_number?: string | null;
   checked_out_at: string;
+  due_at?: string | null;
   checked_in_at?: string | null;
   notes?: string | null;
   return_notes?: string | null;
   period: Period;
   created_at: string;
-  student?: Pick<Student, "id" | "name" | "student_id">;
+  student?: Pick<Student, "id" | "name" | "student_id" | "email">;
   equipment?: Pick<Equipment, "id" | "name" | "category">;
 }
 
