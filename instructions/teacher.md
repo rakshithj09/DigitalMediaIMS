@@ -2,9 +2,9 @@
 
 ## Overview
 
-Ignite IMS is an equipment checkout system with separate teacher and student roles. Teachers manage inventory, manage students, approve accounts, and handle checkouts and check-ins for both AM and PM classes.
+Ignite IMS is the teacher-facing equipment checkout system for Digital Media. Teachers manage inventory, manage students, approve accounts, and handle checkouts and returns for AM and PM classes.
 
-As a teacher, you can access these main pages:
+Teacher pages:
 
 - `Dashboard` (`/`)
 - `Students` (`/students`)
@@ -13,36 +13,49 @@ As a teacher, you can access these main pages:
 - `History` (`/history`)
 - `Profile` (`/profile`)
 
-You can also open individual equipment detail pages at `/equipment/[id]`.
+You can also open equipment detail pages at `/equipment/[id]`.
 
-## Sign In And Password Help
+## Sign In, Sign Up, And Password Reset
 
-### Login page
+### Sign in
 
 Page: `/login`
 
-Features:
+Use your school email and password to sign in.
 
-- Sign in with your email and password
-- Reset your password with the `Forgot password?` link
-- See status messages for verification, sign-in errors, or password reset email results
+This page also includes:
 
-If you use the reset flow, Supabase sends a reset link to your email. That link returns you to the app so you can choose a new password.
+- forgot-password flow
+- status messages after email verification
+- error handling for invalid sign-in attempts
 
-### Reset password page
+### Create a teacher account
 
-Page: `/reset-password`
+Page: `/email-password?mode=signup`
 
-Features:
+Important rules:
 
-- Enter a new password after opening the password reset link
-- Submit the new password and return to the app
+- Your email must end with `@bentonvillek12.org`
+- Your email must already be approved by an existing teacher
+- You still need to verify your email before the account is ready
+
+If your email is not in the teacher approval allow-list, account creation is blocked.
+
+### Reset your password
+
+Flow:
+
+1. Open `/login`
+2. Click `Forgot password?`
+3. Request the reset link
+4. Open the email link
+5. Set the new password on `/reset-password`
 
 ## App Navigation
 
-The app uses a shared navigation shell.
+Teachers use the full navigation shell.
 
-Teacher navigation includes:
+Available links:
 
 - `Dashboard`
 - `Students`
@@ -51,17 +64,16 @@ Teacher navigation includes:
 - `History`
 - `Profile`
 
-### Period switching
+### Period toggle
 
-Teachers can switch between `AM` and `PM` using the period toggle in the header/sidebar.
+Teachers can switch between `AM` and `PM` in the shell header/sidebar.
 
-What period switching affects:
+The selected period affects:
 
-- Dashboard checkout data
-- Checkout page student list
-- Other period-based views tied to active student/equipment activity
-
-You are not locked to one class period. You can switch as needed.
+- dashboard data
+- visible roster on the students page
+- default checkout student list
+- period-based checkout views
 
 ## Dashboard
 
@@ -69,16 +81,15 @@ Page: `/`
 
 Purpose:
 
-- View all active checkouts for the currently selected period
-- Quickly see checkout load and risk level
-- Check items back in directly from the dashboard
+- review active checkouts for the selected period
+- check items in quickly
+- see urgency based on checkout deadlines
 
-Main features:
+Main sections:
 
-- `Items Checked Out` stat card
-- `Students with Items` stat card
-- `Refresh` button
-- `Active Checkouts` table
+- `Items Checked Out`
+- `Students with Items`
+- `Active Checkouts`
 
 ### Active Checkouts table
 
@@ -91,31 +102,29 @@ Columns:
 - Notes
 - Action
 
-What the table shows:
+The table shows:
 
-- Student name
-- Equipment name
-- Category tag when available
-- Serial number tag when used
-- Due date and time
-- Remaining time until due
-- Notes entered during checkout
-- `Check In` button
+- student name
+- equipment name
+- category tag
+- serial tag when used
+- due date/time
+- remaining time
+- deadline state
+- quick `Check In` action
 
-### Due date status colors
+### Deadline colors
 
-The dashboard colors active checkouts based on how much of the checkout window has passed:
+Each active checkout is color-coded from the original checkout time to the due time:
 
 - Green: on track
-- Yellow: 50% or more of the checkout time has elapsed
-- Red: 75% or more of the checkout time has elapsed
-- Red overdue state: the due date/time has already passed
+- Yellow: 50% or more of the checkout window has elapsed
+- Red: 75% or more of the checkout window has elapsed
+- Overdue: due date/time has passed
 
-This appears both in badges and row background emphasis.
+### Quick check-in
 
-### Check in from the dashboard
-
-Teachers can check an item in directly from the `Action` column without opening the checkout page.
+Teachers can return equipment directly from the dashboard without opening the checkout page.
 
 ## Students Page
 
@@ -123,47 +132,28 @@ Page: `/students`
 
 Purpose:
 
-- Manage the student roster
-- Add new students
-- Edit existing students
-- Delete student records when needed
+- manage the active roster for the selected period
+- create student accounts
+- edit student records
+- delete student records
 
 Students cannot access this page.
 
-Main features:
+### What you can do here
 
-- Search/filter student list
-- Add student form
-- Edit student details
-- Delete student action with teacher password confirmation
+- search students by name or student ID
+- add a new student
+- edit name, student ID, email, and period
+- delete a student after confirming your own teacher password
 
-### Student data managed here
+### Add student flow
 
-Depending on the current schema and form fields, this page manages the student information needed by the checkout system, including:
+When a teacher creates a student from this page, the app creates:
 
-- Student name
-- Student ID
-- Email
-- Class period
-- Active status
-- User link when the student has a connected login
+- a Supabase Auth user
+- a linked row in the `students` table
 
-### Teacher-created students
-
-Teachers can create student records directly from this page. This is useful when building the roster before a student signs in.
-
-### Editing students
-
-Teachers can update student information when:
-
-- A name changes
-- A student is moved to AM or PM
-- Contact/account details need correction
-- A student needs to be reactivated or adjusted in the roster
-
-### Deleting students
-
-Deleting a student requires teacher password confirmation. This is intended as a deliberate cleanup action, not an everyday workflow.
+The created student account is email-confirmed immediately by the server-side admin flow.
 
 ## Equipment Page
 
@@ -171,42 +161,39 @@ Page: `/equipment`
 
 Purpose:
 
-- View the inventory catalog
-- Add equipment
-- Edit equipment
-- Deactivate equipment
+- browse inventory
+- add equipment
+- edit equipment
+- deactivate equipment
 
-Students can view this page, but teachers have management actions that students do not.
+Students can view this page, but only teachers can manage equipment.
 
-Main features:
+### Available management actions
 
-- Search and filtering
-- Add equipment form
-- Edit equipment form
-- Deactivate equipment option
-- Links into equipment detail pages
+- search by name
+- filter by category
+- add new items
+- edit existing items
+- deactivate items with teacher password confirmation
 
-### Equipment records
+### Equipment fields
 
-Equipment entries can include:
+Equipment records can include:
 
-- Equipment name
-- Category
-- Quantity
-- Availability-related information
-- Serialized tracking when required
+- name
+- category
+- total quantity
+- serial/asset tags
+- condition notes
+- active/inactive state
 
-### Serialized categories
+### Serialized items
 
-Some equipment categories are serialized. For those items:
+Some categories require serial numbers. For those items:
 
-- Serial tags are tracked separately
-- Checkout flow requires choosing available serial numbers
-- Inventory detail pages show serial-specific information
-
-### Deactivating equipment
-
-Teachers can deactivate items that should no longer appear as normal available inventory. This is useful for broken, retired, or otherwise removed equipment.
+- serial tags must match the quantity
+- checkout is one serialized unit at a time
+- availability is based on both quantity and serial status
 
 ## Equipment Detail Page
 
@@ -214,19 +201,28 @@ Page: `/equipment/[id]`
 
 Purpose:
 
-- Inspect one equipment item in detail
-- See item-specific status and history
-- Jump directly into checkout
+- inspect one item in detail
+- review current usage
+- review the full history for that item
 
-Main features:
+Main sections:
 
-- Equipment metadata
-- Current active checkouts for that item
-- Serial tags and serial-level status where applicable
-- Checkout history for that specific item
-- `Check Out` button linking to `/checkout?eq=<id>`
+- summary cards
+- `Currently Out`
+- `Item Info`
+- `Checkout History`
 
-Use this page when you need item-specific context before checking it out or auditing its recent use.
+### What you can see here
+
+- category
+- available count
+- active checkout count
+- serial tag count
+- condition notes
+- active serialized tags
+- full item history including notes and return notes
+
+There is also a `Check Out` button that opens `/checkout?eq=<id>`.
 
 ## Checkout Page
 
@@ -234,72 +230,73 @@ Page: `/checkout`
 
 Purpose:
 
-- Check items out
-- Check items in
-- Review currently active checkouts
+- check equipment out
+- check equipment in
+- manage active checkouts for the selected period
 
-This is the main operational page for daily equipment handling.
+Main sections:
 
-Main features:
-
-- Teacher checkout form
-- Student selection for the current period
-- Equipment selection
-- Quantity and serial handling
-- Required return date and time
-- Notes field
-- Active checkout list with check-in actions
+- `Check Out Equipment`
+- `Check In Equipment`
 
 ### Teacher checkout flow
 
-Typical process:
+1. Make sure the correct `AM` or `PM` period is selected
+2. Choose the student
+3. Choose the equipment item
+4. Choose quantity or serial tag
+5. Choose `Return By` date
+6. Choose `Return By` time
+7. Add notes if needed
+8. Submit the checkout
 
-1. Open `Checkout`
-2. Make sure the correct class period is selected in the app shell
-3. Select the student
-4. Select the equipment item
-5. Enter quantity or choose a serial number, depending on the item type
-6. Choose the required return date
-7. Choose the required return time
-8. Optionally enter notes
-9. Submit the checkout
+### Due date and due time behavior
 
-### Return date and time
+Every checkout requires a future return deadline.
 
-A due date is required for every checkout.
+Important details:
 
-Important behavior:
+- date and time are selected separately
+- past dates are blocked
+- if the selected date is today, earlier times are removed from the time dropdown
+- the server rejects past due times even if the UI is bypassed
 
-- The date is selected separately from the time
-- The time list is generated in set intervals
-- If the selected date is today, past times are blocked so users cannot choose a time earlier than the current time window
-
-This keeps return deadlines valid and prevents already-expired due times.
-
-### Quantity and serial rules
+### Quantity and serial behavior
 
 Non-serialized items:
 
-- Teachers can usually enter a quantity, limited by current availability
+- quantity can be more than 1
+- quantity cannot exceed current availability
 
 Serialized items:
 
-- Teachers select the exact serial number(s) being checked out
-- Each serial tracks a specific physical item
+- one serialized unit is checked out at a time
+- a serial/asset tag must be selected
+- already checked-out serials are excluded
 
-### Notes
+### Notes and return notes
 
-The checkout form can store notes for extra context such as:
+During checkout:
 
-- Why the item is being used
-- Condition notes
-- Project/lab usage details
+- optional checkout notes can be saved
 
-### Active checkout list
+During check-in:
 
-The page also shows items currently checked out, with options to check them back in.
+- optional return notes can be added before returning the item
 
-Teachers can check in student items from this page regardless of the student self-service window restrictions.
+### Check-in list
+
+The right side of the checkout page shows current active checkouts for the active period, including:
+
+- student name
+- item name
+- quantity
+- serial tag
+- due time
+- deadline badge
+- notes
+- return-notes field
+- `Check In` button
 
 ## History Page
 
@@ -307,22 +304,28 @@ Page: `/history`
 
 Purpose:
 
-- Review past and current checkout records
-- Filter activity for auditing or troubleshooting
+- audit checkout and return activity
+- filter records for troubleshooting or reporting
 
 Main features:
 
-- Student name filter
-- Period filter
-- Date range filters
-- Read-only audit trail of checkout activity
+- student search
+- period filter
+- date range filter
+- status display
+- duration calculation
 
-Use this page when you need to answer questions like:
+Columns include:
 
-- Who had an item last?
-- When was an item checked out?
-- Which period used certain equipment?
-- What happened during a specific date range?
+- Student
+- Item
+- Qty
+- Period
+- Checked Out
+- Checked In
+- Duration
+- Status
+- Notes
 
 ## Profile Page
 
@@ -330,128 +333,105 @@ Page: `/profile`
 
 Purpose:
 
-- Handle approval workflows
+- approve new teacher emails
+- approve pending student signups
 
-Main features:
+Students are redirected away from this page.
 
-- Approve teacher email/account requests
-- Review and approve pending student signups after they verify their own email
+### Approve Teacher
 
-This page controls who is allowed into the full system flows.
+Use this form to approve a teacher email address so that user can create a teacher account later.
 
-### Teacher approval workflow
+This requires:
 
-Teacher accounts can require approval before they should be treated as valid teacher access. Use this page to review and approve them.
+- the teacher email to approve
+- your current teacher password
 
-### Student approval workflow
+### Pending Student Approvals
 
-When a student signs up and verifies their email, they still wait for teacher approval before they can fully use the app. Teachers complete that approval from this page.
+This section shows student signup requests waiting for roster approval.
 
-## Student Approval Waiting State
+Each request shows:
+
+- email
+- first and last name
+- student ID
+- AM/PM period
+- requested time
+- email verification status
+
+A student must verify their email before approval can be completed.
+
+## Pending Approval Page
 
 Page: `/pending-approval`
 
-Students see this page when:
+Students see this after verifying email but before a teacher approves them into the roster.
 
-- They have signed in successfully
-- Their student account still has not been approved by a teacher
+Teachers do not use this page directly, but it is part of the student onboarding flow.
 
-Teachers do not use this page directly, but you should know it exists because students may ask why they cannot proceed. Once you approve them in `Profile`, they can continue into the student app.
-
-## Student Role Restrictions
+## Student Access Rules
 
 Students only have access to:
 
-- `Dashboard`
-- `Equipment`
-- `Checkout`
+- `/`
+- `/equipment`
+- `/checkout`
 
-Students do not have access to:
+Students are redirected away from:
 
-- `Students`
-- `History`
-- `Profile`
+- `/students`
+- `/history`
+- `/profile`
 
-Students are also tied to their own student record. They cannot check items in or out for other students.
-
-## Student Time Restrictions
-
-Student self-service check-in and check-out actions are restricted by class period and only work on weekdays.
-
-AM students:
-
-- Allowed Monday through Friday
-- Allowed from `7:45 AM` to `10:00 AM`
-
-PM students:
-
-- Allowed Monday through Friday
-- Allowed from `11:00 AM` to `2:00 PM`
-
-What this means for teachers:
-
-- Students may see disabled actions outside their allowed window
-- Server-side rules also block attempts outside the allowed window
-- Teachers can still manage checkouts and check-ins from the teacher interface
-
-## Due Dates And Deadline Tracking
-
-Every checkout now includes a `Return By` deadline.
-
-This deadline is used in:
-
-- Dashboard warning colors
-- Student dashboard attention state
-- Remaining-time text
-- Overdue display
-
-The system compares the current time against the original checkout time and due time, then calculates how far through the checkout window the item is.
+Students can only check in equipment tied to their own student record, and student checkouts are always tied to their linked student row.
 
 ## Daily Teacher Workflow
 
 Recommended routine:
 
 1. Sign in
-2. Switch to the correct `AM` or `PM` period
-3. Open `Dashboard` to review active items and urgency colors
-4. Use `Checkout` for new checkouts and returns
-5. Use `Students` when roster adjustments are needed
-6. Use `Equipment` when inventory changes are needed
-7. Use `History` for audits or missing-item research
-8. Use `Profile` to approve new teachers and students
+2. Pick `AM` or `PM`
+3. Review the dashboard for active and urgent checkouts
+4. Use `Checkout` for day-to-day checkouts and returns
+5. Use `Students` when roster data needs to change
+6. Use `Equipment` for inventory management
+7. Use `History` when you need an audit trail
+8. Use `Profile` to approve teachers and students
 
 ## Troubleshooting
 
-### A student cannot access the app after signing in
+### A student says they cannot get past pending approval
 
 Check:
 
-- The student verified their email
-- The student was approved on the `Profile` page
-- The student has an active linked student record
+- they verified their email
+- their request appears in `Profile`
+- you approved the request successfully
+- a linked active `students` row exists
 
-### A student says the checkout button is disabled
-
-Check:
-
-- Whether it is a weekday
-- Whether the current time is inside the student window for that period
-- Whether the student is in the correct AM/PM class
-
-### An item cannot be checked out
+### A checkout fails
 
 Check:
 
-- Inventory availability
-- Quantity limits
-- Whether the item is serialized and needs a serial selection
-- Whether a due date and valid due time were selected
+- student selection
+- equipment availability
+- quantity limits
+- serial requirements
+- due date/time is still in the future
 
-### A record is showing yellow or red
+### A row is yellow, red, or overdue
 
-That means the checkout is moving deeper into its allowed time range:
+That means the checkout is progressing deeper into its deadline window:
 
 - Yellow at 50%
 - Red at 75%
-- Overdue after the due date/time passes
+- Overdue after the due time passes
 
+### A teacher cannot create a teacher account
+
+Check:
+
+- the email was approved first from `Profile`
+- the user used a `@bentonvillek12.org` email
+- the user verified their email after signup

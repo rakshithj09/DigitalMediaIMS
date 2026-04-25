@@ -2,68 +2,79 @@
 
 ## Overview
 
-Ignite IMS lets students view equipment, check items out, and check items back in. Your student account is limited to your own equipment activity.
+Ignite IMS lets students view equipment, check out equipment for themselves, and check in their own active items.
 
-As a student, you can access these pages:
+Student pages:
 
 - `Dashboard` (`/`)
 - `Equipment` (`/equipment`)
 - `Checkout` (`/checkout`)
 
-You cannot access teacher-only pages such as:
+Students cannot access teacher-only pages such as:
 
 - `Students`
 - `History`
 - `Profile`
 
-## First-Time Access
+## Getting Started
+
+### Create a student account
+
+Page: `/email-password?mode=signup`
+
+Required information:
+
+- first name
+- last name
+- student ID
+- school email ending in `@bentonvillek12.org`
+- password
+- class period (`AM` or `PM`)
+
+After signup:
+
+1. Check your email
+2. Click the verification link
+3. Sign in
+4. Wait for a teacher to approve your account into the class roster
 
 ### Sign in
 
 Page: `/login`
 
-Use your school or assigned account email and password to sign in.
+Use your school email and password.
 
-The login page also lets you:
+The login page also includes:
 
-- Reset your password with `Forgot password?`
-- See messages about verification or sign-in errors
+- error messages if your email is not verified
+- password reset request flow
+- verification status messages after you return from the email link
 
-### Email verification and approval
-
-Depending on how your account was created, you may need to complete email verification first. After that, a teacher may still need to approve your account before you can use the app normally.
-
-If your account is not approved yet, you will be sent to the pending approval page.
-
-## Pending Approval Page
+## Pending Approval
 
 Page: `/pending-approval`
 
-This page means:
-
-- Your sign-in worked
-- Your account is still waiting for teacher approval
+If you see this page, your email is verified but a teacher still needs to approve your account.
 
 Features:
 
-- A message explaining that your account is still pending
-- A button to check your approval status again
+- approval status message
+- `Check Approval Status` button
+- `Sign Out` button
 
-If you stay on this page, contact your teacher so they can approve your account.
+Once a teacher approves you, the app sends you to `/checkout`.
 
 ## Password Reset
 
-### Request reset link
+### Request a reset link
 
-Page: `/login`
-
-Use `Forgot password?` to request a reset email.
+1. Open `/login`
+2. Click `Forgot password?`
+3. Enter your school email
 
 ### Set a new password
 
-Page: `/reset-password`
-
-After opening the reset link, enter your new password on the reset page.
+Open the email link and choose a new password on `/reset-password`.
 
 ## Navigation
 
@@ -73,7 +84,7 @@ Student navigation includes:
 - `Equipment`
 - `Checkout`
 
-Your account is linked to your own student record. You cannot act for other students.
+Your account is linked to your own student record. You cannot act for another student.
 
 ## Dashboard
 
@@ -81,56 +92,49 @@ Page: `/`
 
 Purpose:
 
-- See everything you currently have checked out
-- See what needs attention soon
-- Check items back in
+- see what you currently have checked out
+- spot items that need attention soon
+- check your own items back in
 
-Main features:
+Main sections:
 
 - `Items You Have`
 - `Needs Attention`
 - `Next Due`
-- `Check Out Item` button
-- `What You Have Out` list
+- `What You Have Out`
 
 ### What You Have Out
 
-This section shows each active checkout with:
+Each active item can show:
 
-- Equipment name
-- Quantity
-- Serial number tag when used
-- Due date and time
-- Remaining time until due
-- Notes
+- equipment name
+- quantity
+- serial tag when used
+- due date/time
+- time remaining
+- notes
 - `Check In` button
 
 ### Deadline colors
 
-Each active item gets a status color based on how far through the checkout time range it is:
+Each item is color-coded based on how far through the checkout window it is:
 
 - Green: on track
-- Yellow: 50% of the checkout window has passed
-- Red: 75% of the checkout window has passed
-- Overdue: the due date/time has already passed
+- Yellow: 50% or more of the checkout window has elapsed
+- Red: 75% or more of the checkout window has elapsed
+- Overdue: the due time has passed
 
 ### Needs Attention
 
 The `Needs Attention` number counts items that are:
 
-- Yellow
-- Red
-- Overdue
+- yellow
+- red
+- overdue
 
 ### Next Due
 
-The `Next Due` card highlights the checkout with the closest due date and shows the rough time left.
-
-### Check in from the dashboard
-
-You can check in your own items directly from the dashboard with the `Check In` button.
-
-You cannot check in equipment that belongs to another student.
+The `Next Due` card shows the checkout with the closest due time.
 
 ## Equipment Page
 
@@ -138,17 +142,11 @@ Page: `/equipment`
 
 Purpose:
 
-- Browse the equipment catalog
-- Search for items
-- Open item detail pages before checking something out
+- browse the equipment list
+- search for items
+- open equipment detail pages
 
-As a student, this page is view-only. You cannot create, edit, or deactivate equipment.
-
-Typical uses:
-
-- Find an item you need
-- Check whether it exists in the system
-- Open its detail page for more information
+This page is view-only for students. You cannot add, edit, or deactivate equipment.
 
 ## Equipment Detail Page
 
@@ -156,16 +154,18 @@ Page: `/equipment/[id]`
 
 Purpose:
 
-- View one equipment item in more detail
-- See item-specific information before checking it out
+- view one item in more detail before checking it out
 
-This page can include:
+This page can show:
 
-- Item name and category
-- Current status
-- Serial information for serialized items
-- Checkout history or recent activity context
-- A `Check Out` button that takes you to the checkout page with that item selected
+- category
+- current availability
+- current active checkouts
+- serial/asset tags
+- condition notes
+- item history
+
+You can use the `Check Out` button here to jump to the checkout page with that item selected.
 
 ## Checkout Page
 
@@ -173,130 +173,118 @@ Page: `/checkout`
 
 Purpose:
 
-- Check out your own items
-- Check in your own current items
-- Review your active checkouts in one place
+- check out equipment for yourself
+- check in your own active equipment
+- review your current active checkouts
 
-Main features:
+Main sections:
 
-- Equipment selection
-- Quantity or serial selection, depending on the item
-- Required return date
-- Required return time
-- Optional notes
-- Active checkout list
+- `Check Out Equipment`
+- `Check In Equipment`
 
-## How To Check Out An Item
+## How To Check Out Equipment
 
 1. Open `Checkout`
-2. Select the equipment you want
-3. If needed, choose quantity
-4. If the item is serialized, choose the specific serial number
-5. Choose the date you will return it
-6. Choose the time you will return it
-7. Optionally enter notes
-8. Submit the checkout
+2. Select the equipment item
+3. Choose quantity or serial tag
+4. Choose a return date
+5. Choose a return time
+6. Add notes if needed
+7. Submit the checkout
 
-### Return date and time rules
+### Important checkout rules
 
-Every checkout requires a `Return By` date and time.
+- your student account is selected automatically
+- every checkout needs a future `Return By` date and time
+- if the selected date is today, earlier times are removed from the time dropdown
+- the server rejects due times that are already in the past
 
-Important behavior:
+### Quantity and serialized items
 
-- Date and time are selected separately
-- If you choose today, times earlier than the current time are not available
-- You cannot choose a due time that is already in the past
+Non-serialized items:
 
-## How To Check In An Item
+- you can choose a quantity up to the available amount
 
-You can check in from:
+Serialized items:
 
-- The `Dashboard`
-- The `Checkout` page
+- you must choose a serial/asset tag
+- serialized checkouts are one unit at a time
 
-To return equipment:
+## How To Check In Equipment
+
+You can check in your own items from:
+
+- `Dashboard`
+- `Checkout`
+
+To return an item:
 
 1. Find the active checkout
-2. Click `Check In`
+2. Optionally add return notes on the checkout page
+3. Click `Check In`
 
-You can only check in equipment that is checked out under your own student account.
+You cannot check in equipment belonging to another student.
 
-## Time Restrictions For Student Actions
+## Notes And Return Notes
 
-Students can only check items in and out during their allowed class window, and only on weekdays.
+During checkout:
 
-### AM students
+- you can add optional notes
 
-- Monday through Friday only
-- Allowed from `7:45 AM` to `10:00 AM`
+During check-in on the checkout page:
 
-### PM students
+- you can add optional return notes
 
-- Monday through Friday only
-- Allowed from `11:00 AM` to `2:00 PM`
+These notes may appear later in item history and audit records.
 
-### What happens outside your allowed time
+## What You Cannot Access
 
-If you are outside your allowed window:
+Students are redirected away from:
 
-- Checkout actions are disabled
-- Check-in actions are disabled
-- The app shows a warning message
-- The server also blocks requests outside the allowed time
+- `/students`
+- `/history`
+- `/profile`
 
-This means you cannot bypass the limit by refreshing or trying again later in the same blocked window.
-
-## Serialized Items
-
-Some equipment is tracked by serial number. For those items:
-
-- You may have to choose a specific serial number instead of only entering quantity
-- The serial number identifies the exact physical item you are borrowing
-
-If no serial is available, the item may already be checked out or unavailable.
-
-## Notes
-
-The checkout form may let you add notes. Use notes for short, useful details such as:
-
-- Project name
-- Class activity
-- Item condition you noticed before borrowing it
+Those pages are for teachers only.
 
 ## Common Situations
 
-### I signed in but I am stuck on pending approval
+### I signed up but cannot use the app yet
 
-Your teacher still needs to approve your account.
+You may still need:
 
-### I cannot click checkout or check in
+- email verification
+- teacher approval
+
+### I cannot submit a checkout
 
 Check:
 
-- Whether today is a weekday
-- Whether the current time is inside your AM or PM class window
-- Whether your teacher has approved your account
+- the equipment is available
+- the quantity is valid
+- the required serial tag is selected
+- the due date and time are in the future
 
-### I do not see a piece of equipment available
+### I do not see an item available
 
 Possible reasons:
 
-- It is already checked out
-- It is inactive
-- The serial you need is not currently available
+- it is already checked out
+- it is inactive
+- the serial tag you need is already in use
 
-### My item is yellow or red
+### My item is yellow, red, or overdue
 
-That means the due deadline is getting closer:
+That means the due time is getting closer:
 
-- Yellow after 50% of the allowed checkout time has passed
-- Red after 75% has passed
-- Overdue after the due date/time passes
+- Yellow at 50%
+- Red at 75%
+- Overdue after the due time passes
 
 ## Best Practices
 
-- Return items on or before the due date and time you selected
-- Check your dashboard regularly for color changes
-- Use notes when they help explain what the equipment is for
-- If your account is pending, ask a teacher to approve it
-- If you miss your class window, wait until the next allowed weekday period or ask a teacher for help
+- choose a realistic return time
+- check your dashboard regularly
+- return items on time
+- use notes when they help explain the equipment use
+- contact a teacher if your account is still pending approval

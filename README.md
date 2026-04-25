@@ -1,6 +1,6 @@
 # Digital Media Equipment Tracker
 
-A web app for Ignite Professional Studies at Bentonville West High School that lets teachers manage equipment inventory and students check out/check in digital media gear.
+A web app for Ignite Professional Studies at Bentonville West High School that lets teachers manage equipment inventory and students check out and check in digital media gear.
 
 Built with Next.js, React, Tailwind CSS, and Supabase.
 
@@ -8,18 +8,19 @@ Built with Next.js, React, Tailwind CSS, and Supabase.
 
 ## Features
 
-- Teacher and student sign-in via Supabase Auth
-- Email verification for self-created accounts
+- Supabase Auth sign-in with email verification for self-created accounts
+- Teacher approval allow-list for self-created teacher accounts
+- Student signup requests with teacher approval before joining the roster
 - Password reset by email
-- AM/PM class period selector for teachers
-- **Teacher dashboard** — active checkout totals, class-period filtering, quick check-in, deadline-based warning colors
-- **Student dashboard** — view and check in their own active checkouts with return deadlines
-- **Equipment inventory** — add, edit, and remove equipment items with category, serial number, quantity, and condition notes
-- **Equipment detail page** — full item history and checkout list per equipment item
-- **Student roster** — add, edit, and delete students; teacher password confirmation required to delete
-- **Checkout flow** — check equipment out to a student with period, return date/time, and optional notes
-- **Check-in flow** — return equipment with optional return notes
-- **History / audit log** — full checkout and check-in history across all items and students
+- Teacher dashboard with active checkout totals, period filtering, and quick check-in
+- Student dashboard with personal active checkout tracking
+- Return deadlines for every checkout with color-coded urgency states
+- Equipment inventory management with categories, quantities, serial tags, and condition notes
+- Equipment detail pages with current status, serial visibility, and full item history
+- Student roster management with add, edit, and delete flows
+- Checkout flow with due date, due time, optional notes, quantity limits, and serialized item handling
+- Check-in flow with optional return notes
+- Audit history for teachers
 
 ---
 
@@ -37,105 +38,127 @@ Built with Next.js, React, Tailwind CSS, and Supabase.
 
 ---
 
+## User Guides
+
+Role-specific walkthroughs live in the [`instructions/`](./instructions) folder:
+
+- [Teacher Guide](./instructions/teacher.md)
+- [Student Guide](./instructions/student.md)
+
+---
+
 ## Project Structure
 
-`igniteims/` contains the main app, shared UI, server utilities, database SQL, and project configuration. Expand any section below to inspect its files and descriptions.
+`igniteims/` contains the Next.js app, shared UI, Supabase helpers, SQL migrations, and user documentation. Expand any section below to inspect its files and descriptions.
 
 <details>
-<summary><code>app/</code> — Next.js App Router pages, layouts, route handlers, and app-level utilities</summary>
+<summary><code>app/</code> — Next.js App Router pages, route handlers, and app-specific utilities</summary>
 
 ```text
 app/
-├── layout.tsx                # Root HTML layout (sets metadata, body styles)
-├── globals.css               # Global CSS: brand tokens, utility classes, table/badge styles
-├── page.tsx                  # Dashboard — active checkout stats, check-in button
+├── layout.tsx                       # Root HTML layout and metadata
+├── globals.css                      # Global styling, tokens, table styles, form styles
+├── icon.png                         # App icon
+├── page.tsx                         # Dashboard for teachers and students
 ├── login/
-│   └── page.tsx              # Sign-in form + forgot password link
+│   └── page.tsx                     # Sign-in form and forgot-password flow
 ├── email-password/
-│   ├── page.tsx              # Account creation page
-│   └── EmailPasswordDemo.tsx # Sign-up form component
+│   ├── page.tsx                     # Auth entry page for sign-in/sign-up mode
+│   └── EmailPasswordDemo.tsx        # Self-service account creation and sign-in UI
 ├── reset-password/
-│   └── page.tsx              # Set new password (after clicking reset email link)
+│   └── page.tsx                     # Password reset page opened from email link
 ├── pending-approval/
-│   └── page.tsx              # Shown to users whose account is awaiting teacher approval
+│   └── page.tsx                     # Student waiting screen until a teacher approves the account
 ├── checkout/
-│   └── page.tsx              # Check-out and check-in flow
+│   └── page.tsx                     # Check-out form, check-in list, due date/time selection
 ├── equipment/
-│   ├── page.tsx              # Equipment inventory list — add, edit, remove items
+│   ├── page.tsx                     # Inventory list with teacher add/edit/deactivate actions
 │   └── [id]/
-│       └── page.tsx          # Individual equipment item detail — history, active checkouts
+│       └── page.tsx                 # Single equipment detail page with active use and history
 ├── students/
-│   └── page.tsx              # Student roster — add, edit, delete students
+│   └── page.tsx                     # Teacher-only roster management
 ├── history/
-│   └── page.tsx              # Full checkout/check-in audit log
+│   └── page.tsx                     # Teacher-only audit log page
 ├── profile/
-│   └── page.tsx              # Logged-in user's profile and account settings
+│   └── page.tsx                     # Teacher approvals and pending student approvals
 ├── auth/
 │   └── callback/
-│       └── route.ts          # Supabase email verification callback (verifies OTP, sets session)
-├── api/                      # Next.js Route Handlers (server-side only)
+│       └── route.ts                 # Supabase email verification callback
+├── api/
 │   ├── auth/
 │   │   └── create-account/
-│   │       └── route.ts      # Creates a new student or teacher account via service role
+│   │       └── route.ts             # Self-service teacher/student account creation
 │   ├── checkouts/
-│   │   ├── route.ts          # POST: create a new checkout record
+│   │   ├── route.ts                 # POST checkout creation
 │   │   └── check-in/
-│   │       └── route.ts      # POST: check equipment back in, record return notes
+│   │       └── route.ts             # POST check-in and optional return notes
 │   ├── equipment/
-│   │   └── route.ts          # GET: fetch equipment list; POST: add new equipment
+│   │   └── route.ts                 # Teacher equipment create/update/deactivate API
 │   └── admin/
-│       ├── students/
-│       │   └── route.ts      # GET/POST/PATCH/DELETE student records (teacher only)
-│       ├── create-student/
-│       │   └── route.ts      # Creates a student Auth account + students row together
 │       ├── add-student-roster/
-│       │   └── route.ts      # Bulk-adds students from a roster
+│       │   └── route.ts             # Admin roster import endpoint
+│       ├── create-student/
+│       │   └── route.ts             # Teacher-created student Auth + roster record
 │       ├── student-approvals/
-│       │   └── route.ts      # GET/PATCH pending student approval requests
+│       │   └── route.ts             # Pending student approval API
+│       ├── students/
+│       │   └── route.ts             # Teacher student CRUD endpoints
 │       └── teacher-approvals/
-│           └── route.ts      # GET/PATCH pending teacher approval requests
-├── components/               # Shared layout components (app-specific)
-│   ├── AppShell.tsx          # Sidebar navigation, header, period selector, logout button
-│   └── PeriodBadge.tsx       # AM/PM badge chip used in tables
-└── lib/                      # App-level shared utilities
-    ├── types.ts              # TypeScript types: Student, Equipment, Checkout, Period, EQUIPMENT_CATEGORIES
-    ├── period-context.tsx    # React context that stores the selected AM/PM period across pages
-    └── serials.ts            # Helpers for parsing and displaying serial numbers
+│           └── route.ts             # Teacher email allow-list approval API
+├── components/
+│   ├── AppShell.tsx                 # Shared authenticated shell, nav, period toggle, redirects
+│   └── PeriodBadge.tsx              # AM/PM badge UI
+└── lib/
+    ├── period-context.tsx           # Client state for AM/PM period selection
+    ├── serials.ts                   # Serial parsing and normalization helpers
+    └── types.ts                     # Shared app types and equipment category constants
 ```
 
 </details>
 
 <details>
-<summary><code>components/</code> — Reusable UI primitives shared across the app</summary>
+<summary><code>components/</code> — Reusable UI primitives shared across auth and app pages</summary>
 
 ```text
 components/
-└── ui/                       # Reusable headless/primitive UI components (shadcn-style)
-    ├── button.tsx            # Button with size/variant props
-    ├── card.tsx              # Card, CardHeader, CardContent, CardFooter
-    ├── checkbox.tsx          # Radix Checkbox wrapper
-    ├── input.tsx             # Styled text input
-    ├── label.tsx             # Form label
-    ├── separator.tsx         # Horizontal/vertical divider
-    ├── tabs.tsx              # Radix Tabs wrapper (TabsList, TabsTrigger, TabsContent)
-    └── login-signup.tsx      # LoginSignupFrame layout used on all auth pages
+└── ui/
+    ├── button.tsx                   # Button primitive
+    ├── card.tsx                     # Card wrappers
+    ├── checkbox.tsx                 # Checkbox primitive
+    ├── input.tsx                    # Input primitive
+    ├── label.tsx                    # Label primitive
+    ├── login-signup.tsx             # Auth page frame and shared auth input classes
+    ├── separator.tsx                # Separator primitive
+    └── tabs.tsx                     # Tabs primitive
 ```
 
 </details>
 
 <details>
-<summary><code>lib/</code> — Root-level server utilities, auth helpers, and Supabase clients</summary>
+<summary><code>lib/</code> — Root-level helpers for auth, deadlines, Supabase, and utilities</summary>
 
 ```text
 lib/
-├── utils.ts                  # cn() helper (clsx + tailwind-merge)
-├── supabase/
-│   ├── browser-client.ts     # Supabase client for use in Client Components
-│   ├── server-client.ts      # Supabase client for use in Server Components and Route Handlers
-│   └── admin-client.ts       # Supabase service-role client for admin API routes (never exposed to browser)
-└── auth/
-    ├── student-approvals.ts  # Server helpers for reading/updating student approval state
-    └── student-roster.ts     # Server helpers for student roster queries
+├── checkout-deadlines.ts            # Deadline formatting and warning-state calculation
+├── utils.ts                         # Shared className helper
+├── auth/
+│   ├── student-approvals.ts         # Student approval request helpers
+│   └── student-roster.ts            # Student roster lookup helpers
+└── supabase/
+    ├── admin-client.ts              # Service-role Supabase client
+    ├── browser-client.ts            # Browser Supabase client
+    └── server-client.ts             # Server Supabase client
+```
+
+</details>
+
+<details>
+<summary><code>instructions/</code> — Role-specific user documentation</summary>
+
+```text
+instructions/
+├── student.md                       # End-user guide for student accounts
+└── teacher.md                       # End-user guide for teacher accounts
 ```
 
 </details>
@@ -145,21 +168,21 @@ lib/
 
 ```text
 supabase/
-├── student-account-link.sql      # Adds user_id and email columns to students table; creates indexes
-├── student-approval-requests.sql # Creates the student_approval_requests table and RLS policies
-├── approved-teachers.sql         # Creates the approved_teachers table for teacher allow-list
-├── checkout-serial-number.sql    # Adds serial_number column to checkouts table
-└── checkout-return-deadline.sql  # Adds due_at to checkouts
+├── approved-teachers.sql            # Teacher email allow-list table
+├── checkout-return-deadline.sql     # Adds due_at to checkouts
+├── checkout-serial-number.sql       # Adds serial_number to checkouts
+├── student-account-link.sql         # Adds user_id/email support for student-auth linking
+└── student-approval-requests.sql    # Pending student approval requests table and policies
 ```
 
 </details>
 
 <details>
-<summary><code>public/</code> — Static assets served at <code>/</code></summary>
+<summary><code>public/</code> — Static assets served at runtime</summary>
 
 ```text
 public/
-└── ignite-logo.png           # Logo shown in the app header
+└── ignite-logo.png                  # App logo used in auth screens and shell
 ```
 
 </details>
@@ -168,13 +191,12 @@ public/
 <summary>Root config files — environment, build, lint, and package setup</summary>
 
 ```text
-.env.example                  # Template for required environment variables
-.env.local                    # Local environment variables (not committed)
-next.config.ts                # Next.js configuration
-tsconfig.json                 # TypeScript configuration
-postcss.config.mjs            # PostCSS config for Tailwind CSS v4
-eslint.config.mjs             # ESLint configuration
-package.json                  # Dependencies and npm scripts
+.env.example                         # Required environment variable template
+eslint.config.mjs                    # ESLint config
+next.config.ts                       # Next.js config
+package.json                         # Dependencies and scripts
+postcss.config.mjs                   # PostCSS/Tailwind config
+tsconfig.json                        # TypeScript config
 ```
 
 </details>
@@ -183,30 +205,30 @@ package.json                  # Dependencies and npm scripts
 
 ## Getting Started
 
-**1. Install dependencies:**
+**1. Install dependencies**
 
 ```bash
 npm install
 ```
 
-**2. Create your local environment file:**
+**2. Create your local environment file**
 
 ```bash
 cp .env.example .env.local
 ```
 
-**3. Fill in the environment variables:**
+**3. Fill in the environment variables**
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_publishable_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-> `SUPABASE_SERVICE_ROLE_KEY` is only used in server Route Handlers. It is never sent to the browser.
+`SUPABASE_SERVICE_ROLE_KEY` is only used in server route handlers. It is never sent to the browser.
 
-**4. Run the development server:**
+**4. Run the development server**
 
 ```bash
 npm run dev
@@ -219,13 +241,13 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Scripts
 
 ```bash
-npm run dev      # Start local dev server with hot reload
+npm run dev      # Start local dev server
 npm run build    # Build the production app
-npm run start    # Serve the production build locally
+npm run start    # Run the production build locally
 npm run lint     # Run ESLint
 ```
 
-**To clear the Next.js build cache** (useful if old compiled output shows up after reverting code):
+To clear old compiled output:
 
 ```bash
 rm -rf .next && npm run dev
@@ -241,23 +263,25 @@ Run each file in the Supabase SQL Editor in this order:
 
 | File | What it does |
 |---|---|
-| `supabase/student-account-link.sql` | Adds `user_id` and `email` to the `students` table so Auth accounts can be linked to roster entries |
-| `supabase/student-approval-requests.sql` | Creates the `student_approval_requests` table with RLS policies |
-| `supabase/approved-teachers.sql` | Creates the `approved_teachers` allow-list table |
-| `supabase/checkout-serial-number.sql` | Adds the `serial_number` column to the `checkouts` table |
-| `supabase/checkout-return-deadline.sql` | Adds a `due_at` column so checkouts can have return deadlines |
+| `supabase/student-account-link.sql` | Links student roster rows to Auth users with `user_id` and `email` support |
+| `supabase/student-approval-requests.sql` | Creates the pending student approval table and policies |
+| `supabase/approved-teachers.sql` | Creates the teacher approval allow-list table |
+| `supabase/checkout-serial-number.sql` | Adds `serial_number` to checkouts |
+| `supabase/checkout-return-deadline.sql` | Adds `due_at` to checkouts |
 
 ### 2. Configure Supabase Auth URLs
 
 In **Supabase Dashboard → Authentication → URL Configuration**, set:
 
-**Site URL:**
-```
+**Site URL**
+
+```text
 https://digital-media-ims.vercel.app
 ```
 
-**Redirect URLs (add all of these):**
-```
+**Redirect URLs**
+
+```text
 https://digital-media-ims.vercel.app/auth/callback
 https://digital-media-ims.vercel.app/login
 https://digital-media-ims.vercel.app/reset-password
@@ -276,30 +300,44 @@ In **Supabase Dashboard → Authentication → Email Templates → Confirm signu
 </a>
 ```
 
-This sends `token_hash` and `type` to `app/auth/callback/route.ts`, which verifies the OTP and establishes the session.
+This points verification back to `app/auth/callback/route.ts`, which verifies the token and redirects the user.
 
 ---
 
 ## Authentication Flow
 
-### Student / Teacher Sign-up
-- Self-created accounts go through `app/api/auth/create-account/route.ts`
-- Supabase sends a verification email; the link goes to `app/auth/callback/route.ts`
-- After verification, the user is redirected to the dashboard or pending-approval page
+### Self-Service Student Signup
 
-### Password Reset
-- User clicks **Forgot password?** on the login page
-- Supabase emails a reset link pointing to `/reset-password`
-- `app/reset-password/page.tsx` lets them set a new password, then redirects to login
+1. Student opens `/email-password?mode=signup`
+2. Student enters first name, last name, student ID, email, password, and AM/PM period
+3. `app/api/auth/create-account/route.ts` creates the Auth account
+4. Supabase sends a verification email
+5. `app/auth/callback/route.ts` verifies the email and marks the approval request as verified
+6. Student is redirected to `/pending-approval`
+7. A teacher approves the student from `/profile`
+8. After approval, the student can use the app
+
+### Self-Service Teacher Signup
+
+1. Teacher opens `/email-password?mode=signup`
+2. Teacher selects the `Teacher` role
+3. The email must already be approved in the `approved_teachers` table
+4. Supabase sends a verification email
+5. After verification, the teacher can sign in normally
 
 ### Teacher-Created Student Accounts
-- Teachers add students from the Students tab
-- `app/api/admin/create-student/route.ts` uses the service role to create both an Auth user and a `students` row in one step
 
-### Deleting a Student Account
-1. Teacher enters their own password to confirm
-2. Server verifies the password
-3. Deletes the student's `profiles` row (if present), the `students` row, and the Supabase Auth user
+Teachers can create student accounts directly from the `Students` page. That flow creates:
+
+- a Supabase Auth user with email already confirmed
+- a linked row in the `students` table
+
+### Password Reset
+
+1. User clicks `Forgot password?` on `/login`
+2. Supabase sends a reset email pointing to `/reset-password`
+3. User chooses a new password
+4. The app signs them out and redirects them back to `/login`
 
 ---
 
@@ -307,18 +345,60 @@ This sends `token_hash` and `type` to `app/auth/callback/route.ts`, which verifi
 
 | Route | Who sees it | What it does |
 |---|---|---|
-| `/` | Teachers & students | Dashboard with active checkout stats |
-| `/login` | Unauthenticated | Sign-in form and forgot-password link |
-| `/email-password` | Unauthenticated | Create a new account |
-| `/auth/callback` | — | Supabase email verification callback |
-| `/reset-password` | From email link | Set a new password |
-| `/pending-approval` | New users | Waiting screen while account is being approved |
-| `/checkout` | Teachers | Check equipment out to a student or check it back in |
-| `/equipment` | Teachers & students | Browse inventory; teachers can add/edit/remove |
-| `/equipment/[id]` | Teachers & students | Detail view for one item — full checkout history |
-| `/students` | Teachers | Manage student roster |
-| `/history` | Teachers | Full checkout and check-in audit log |
-| `/profile` | Teachers & students | Account settings |
+| `/` | Teachers and students | Dashboard |
+| `/login` | Unauthenticated | Sign-in form and password reset request |
+| `/email-password` | Unauthenticated | Self-service sign-in / sign-up UI |
+| `/auth/callback` | System route | Supabase email verification callback |
+| `/reset-password` | From email link | Choose a new password |
+| `/pending-approval` | Students awaiting approval | Waiting screen until a teacher approves the account |
+| `/checkout` | Teachers and students | Checkout form and check-in list |
+| `/equipment` | Teachers and students | Inventory list |
+| `/equipment/[id]` | Teachers and students | Detail view for one equipment item |
+| `/students` | Teachers only | Roster management |
+| `/history` | Teachers only | Audit log |
+| `/profile` | Teachers only | Teacher approvals and student approvals |
+
+---
+
+## Role Behavior
+
+### Teachers
+
+Teachers can:
+
+- switch between `AM` and `PM`
+- manage students
+- manage equipment
+- create checkouts for students
+- check items back in
+- review audit history
+- approve teachers and students
+
+### Students
+
+Students can:
+
+- view their own dashboard
+- browse equipment
+- check out equipment for themselves
+- check in their own active items
+
+Students are redirected away from teacher-only pages and only see:
+
+- `/`
+- `/equipment`
+- `/checkout`
+
+### Checkout Deadlines
+
+Every checkout requires a return deadline. Deadline states are calculated from the original checkout time to the due time:
+
+- Green: on track
+- Yellow: 50% or more of the checkout window has elapsed
+- Red: 75% or more of the checkout window has elapsed
+- Overdue: due date/time has passed
+
+The due date picker blocks past dates, and the due time list removes earlier times when the selected date is today.
 
 ---
 
@@ -326,7 +406,7 @@ This sends `token_hash` and `type` to `app/auth/callback/route.ts`, which verifi
 
 The production app runs at `https://digital-media-ims.vercel.app`.
 
-**Add these environment variables in your Vercel project settings:**
+Add these environment variables in Vercel:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
@@ -335,34 +415,50 @@ NEXT_PUBLIC_SITE_URL=https://digital-media-ims.vercel.app
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-After updating Supabase redirect settings or email templates, create a fresh test account — old verification emails may still contain old URLs.
+After updating Supabase redirect settings or email templates, create a fresh test account because old emails may still contain old URLs.
 
 ---
 
 ## Troubleshooting
 
-**Verification email opens localhost instead of production**
-- Check that `NEXT_PUBLIC_SITE_URL` in Vercel is set to `https://digital-media-ims.vercel.app`
-- Check that Supabase Site URL and redirect URLs include the production domain
-- Make sure the Confirm signup email template uses `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`
-- Old emails may still point to localhost — send a new one or create a new test account
+**Verification email opens the wrong URL**
 
-**Email rate limit exceeded**
-- Supabase's default email sender has rate limits. For production, configure custom SMTP in Supabase Auth settings.
+- Check `NEXT_PUBLIC_SITE_URL`
+- Check Supabase `Site URL` and redirect URLs
+- Check the Confirm signup email template
+- Use a newly generated email if the older one still points to the wrong place
 
-**Invalid refresh token error**
-- The browser has a stale Supabase session. Clear site data for the app domain, or sign out and sign back in.
+**Students stay on pending approval**
 
-**Old UI still showing after reverting code changes**
-- Next.js caches compiled output in `.next/`. Clear it and restart: `rm -rf .next && npm run dev`
+- Confirm the email was verified
+- Confirm the student approval request exists
+- Approve the student from `/profile`
+- Confirm there is an active linked row in `students`
+
+**Checkout page says a database update is needed**
+
+Run the missing SQL file in Supabase:
+
+- `supabase/checkout-serial-number.sql`
+- `supabase/checkout-return-deadline.sql`
 
 **Cannot reach Supabase**
-- Verify the Supabase project is active (not paused)
-- Double-check `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`
+
+- Make sure the Supabase project is active
+- Double-check `NEXT_PUBLIC_SUPABASE_URL`
+- Double-check `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- Double-check `SUPABASE_SERVICE_ROLE_KEY`
+
+**Old UI still shows after reverting code**
+
+Clear `.next` and restart the dev server:
+
+```bash
+rm -rf .next && npm run dev
+```
 
 ---
 
 ## To Do
 
-- Add restricted check in/check out date and times
-- Create custom domain and add email notifications for
+- Create a custom domain and add email reminder notifications for upcoming due dates
