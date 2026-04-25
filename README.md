@@ -359,3 +359,10 @@ After updating Supabase redirect settings or email templates, create a fresh tes
 **Cannot reach Supabase**
 - Verify the Supabase project is active (not paused)
 - Double-check `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`
+
+---
+
+## To Do
+
+- Add restricted check in/check out date and times
+- Create custom domain and add email notifications for
