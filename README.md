@@ -1,6 +1,6 @@
 # Digital Media Equipment Tracker
 
-A web app for Ignite Professional Studies at Bentonville West High School that lets teachers manage equipment inventory and students check out and check in digital media gear.
+A web app for Digital Media at Ignite Professional Studies that lets teachers manage equipment inventory and students check out and check in digital media gear.
 
 Built with Next.js, React, Tailwind CSS, and Supabase.
 
