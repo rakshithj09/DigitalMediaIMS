@@ -295,7 +295,7 @@ function EquipmentContent() {
             Equipment
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            Inventory with real-time availability
+            Inventory with real time availability
           </p>
         </div>
         {isTeacher && (

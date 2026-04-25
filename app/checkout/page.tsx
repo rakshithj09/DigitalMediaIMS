@@ -328,7 +328,7 @@ function CheckoutContent() {
     }
 
     setCheckingIn(checkoutId);
-    const checkInResp = await fetch("/api/checkouts/check-in", {
+    const checkInResp = await fetch("/api/checkouts/check in", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ checkoutId, returnNotes: returnNotes[checkoutId] ?? null }),
@@ -336,8 +336,8 @@ function CheckoutContent() {
 
     if (!checkInResp.ok) {
       const data = await checkInResp.json().catch(() => ({}));
-      const msg = (data && (data.error?.message ?? data.error)) ?? "Check-in failed.";
-      alert("Check-in failed: " + String(msg));
+      const msg = (data && (data.error?.message ?? data.error)) ?? "Check in failed.";
+      alert("Check in failed: " + String(msg));
     } else refresh();
     setCheckingIn(null);
   };
@@ -586,7 +586,7 @@ function CheckoutContent() {
           )}
         </div>
 
-        {/* ── Check-in list ──────────────────────────────── */}
+        {/* ── Check in list ──────────────────────────────── */}
         <div
           className="rounded-2xl p-6"
           style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}

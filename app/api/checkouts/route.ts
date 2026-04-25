@@ -119,7 +119,7 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "You must be signed in to check out equipment." }, { status: 401 });
+    return NextResponse.json({ error: "You must be signed in to checkout equipment." }, { status: 401 });
   }
 
   const body = (await req.json().catch(() => ({}))) as CheckoutBody;
@@ -156,7 +156,7 @@ export async function POST(req: Request) {
     const requiresSerial = availability.serials.length > 0;
     if (requiresSerial) {
       if (requestedQuantity !== 1) {
-        return NextResponse.json({ error: "Check out one serialized unit at a time." }, { status: 400 });
+        return NextResponse.json({ error: "Checkout one serialized unit at a time." }, { status: 400 });
       }
       if (!selectedSerial) {
         return NextResponse.json({ error: "Please select a serial/asset tag for this checkout." }, { status: 400 });

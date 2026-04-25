@@ -97,7 +97,7 @@ export async function POST(req: Request) {
 
     const updated = await updateRes.json().catch(() => null);
     if (!updateRes.ok) {
-      return NextResponse.json({ error: updated ?? "Check-in failed." }, { status: updateRes.status });
+      return NextResponse.json({ error: updated ?? "Check in failed." }, { status: updateRes.status });
     }
 
     return NextResponse.json({ checkout: Array.isArray(updated) ? updated[0] : updated });

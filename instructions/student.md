@@ -231,7 +231,7 @@ During checkout:
 
 - you can add optional notes
 
-During check-in on the checkout page:
+During check in on the checkout page:
 
 - you can add optional return notes
 

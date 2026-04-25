@@ -122,7 +122,7 @@ Each active checkout is color-coded from the original checkout time to the due t
 - Red: 75% or more of the checkout window has elapsed
 - Overdue: due date/time has passed
 
-### Quick check-in
+### Quick check in
 
 Teachers can return equipment directly from the dashboard without opening the checkout page.
 
@@ -280,11 +280,11 @@ During checkout:
 
 - optional checkout notes can be saved
 
-During check-in:
+During check in:
 
 - optional return notes can be added before returning the item
 
-### Check-in list
+### Check in list
 
 The right side of the checkout page shows current active checkouts for the active period, including:
 

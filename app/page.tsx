@@ -90,8 +90,8 @@ function DashboardContent() {
 
     if (!checkInResp.ok) {
       const data = await checkInResp.json().catch(() => ({}));
-      const msg = (data && (data.error?.message ?? data.error)) ?? "Check-in failed.";
-      alert("Check-in failed: " + String(msg));
+      const msg = (data && (data.error?.message ?? data.error)) ?? "Check in failed.";
+      alert("Check in failed: " + String(msg));
     } else {
       refresh();
     }
