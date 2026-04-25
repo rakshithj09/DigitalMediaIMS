@@ -652,26 +652,28 @@ function CheckoutContent() {
                         <p className="font-semibold text-sm leading-tight" style={{ color: "var(--ignite-navy)" }}>
                           {c.student?.name ?? "—"}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                        <p className="text-xs mt-0.5 leading-tight" style={{ color: "var(--muted)" }}>
                           {c.equipment?.name ?? "—"}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
                           <span
-                            className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                            className="px-1.5 py-0.5 rounded-full text-xs font-medium"
                             style={{ background: "#f1f5f9", color: "var(--muted)" }}
                           >
                             qty {c.quantity}
                           </span>
                           {c.serial_number && (
                             <span
-                              className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                              className="px-1.5 py-0.5 rounded-full text-xs font-medium"
                               style={{ background: "#e8f0fe", color: "#005a78" }}
                             >
                               {c.serial_number}
                             </span>
                           )}
-                          <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium" style={statusStyle}>
+                          <span className="px-1.5 py-0.5 rounded-full text-xs font-medium" style={statusStyle}>
                             {state === "overdue" ? "Overdue" : state === "danger" ? "75% elapsed" : state === "warning" ? "50% elapsed" : "On track"}
                           </span>
-                        </p>
+                        </div>
                         <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                           Due {formatDateTime(c.due_at ?? null)}
                           {deadline ? ` · ${deadline.remainingMs > 0 ? `${formatRemainingTime(deadline.remainingMs)} left` : `${formatRemainingTime(deadline.remainingMs)} overdue`}` : ""}
