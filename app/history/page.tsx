@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
+import DatePicker from "@/app/components/DatePicker";
+import SelectMenu from "@/components/ui/select-menu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Checkout, Period } from "@/app/lib/types";
 
@@ -126,37 +128,38 @@ function HistoryContent() {
           />
         </div>
 
-        <select
+        <SelectMenu
           value={periodFilter}
-          onChange={(e) => setPeriodFilter(e.target.value as Period | "All")}
-          className="form-input text-sm"
-          style={{ width: "auto" }}
+          onChange={(nextValue) => setPeriodFilter(nextValue as Period | "All")}
+          className="min-w-[10rem]"
+          triggerClassName="text-sm"
           aria-label="Filter by period"
-        >
-          <option value="All">All Periods</option>
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
+          options={[
+            { label: "All Periods", value: "All" },
+            { label: "AM", value: "AM" },
+            { label: "PM", value: "PM" },
+          ]}
+        />
 
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--muted)" }}>From</label>
-          <input
-            type="date"
+          <DatePicker
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="form-input text-sm"
-            style={{ width: "auto" }}
+            onChange={setDateFrom}
+            placeholder="From date"
+            quickActionLabel="Today"
+            className="min-w-[12rem]"
           />
         </div>
 
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium whitespace-nowrap" style={{ color: "var(--muted)" }}>To</label>
-          <input
-            type="date"
+          <DatePicker
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="form-input text-sm"
-            style={{ width: "auto" }}
+            onChange={setDateTo}
+            placeholder="To date"
+            quickActionLabel="Today"
+            className="min-w-[12rem]"
           />
         </div>
 

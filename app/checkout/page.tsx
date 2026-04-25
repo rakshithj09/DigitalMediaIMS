@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, FormEvent } from "react";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
 import PeriodBadge from "@/app/components/PeriodBadge";
+import DatePicker from "@/app/components/DatePicker";
+import SelectMenu from "@/components/ui/select-menu";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Student, Equipment, Checkout } from "@/app/lib/types";
@@ -32,7 +34,6 @@ function roundUpToQuarterHour(date: Date) {
 
 function createDefaultReturnDateTime() {
   const date = roundUpToQuarterHour(new Date());
-  date.setDate(date.getDate() + 1);
   return {
     date: toLocalDateInputValue(date),
     time: `${padTime(date.getHours())}:${padTime(date.getMinutes())}`,
@@ -429,19 +430,19 @@ function CheckoutContent() {
                   </div>
                 ) : (
                   <>
-                    <select
+                    <SelectMenu
                       id="co-student"
                       value={studentId}
-                      onChange={(e) => setStudentId(e.target.value)}
-                      className="form-input"
-                    >
-                      <option value="">Select a student…</option>
-                      {students.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}{s.student_id ? ` (${s.student_id})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setStudentId}
+                      placeholder="Select a student…"
+                      options={[
+                        { label: "Select a student…", value: "" },
+                        ...students.map((s) => ({
+                          label: `${s.name}${s.student_id ? ` (${s.student_id})` : ""}`,
+                          value: s.id,
+                        })),
+                      ]}
+                    />
                     {students.length === 0 && !loadFailed && (
                       <p className="text-xs mt-1.5" style={{ color: "#ca8a04" }}>
                         No students in {checkoutPeriod} roster. Add students first.
@@ -455,19 +456,22 @@ function CheckoutContent() {
                 <label className="block text-sm font-medium mb-1.5" htmlFor="co-eq" style={{ color: "#374151" }}>
                   Equipment <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                <select
+                <SelectMenu
                   id="co-eq"
                   value={equipmentId}
-                  onChange={(e) => { setEquipmentId(e.target.value); setQuantity("1"); setSerialNumber(""); }}
-                  className="form-input"
-                >
-                  <option value="">Select equipment…</option>
-                  {equipment.map((eq) => (
-                    <option key={eq.id} value={eq.id} disabled={eq.available === 0}>
-                      {eq.name} — {eq.available} available{eq.available === 0 ? " (none left)" : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(nextValue) => { setEquipmentId(nextValue); setQuantity("1"); setSerialNumber(""); }}
+                  placeholder="Select equipment…"
+                  searchable
+                  searchPlaceholder="Search equipment..."
+                  options={[
+                    { label: "Select equipment…", value: "" },
+                    ...equipment.map((eq) => ({
+                      label: `${eq.name} — ${eq.available} available${eq.available === 0 ? " (none left)" : ""}`,
+                      value: eq.id,
+                      disabled: eq.available === 0,
+                    })),
+                  ]}
+                />
               </div>
 
               {requiresSerialSelection && (
@@ -475,18 +479,17 @@ function CheckoutContent() {
                   <label className="block text-sm font-medium mb-1.5" htmlFor="co-serial" style={{ color: "#374151" }}>
                     Serial / Asset Tag <span style={{ color: "#ef4444" }}>*</span>
                   </label>
-                  <select
+                  <SelectMenu
                     id="co-serial"
                     value={serialNumber}
-                    onChange={(e) => setSerialNumber(e.target.value)}
-                    className="form-input"
+                    onChange={setSerialNumber}
+                    placeholder="Select serial/asset tag..."
                     disabled={serialOptions.length === 0}
-                  >
-                    <option value="">Select serial/asset tag...</option>
-                    {serialOptions.map((serial) => (
-                      <option key={serial} value={serial}>{serial}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { label: "Select serial/asset tag...", value: "" },
+                      ...serialOptions.map((serial) => ({ label: serial, value: serial })),
+                    ]}
+                  />
                 </div>
               )}
 
@@ -516,28 +519,34 @@ function CheckoutContent() {
                   Return By <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-3">
-                  <input
-                    id="co-return-date"
-                    type="date"
-                    required
-                    value={returnDate}
-                    min={minimumReturnDate}
-                    onChange={(e) => setReturnDate(e.target.value)}
-                    className="form-input"
-                  />
-                  <select
+                  <div>
+                    <label className="sr-only" htmlFor="co-return-date-hidden">Return date</label>
+                    <DatePicker
+                      value={returnDate}
+                      minDate={minimumReturnDate}
+                      onChange={setReturnDate}
+                      placeholder="Choose return date"
+                      quickActionLabel="Today"
+                    />
+                    <input
+                      id="co-return-date-hidden"
+                      type="hidden"
+                      required
+                      value={returnDate}
+                      readOnly
+                    />
+                  </div>
+                  <SelectMenu
                     id="co-return-time"
                     value={selectedReturnTime}
-                    onChange={(e) => setReturnTime(e.target.value)}
-                    className="form-input"
+                    onChange={setReturnTime}
                     disabled={availableTimeOptions.length === 0}
-                  >
-                    {availableTimeOptions.map((time) => (
-                      <option key={time} value={time}>
-                        {formatTimeOption(time)}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Choose return time"
+                    options={availableTimeOptions.map((time) => ({
+                      label: formatTimeOption(time),
+                      value: time,
+                    }))}
+                  />
                 </div>
               </div>
 

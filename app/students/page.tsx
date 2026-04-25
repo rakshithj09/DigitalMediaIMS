@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
 import PeriodBadge from "@/app/components/PeriodBadge";
+import SelectMenu from "@/components/ui/select-menu";
 import { usePeriod } from "@/app/lib/period-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Period, Student } from "@/app/lib/types";
@@ -462,15 +463,15 @@ function StudentsContent() {
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-period" style={{ color: "#374151" }}>
                   Period
                 </label>
-                <select
+                <SelectMenu
                   id="edit-period"
                   value={editForm.period}
-                  onChange={(e) => setEditForm((f) => ({ ...f, period: e.target.value as Period }))}
-                  className="form-input"
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
+                  onChange={(nextValue) => setEditForm((f) => ({ ...f, period: nextValue as Period }))}
+                  options={[
+                    { label: "AM", value: "AM" },
+                    { label: "PM", value: "PM" },
+                  ]}
+                />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-email" style={{ color: "#374151" }}>

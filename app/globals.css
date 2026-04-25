@@ -65,6 +65,195 @@ body {
   cursor: pointer;
 }
 
+.return-date-picker {
+  position: relative;
+}
+
+.return-date-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid #e2e8f0;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 1px 2px rgba(15, 36, 55, 0.04);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+  cursor: pointer;
+}
+
+.return-date-trigger:hover {
+  border-color: #cbd5e1;
+}
+
+.return-date-trigger:focus-visible {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(0, 90, 120, 0.12), 0 1px 2px rgba(15, 36, 55, 0.04);
+}
+
+.return-date-popover {
+  position: absolute;
+  top: calc(100% + 0.65rem);
+  left: 0;
+  z-index: 30;
+  width: min(100vw - 3rem, 20rem);
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background:
+    radial-gradient(circle at top right, rgba(255, 210, 31, 0.16), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 16px 44px rgba(8, 36, 58, 0.16), 0 2px 6px rgba(15, 36, 55, 0.08);
+}
+
+.return-date-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.return-date-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: #64748b;
+}
+
+.return-date-header h4 {
+  margin: 0.2rem 0 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ignite-navy);
+}
+
+.return-date-nav {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.return-date-nav-button,
+.return-date-footer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dbe4ee;
+  background: white;
+  color: #0f172a;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  cursor: pointer;
+}
+
+.return-date-nav-button {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+}
+
+.return-date-nav-button:hover:not(:disabled),
+.return-date-footer-button:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.return-date-nav-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.return-date-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.return-date-weekdays span {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.return-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.return-date-day {
+  height: 2.4rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+  cursor: pointer;
+}
+
+.return-date-day:hover:not(:disabled) {
+  background: #eef7ff;
+  border-color: #bfdbfe;
+}
+
+.return-date-day[data-today="true"] {
+  border-color: rgba(0, 90, 120, 0.18);
+  color: var(--ignite-navy);
+}
+
+.return-date-day[data-selected="true"] {
+  background: linear-gradient(180deg, #0b74d8 0%, #0a64c2 100%);
+  border-color: #0957ac;
+  color: white;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.15), 0 6px 14px rgba(10, 100, 194, 0.22);
+}
+
+.return-date-day[data-outside-month="true"] {
+  color: #94a3b8;
+}
+
+.return-date-day:disabled {
+  color: #cbd5e1;
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.return-date-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.return-date-footer-button {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.return-date-footer-button-primary {
+  border-color: rgba(0, 90, 120, 0.16);
+  background: rgba(0, 90, 120, 0.08);
+  color: var(--ignite-navy);
+}
+
 /* ── Data table ──────────────────────────────────── */
 .data-table {
   width: 100%;

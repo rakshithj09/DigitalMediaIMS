@@ -5,6 +5,7 @@ import Link from "next/link";
 import { User } from "@supabase/supabase-js";
 import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
+import SelectMenu from "@/components/ui/select-menu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
@@ -363,17 +364,16 @@ function EquipmentContent() {
                 <label className="block text-sm font-medium mb-1.5" htmlFor="eq-cat" style={{ color: "#374151" }}>
                   Category <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                <select
+                <SelectMenu
                   id="eq-cat"
                   value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as EquipmentCategory | "" }))}
-                  className="form-input"
-                >
-                  <option value="">Select category</option>
-                  {EQUIPMENT_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  onChange={(nextValue) => setForm((f) => ({ ...f, category: nextValue as EquipmentCategory | "" }))}
+                  placeholder="Select category"
+                  options={[
+                    { label: "Select category", value: "" },
+                    ...EQUIPMENT_CATEGORIES.map((c) => ({ label: c, value: c })),
+                  ]}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="eq-qty" style={{ color: "#374151" }}>
@@ -490,16 +490,12 @@ function EquipmentContent() {
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-cat" style={{ color: "#374151" }}>
                   Category
                 </label>
-                <select
+                <SelectMenu
                   id="edit-eq-cat"
                   value={editForm.category}
-                  onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value as (typeof EQUIPMENT_CATEGORIES)[number] }))}
-                  className="form-input"
-                >
-                  {EQUIPMENT_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  onChange={(nextValue) => setEditForm((f) => ({ ...f, category: nextValue as (typeof EQUIPMENT_CATEGORIES)[number] }))}
+                  options={EQUIPMENT_CATEGORIES.map((c) => ({ label: c, value: c }))}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-qty" style={{ color: "#374151" }}>
@@ -651,17 +647,13 @@ function EquipmentContent() {
             aria-label="Search equipment"
           />
         </div>
-        <select
+        <SelectMenu
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="form-input"
-          style={{ width: "auto" }}
+          onChange={setCategoryFilter}
+          className="min-w-[12rem]"
           aria-label="Filter by category"
-        >
-          {allCategories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+          options={allCategories.map((c) => ({ label: c, value: c }))}
+        />
       </div>
 
       {/* Table */}

@@ -6,11 +6,11 @@ import Link from "next/link";
 import { Eye, EyeOff, IdCard, Lock, Mail, UserRound } from "lucide-react";
 import LoginSignupFrame, {
   authInputClassName,
-  authSelectClassName,
 } from "@/components/ui/login-signup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import SelectMenu from "@/components/ui/select-menu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { User } from "@supabase/supabase-js";
 
@@ -191,30 +191,32 @@ export default function EmailPasswordDemo({ user }: Props) {
               <Label htmlFor="role" className="text-slate-700">
                 Role
               </Label>
-              <select
+              <SelectMenu
                 id="role"
                 value={role}
-                onChange={(e) => setRole(e.target.value as "Teacher" | "Student")}
-                className={authSelectClassName}
-              >
-                <option value="Student">Student</option>
-                <option value="Teacher">Teacher</option>
-              </select>
+                onChange={(nextValue) => setRole(nextValue as "Teacher" | "Student")}
+                options={[
+                  { label: "Student", value: "Student" },
+                  { label: "Teacher", value: "Teacher" },
+                ]}
+                triggerClassName="h-10 rounded-lg"
+              />
             </div>
             {role === "Student" && (
               <div className="grid gap-2">
                   <Label htmlFor="period" className="text-slate-700">
                     Class period
                   </Label>
-                  <select
+                  <SelectMenu
                     id="period"
                     value={periodSel}
-                    onChange={(e) => setPeriodSel(e.target.value as "AM" | "PM")}
-                    className={authSelectClassName}
-                  >
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
-                  </select>
+                    onChange={(nextValue) => setPeriodSel(nextValue as "AM" | "PM")}
+                    options={[
+                      { label: "AM", value: "AM" },
+                      { label: "PM", value: "PM" },
+                    ]}
+                    triggerClassName="h-10 rounded-lg"
+                  />
               </div>
             )}
           </div>
