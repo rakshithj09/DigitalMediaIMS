@@ -101,9 +101,6 @@ function EquipmentDetailContent() {
           <h2 className="text-2xl font-bold mt-3" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
             {equipment?.name ?? "Equipment Details"}
           </h2>
-          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            Current status, serial tags, and checkout history
-          </p>
         </div>
         {equipment && (
           <Link

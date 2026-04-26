@@ -100,7 +100,7 @@ function HistoryContent() {
           History
         </h2>
         <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-          Full checkout and check in audit log
+          Full checkout and check in log
         </p>
       </div>
 

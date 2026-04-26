@@ -105,9 +105,6 @@ function StudentDetailContent() {
           <h2 className="text-2xl font-bold mt-3" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
             {student?.name ?? "Student Details"}
           </h2>
-          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            Teacher view of account details, current checkouts, and history
-          </p>
         </div>
       </div>
 
@@ -174,8 +171,6 @@ function StudentDetailContent() {
               <div className="space-y-4">
                 <InfoRow label="Student ID" value={student.student_id || "Not set"} mono />
                 <InfoRow label="Email" value={student.email || "Not linked"} />
-                <InfoRow label="Account Link" value={student.user_id ? "Linked to sign-in account" : "No linked account"} />
-                <InfoRow label="Roster Status" value={student.is_active ? "Active" : "Inactive"} />
                 <InfoRow label="Added" value={formatDate(student.created_at)} />
                 <InfoRow label="Last Checkout" value={formatDateTime(latestCheckout)} />
               </div>
