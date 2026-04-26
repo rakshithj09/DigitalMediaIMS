@@ -7,6 +7,7 @@ import PeriodBadge from "@/app/components/PeriodBadge";
 import DatePicker from "@/app/components/DatePicker";
 import SelectMenu from "@/components/ui/select-menu";
 import { usePeriod } from "@/app/lib/period-context";
+import { filterTimeOptionsForPeriod, nextWeekday } from "@/app/lib/return-windows";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Student, Equipment, Checkout } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
@@ -22,18 +23,18 @@ function padTime(value: number) {
   return String(value).padStart(2, "0");
 }
 
-function roundUpToQuarterHour(date: Date) {
+function roundUpToFiveMinutes(date: Date) {
   const rounded = new Date(date);
   rounded.setSeconds(0, 0);
-  const remainder = rounded.getMinutes() % 15;
+  const remainder = rounded.getMinutes() % 5;
   if (remainder !== 0) {
-    rounded.setMinutes(rounded.getMinutes() + (15 - remainder));
+    rounded.setMinutes(rounded.getMinutes() + (5 - remainder));
   }
   return rounded;
 }
 
 function createDefaultReturnDateTime() {
-  const date = roundUpToQuarterHour(new Date());
+  const date = nextWeekday(roundUpToFiveMinutes(new Date()));
   return {
     date: toLocalDateInputValue(date),
     time: `${padTime(date.getHours())}:${padTime(date.getMinutes())}`,
@@ -41,19 +42,19 @@ function createDefaultReturnDateTime() {
 }
 
 function createMinimumReturnDate() {
-  return toLocalDateInputValue(new Date());
+  return toLocalDateInputValue(nextWeekday(new Date()));
 }
 
 function createMinimumReturnTime(dateValue: string) {
   if (dateValue !== toLocalDateInputValue(new Date())) return null;
-  const date = roundUpToQuarterHour(new Date());
+  const date = roundUpToFiveMinutes(new Date());
   return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
 }
 
 function buildTimeOptions() {
   const options: string[] = [];
   for (let hour = 0; hour < 24; hour += 1) {
-    for (let minute = 0; minute < 60; minute += 15) {
+    for (let minute = 0; minute < 60; minute += 5) {
       options.push(`${padTime(hour)}:${padTime(minute)}`);
     }
   }
@@ -251,7 +252,7 @@ function CheckoutContent() {
   const maxQty = selectedEquipment?.available ?? 0;
   const serialOptions = selectedEquipment?.availableSerialNumbers ?? [];
   const requiresSerialSelection = serialOptions.length > 0;
-  const timeOptions = buildTimeOptions();
+  const timeOptions = filterTimeOptionsForPeriod(checkoutPeriod, buildTimeOptions());
   const minimumReturnTime = createMinimumReturnTime(returnDate);
   const availableTimeOptions = timeOptions.filter((time) => !minimumReturnTime || time >= minimumReturnTime);
   const selectedReturnTime = availableTimeOptions.includes(returnTime)
@@ -527,6 +528,7 @@ function CheckoutContent() {
                       onChange={setReturnDate}
                       placeholder="Choose return date"
                       quickActionLabel="Today"
+                      disableWeekends
                     />
                     <input
                       id="co-return-date-hidden"

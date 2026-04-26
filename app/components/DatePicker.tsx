@@ -54,6 +54,7 @@ export default function DatePicker({
   placeholder = "Select date",
   quickActionLabel = "Today",
   className = "",
+  disableWeekends = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -61,6 +62,7 @@ export default function DatePicker({
   placeholder?: string;
   quickActionLabel?: string;
   className?: string;
+  disableWeekends?: boolean;
 }) {
   const pickerRef = useRef<HTMLDivElement | null>(null);
   const today = new Date();
@@ -163,7 +165,8 @@ export default function DatePicker({
             {calendarDays.map((day) => {
               const dayValue = toLocalDateInputValue(day);
               const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
-              const isDisabled = minSelectableDate ? day < minSelectableDate : false;
+              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+              const isDisabled = (minSelectableDate ? day < minSelectableDate : false) || (disableWeekends && isWeekend);
               const isSelected = selectedDate ? sameCalendarDay(day, selectedDate) : false;
               const isToday = sameCalendarDay(day, today);
               const dayClasses = [
@@ -214,9 +217,15 @@ export default function DatePicker({
               className="inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition"
               style={{ borderColor: "rgba(0, 90, 120, 0.16)", background: "rgba(0, 90, 120, 0.08)", color: "var(--ignite-navy)" }}
               onClick={() => {
-                const todayValue = toLocalDateInputValue(today);
+                const nextDate = new Date(today);
+                if (disableWeekends) {
+                  while (nextDate.getDay() === 0 || nextDate.getDay() === 6) {
+                    nextDate.setDate(nextDate.getDate() + 1);
+                  }
+                }
+                const todayValue = toLocalDateInputValue(nextDate);
                 onChange(minDate && todayValue < minDate ? minDate : todayValue);
-                setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+                setVisibleMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
                 setOpen(false);
               }}
             >

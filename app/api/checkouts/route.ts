@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
+import { getChicagoTimeValue, getChicagoWeekday, isPeriodValue, isTimeWithinReturnWindow } from "@/app/lib/return-windows";
 
 type CheckoutBody = {
   studentId?: string;
@@ -150,6 +151,25 @@ export async function POST(req: Request) {
 
     if (!student) {
       return NextResponse.json({ error: "Please select a valid student." }, { status: 400 });
+    }
+
+    if (!isPeriodValue(student.period)) {
+      return NextResponse.json({ error: "Student is missing a valid class period." }, { status: 400 });
+    }
+
+    const dueWeekdayInChicago = getChicagoWeekday(dueAt);
+    if (dueWeekdayInChicago === "Sat" || dueWeekdayInChicago === "Sun") {
+      return NextResponse.json({
+        error: "Return date must be on a weekday (Monday through Friday) in America/Chicago.",
+      }, { status: 400 });
+    }
+
+    const dueTimeInChicago = getChicagoTimeValue(dueAt);
+    if (!isTimeWithinReturnWindow(student.period, dueTimeInChicago)) {
+      const allowedWindow = student.period === "AM" ? "7:45 AM to 10:00 AM" : "11:45 AM to 3:00 PM";
+      return NextResponse.json({
+        error: `Return time for ${student.period} students must be between ${allowedWindow} (America/Chicago).`,
+      }, { status: 400 });
     }
 
     const availability = await getEquipmentAvailability(body.equipmentId);
