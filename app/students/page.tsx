@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
 import { User } from "@supabase/supabase-js";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
@@ -637,7 +638,14 @@ function StudentsContent() {
                 {filtered.map((s) => (
                   <tr key={s.id}>
                     <td>
-                      <span className="students-name" title={s.name}>{s.name}</span>
+                      <Link
+                        href={`/students/${s.id}`}
+                        className="students-name font-semibold hover:underline"
+                        style={{ color: "var(--ignite-navy)" }}
+                        title={`Open ${s.name}`}
+                      >
+                        {s.name}
+                      </Link>
                     </td>
                     <td>
                       <span className="font-mono text-sm" style={{ color: "#374151" }}>
