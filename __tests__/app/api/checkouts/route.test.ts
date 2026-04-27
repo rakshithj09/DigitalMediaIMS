@@ -41,17 +41,32 @@ function mockAuth(user: unknown) {
   } as never);
 }
 
-const FUTURE = new Date(Date.now() + 86_400_000).toISOString(); // +1 day
+const FUTURE = "2099-04-27T08:00:00-05:00"; // Monday 8:00 AM in America/Chicago
 const PAST = new Date(Date.now() - 86_400_000).toISOString(); // -1 day
 
-const STUDENT_ROW = {
+type TestStudentRow = {
+  id: string;
+  name: string;
+  period: "AM" | "PM";
+  is_active: boolean;
+};
+
+type TestEquipmentRow = {
+  id: string;
+  category: string;
+  total_quantity: number;
+  serial_number: string | null;
+  is_active: boolean;
+};
+
+const STUDENT_ROW: TestStudentRow = {
   id: "student-1",
   name: "Alice",
   period: "AM",
   is_active: true,
 };
 
-const EQUIPMENT_ROW = {
+const EQUIPMENT_ROW: TestEquipmentRow = {
   id: "eq-1",
   category: "Miscellaneous",
   total_quantity: 5,
