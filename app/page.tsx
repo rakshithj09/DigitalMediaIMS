@@ -199,7 +199,10 @@ function DashboardContent() {
                   const needsYellow = state === "warning";
 
                   return (
-                    <div key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div
+                      key={c.id}
+                      className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold" style={{ color: "var(--ignite-navy)" }}>{c.equipment?.name ?? "Equipment"}</p>
@@ -207,7 +210,7 @@ function DashboardContent() {
                           {c.serial_number && <span className="badge" style={{ background: "#e8f0fe", color: "#005a78" }}>{c.serial_number}</span>}
                           <span
                             className="badge"
-                            style={needsRed ? { background: "#fee2e2", color: "#dc2626" } : needsYellow ? { background: "#fef9c3", color: "#ca8a04" } : { background: "#dcfce7", color: "#16a34a" }}
+                            style={needsRed ? { background: "#fca5a5", color: "#b91c1c" } : needsYellow ? { background: "#fbbf24", color: "#92400e" } : { background: "#dcfce7", color: "#16a34a" }}
                           >
                             {state === "overdue" ? "Overdue" : state === "danger" ? "75% elapsed" : state === "warning" ? "50% elapsed" : "On track"}
                           </span>
@@ -355,7 +358,6 @@ function DashboardContent() {
                   return (
                     <tr
                       key={c.id}
-                      style={needsRed ? { background: "#fef2f2" } : needsYellow ? { background: "#fffbeb" } : undefined}
                     >
                       <td className="dashboard-student-cell font-medium" style={{ color: "var(--ignite-navy)" }}>
                         <span className="dashboard-cell-clip">{c.student?.name ?? "—"}</span>
