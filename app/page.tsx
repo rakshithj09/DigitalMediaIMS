@@ -383,21 +383,30 @@ function DashboardContent() {
                       </td>
                       <td style={{ color: "#374151" }}>{c.quantity}</td>
                       <td>
-                        <span
-                          className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={
-                            needsRed
-                              ? { background: "#fee2e2", color: "#dc2626" }
-                              : needsYellow
-                              ? { background: "#fef9c3", color: "#ca8a04" }
-                              : { background: "#f0fdf4", color: "#16a34a" }
-                          }
-                        >
-                          {state === "overdue" ? "Overdue" : state === "danger" ? "75% elapsed" : state === "warning" ? "50% elapsed" : "On track"}
-                        </span>
-                        <div className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                          {formatDateTime(c.due_at ?? null)}
-                          {deadline ? ` · ${deadline.remainingMs > 0 ? `${formatRemainingTime(deadline.remainingMs)} left` : `${formatRemainingTime(deadline.remainingMs)} overdue`}` : ""}
+                        <div>
+                          <span
+                            className="inline-flex text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{
+                              whiteSpace: "nowrap",
+                              ...(needsRed
+                                ? { background: "#fee2e2", color: "#dc2626" }
+                                : needsYellow
+                                ? { background: "#fef9c3", color: "#ca8a04" }
+                                : { background: "#f0fdf4", color: "#16a34a" }),
+                            }}
+                          >
+                            {state === "overdue" ? "Overdue" : state === "danger" ? "75% elapsed" : state === "warning" ? "50% elapsed" : "On track"}
+                          </span>
+                          <div className="text-xs mt-1" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
+                            {formatDateTime(c.due_at ?? null)}
+                          </div>
+                          {deadline && (
+                            <div className="text-xs mt-1" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
+                              {deadline.remainingMs > 0
+                                ? `${formatRemainingTime(deadline.remainingMs)} left`
+                                : `${formatRemainingTime(deadline.remainingMs)} overdue`}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="dashboard-notes-cell text-sm" style={{ color: "var(--muted)" }}>

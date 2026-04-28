@@ -402,7 +402,6 @@ body {
 .dashboard-item-chip {
   flex: 0 0 auto;
 }
-
 .students-table {
   table-layout: fixed;
   min-width: 980px;
