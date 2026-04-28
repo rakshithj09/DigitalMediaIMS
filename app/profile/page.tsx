@@ -230,9 +230,6 @@ function ProfileContent() {
             <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
               Pending Student Approvals
             </h3>
-            <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              Students must verify their email before you can add them to the class roster.
-            </p>
           </div>
           <button
             type="button"
@@ -262,8 +259,6 @@ function ProfileContent() {
 
         {loadingPendingStudents ? (
           <p className="text-sm" style={{ color: "var(--muted)" }}>Loading pending student approvals…</p>
-        ) : pendingStudents.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--muted)" }}>No pending student approvals right now.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
@@ -279,43 +274,55 @@ function ProfileContent() {
                 </tr>
               </thead>
               <tbody>
-                {pendingStudents.map((student) => {
-                  const emailVerified = Boolean(student.emailVerifiedAt);
-                  return (
-                    <tr key={student.userId}>
-                      <td style={{ fontWeight: 600, color: "var(--navy)" }}>
-                        {student.firstName} {student.lastName}
-                      </td>
-                      <td>{student.email}</td>
-                      <td>{student.studentId}</td>
-                      <td>
-                        <span className="category-chip">{student.period}</span>
-                      </td>
-                      <td>
-                        <span
-                          className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-                          style={emailVerified
-                            ? { background: "#f0fdf4", color: "#15803d" }
-                            : { background: "#fff7ed", color: "#c2410c" }}
-                        >
-                          {emailVerified ? "Verified" : "Waiting"}
-                        </span>
-                      </td>
-                      <td>{formatDateTime(student.requestedAt)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          disabled={!emailVerified || approvingStudentId === student.userId}
-                          onClick={() => handleStudentApproval(student.userId)}
-                          className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                          style={{ background: "var(--navy)" }}
-                        >
-                          {approvingStudentId === student.userId ? "Approving..." : "Approve"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {pendingStudents.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="text-sm text-center"
+                      style={{ color: "var(--muted)", paddingTop: "2rem", paddingBottom: "2rem" }}
+                    >
+                      No pending student approvals.
+                    </td>
+                  </tr>
+                ) : (
+                  pendingStudents.map((student) => {
+                    const emailVerified = Boolean(student.emailVerifiedAt);
+                    return (
+                      <tr key={student.userId}>
+                        <td style={{ fontWeight: 600, color: "var(--navy)" }}>
+                          {student.firstName} {student.lastName}
+                        </td>
+                        <td>{student.email}</td>
+                        <td>{student.studentId}</td>
+                        <td>
+                          <span className="category-chip">{student.period}</span>
+                        </td>
+                        <td>
+                          <span
+                            className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                            style={emailVerified
+                              ? { background: "#f0fdf4", color: "#15803d" }
+                              : { background: "#fff7ed", color: "#c2410c" }}
+                          >
+                            {emailVerified ? "Verified" : "Waiting"}
+                          </span>
+                        </td>
+                        <td>{formatDateTime(student.requestedAt)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            disabled={!emailVerified || approvingStudentId === student.userId}
+                            onClick={() => handleStudentApproval(student.userId)}
+                            className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                            style={{ background: "var(--navy)" }}
+                          >
+                            {approvingStudentId === student.userId ? "Approving..." : "Approve"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

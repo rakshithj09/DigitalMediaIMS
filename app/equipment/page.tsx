@@ -330,7 +330,7 @@ function EquipmentContent() {
           style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
         >
           <h3 className="font-semibold text-base mb-5" style={{ color: "var(--ignite-navy)" }}>
-            New Equipment
+            Add Equipment
           </h3>
           {saveError && (
             <div

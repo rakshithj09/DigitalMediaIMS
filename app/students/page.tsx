@@ -275,7 +275,7 @@ function StudentsContent() {
           style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
         >
           <h3 className="font-semibold text-base mb-5" style={{ color: "var(--ignite-navy)" }}>
-            New Student
+            Add Student
           </h3>
           {saveError && (
             <div
@@ -367,7 +367,7 @@ function StudentsContent() {
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Set a temp password"
+                    placeholder="Set a temporary password"
                     className="form-input"
                     style={{ paddingRight: "2.75rem" }}
                   />
@@ -381,9 +381,6 @@ function StudentsContent() {
                     {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
-                  Students should change this after first sign in.
-                </p>
               </div>
             </div>
 
