@@ -54,10 +54,15 @@ const NAV = [
   { href: "/students",  label: "Students"  },
   { href: "/equipment", label: "Equipment" },
   { href: "/checkout",  label: "Checkout"  },
-  { href: "/my-info",   label: "My Info"   },
   { href: "/history",   label: "History"   },
   { href: "/profile",   label: "Profile"   },
 ];
+const STUDENT_NAV = [
+  { href: "/",          label: "Dashboard" },
+  { href: "/equipment", label: "Equipment" },
+  { href: "/checkout",  label: "Checkout"  },
+  { href: "/my-info",   label: "My Info"   },
+] as const;
 const STUDENT_HREFS = new Set(["/", "/equipment", "/checkout", "/my-info"]);
 
 /* ── Shell ──────────────────────────────────────────── */
@@ -90,7 +95,7 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
     if (role === "Student" && !STUDENT_HREFS.has(pathname)) router.replace("/checkout");
   }, [role, pathname, router, studentApproved]);
 
-  const links = role === "Student" ? NAV.filter(l => STUDENT_HREFS.has(l.href)) : NAV;
+  const links = role === "Student" ? STUDENT_NAV : NAV;
   const activePeriod = role === "Student" && userPeriod ? userPeriod : period;
 
   return (

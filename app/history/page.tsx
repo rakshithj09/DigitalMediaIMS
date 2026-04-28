@@ -222,7 +222,6 @@ function HistoryContent() {
                   <th>Checked Out</th>
                   <th>Checked In</th>
                   <th>Duration</th>
-                  <th>Status</th>
                   <th>Notes</th>
                 </tr>
               </thead>
@@ -282,23 +281,6 @@ function HistoryContent() {
                     </td>
                     <td className="text-sm" style={{ color: "var(--muted)" }}>
                       {duration(c.checked_out_at, c.checked_in_at)}
-                    </td>
-                    <td>
-                      {c.checked_in_at ? (
-                        <span
-                          className="badge"
-                          style={{ background: "#dcfce7", color: "#16a34a" }}
-                        >
-                          Returned
-                        </span>
-                      ) : (
-                        <span
-                          className="badge"
-                          style={{ background: "#fef9c3", color: "#ca8a04" }}
-                        >
-                          Out
-                        </span>
-                      )}
                     </td>
                     <td className="history-notes" style={{ color: "#94a3b8" }}>
                       {[c.notes, c.return_notes].filter(Boolean).join(" | ") || "—"}
