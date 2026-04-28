@@ -32,6 +32,11 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
     </svg>
   ),
+  "/my-info": (
+    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/><path d="M9 12h6"/>
+    </svg>
+  ),
   "/history": (
     <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
@@ -49,10 +54,11 @@ const NAV = [
   { href: "/students",  label: "Students"  },
   { href: "/equipment", label: "Equipment" },
   { href: "/checkout",  label: "Checkout"  },
+  { href: "/my-info",   label: "My Info"   },
   { href: "/history",   label: "History"   },
   { href: "/profile",   label: "Profile"   },
 ];
-const STUDENT_HREFS = new Set(["/", "/equipment", "/checkout"]);
+const STUDENT_HREFS = new Set(["/", "/equipment", "/checkout", "/my-info"]);
 
 /* ── Shell ──────────────────────────────────────────── */
 function Shell({ user, children, onLogout, studentApproved }: { user: User; children: ReactNode; onLogout: () => void; studentApproved: boolean }) {
