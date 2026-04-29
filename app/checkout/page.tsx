@@ -3,9 +3,11 @@
 import { useEffect, useState, useCallback, FormEvent } from "react";
 import { User } from "@supabase/supabase-js";
 import AppShell from "@/app/components/AppShell";
+import BarcodeScanner from "@/app/components/BarcodeScanner";
 import PeriodBadge from "@/app/components/PeriodBadge";
 import DatePicker from "@/app/components/DatePicker";
 import SelectMenu from "@/components/ui/select-menu";
+import { findEquipmentByBarcode } from "@/app/lib/barcodes";
 import { usePeriod } from "@/app/lib/period-context";
 import { filterTimeOptionsForPeriod, nextWeekday } from "@/app/lib/return-windows";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -13,7 +15,11 @@ import { Student, Equipment, Checkout } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
 import { formatDateTime, formatRemainingTime, getCheckoutDeadlineMeta } from "@/lib/checkout-deadlines";
 
-type EquipmentWithAvail = Equipment & { available: number; availableSerialNumbers: string[] };
+type EquipmentWithAvail = Equipment & {
+  available: number;
+  availableSerialNumbers: string[];
+  allSerialNumbers: string[];
+};
 
 function toLocalDateInputValue(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -91,6 +97,8 @@ function CheckoutContent() {
   const [equipmentId, setEquipmentId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [serialNumber, setSerialNumber] = useState("");
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [barcodeFeedback, setBarcodeFeedback] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [returnDate, setReturnDate] = useState(() => createDefaultReturnDateTime().date);
   const [returnTime, setReturnTime] = useState(() => createDefaultReturnDateTime().time);
@@ -234,6 +242,9 @@ function CheckoutContent() {
       const withAvail = ((eqData ?? []) as Equipment[]).map((e) => ({
         ...e,
         available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
+        allSerialNumbers: categorySupportsSerialNumbers(e.category)
+          ? parseSerialNumbers(e.serial_number)
+          : [],
         availableSerialNumbers: categorySupportsSerialNumbers(e.category)
           ? parseSerialNumbers(e.serial_number).filter(
               (serial) => !(checkedOutSerials.get(e.id) ?? new Set<string>()).has(serial.toLowerCase())
@@ -263,6 +274,54 @@ function CheckoutContent() {
     return true;
   });
 
+  const applyScannedBarcode = useCallback(
+    (rawBarcode: string) => {
+      const result = findEquipmentByBarcode(
+        equipment.map((item) => ({
+          id: item.id,
+          name: item.name,
+          barcodes: item.allSerialNumbers,
+          availableBarcodes: item.availableSerialNumbers,
+        })),
+        rawBarcode
+      );
+
+      setBarcodeInput(rawBarcode.trim());
+
+      if (result.status === "missing") {
+        setBarcodeFeedback(null);
+        setSubmitError("Enter or scan a barcode first.");
+        return;
+      }
+
+      if (result.status === "not_found") {
+        setBarcodeFeedback(null);
+        setSubmitError("That barcode is not linked to any active equipment item.");
+        return;
+      }
+
+      if (result.status === "duplicate") {
+        setBarcodeFeedback(null);
+        setSubmitError("That barcode is assigned to multiple equipment items. Fix the inventory entry before scanning.");
+        return;
+      }
+
+      setEquipmentId(result.match.id);
+      setSerialNumber(result.barcode);
+      setQuantity("1");
+
+      if (result.status === "unavailable") {
+        setBarcodeFeedback(null);
+        setSubmitError(`${result.match.name} matches this barcode, but that item is already checked out.`);
+        return;
+      }
+
+      setSubmitError(null);
+      setBarcodeFeedback(`Matched ${result.match.name} (${result.barcode}).`);
+    },
+    [equipment]
+  );
+
   const handleCheckout = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -275,7 +334,7 @@ function CheckoutContent() {
     if (!equipmentId) { setSubmitError("Please select an equipment item."); setSubmitting(false); return; }
     if (isNaN(qty) || qty < 1) { setSubmitError("Quantity must be at least 1."); setSubmitting(false); return; }
     if (qty > maxQty) { setSubmitError(`Only ${maxQty} unit(s) available.`); setSubmitting(false); return; }
-    if (requiresSerialSelection && !serialNumber) { setSubmitError("Please select a serial/asset tag."); setSubmitting(false); return; }
+    if (requiresSerialSelection && !serialNumber) { setSubmitError("Please select a barcode label."); setSubmitting(false); return; }
     if (!returnDate || !selectedReturnTime) { setSubmitError("Please choose when the item should be returned."); setSubmitting(false); return; }
     const returnBy = new Date(`${returnDate}T${selectedReturnTime}:00`);
     if (Number.isNaN(returnBy.getTime()) || returnBy.getTime() <= Date.now()) {
@@ -307,6 +366,8 @@ function CheckoutContent() {
       setEquipmentId("");
       setQuantity("1");
       setSerialNumber("");
+      setBarcodeInput("");
+      setBarcodeFeedback(null);
       setNotes("");
       {
         const nextDefault = createDefaultReturnDateTime();
@@ -454,13 +515,50 @@ function CheckoutContent() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium mb-1.5" htmlFor="co-barcode" style={{ color: "#374151" }}>
+                  IGNITE Barcode
+                </label>
+                <div className="flex gap-2 flex-col sm:flex-row">
+                  <input
+                    id="co-barcode"
+                    type="text"
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    placeholder="Scan or type barcode label"
+                    className="form-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => applyScannedBarcode(barcodeInput)}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                    style={{ background: "var(--navy)" }}
+                  >
+                    Match Barcode
+                  </button>
+                </div>
+                {barcodeFeedback && (
+                  <p className="text-xs mt-1.5" style={{ color: "#047857" }}>
+                    {barcodeFeedback}
+                  </p>
+                )}
+                <div className="mt-3">
+                  <BarcodeScanner onDetected={applyScannedBarcode} disabled={loadingData} />
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="co-eq" style={{ color: "#374151" }}>
                   Equipment <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <SelectMenu
                   id="co-eq"
                   value={equipmentId}
-                  onChange={(nextValue) => { setEquipmentId(nextValue); setQuantity("1"); setSerialNumber(""); }}
+                  onChange={(nextValue) => {
+                    setEquipmentId(nextValue);
+                    setQuantity("1");
+                    setSerialNumber("");
+                    setBarcodeFeedback(null);
+                  }}
                   placeholder="Select equipment…"
                   searchable
                   searchPlaceholder="Search equipment..."
@@ -478,16 +576,20 @@ function CheckoutContent() {
               {requiresSerialSelection && (
                 <div>
                   <label className="block text-sm font-medium mb-1.5" htmlFor="co-serial" style={{ color: "#374151" }}>
-                    Serial / Asset Tag <span style={{ color: "#ef4444" }}>*</span>
+                    Barcode Label <span style={{ color: "#ef4444" }}>*</span>
                   </label>
                   <SelectMenu
                     id="co-serial"
                     value={serialNumber}
-                    onChange={setSerialNumber}
-                    placeholder="Select serial/asset tag..."
+                    onChange={(nextValue) => {
+                      setSerialNumber(nextValue);
+                      setBarcodeInput(nextValue);
+                      setBarcodeFeedback(nextValue ? `Matched ${selectedEquipment?.name ?? "equipment"} (${nextValue}).` : null);
+                    }}
+                    placeholder="Select barcode label..."
                     disabled={serialOptions.length === 0}
                     options={[
-                      { label: "Select serial/asset tag...", value: "" },
+                      { label: "Select barcode label...", value: "" },
                       ...serialOptions.map((serial) => ({ label: serial, value: serial })),
                     ]}
                   />
@@ -499,7 +601,7 @@ function CheckoutContent() {
                   Quantity <span style={{ color: "#ef4444" }}>*</span>
                   {selectedEquipment && (
                     <span className="ml-2 font-normal text-xs" style={{ color: "var(--muted)" }}>
-                      {requiresSerialSelection ? "(serial checkouts are one at a time)" : `(max ${maxQty} available)`}
+                    {requiresSerialSelection ? "(barcode-labeled items are checked out one at a time)" : `(max ${maxQty} available)`}
                     </span>
                   )}
                 </label>

@@ -24,7 +24,6 @@ jest.mock("next/server", () => ({
 // Build a re-usable chainable builder that Jest controls per-test.
 const mockMaybySingle = jest.fn();
 const mockInsert = jest.fn();
-const mockUpdateEq = jest.fn(); // resolves when awaited (the update chain end)
 
 const mockBuilder = {
   select: jest.fn().mockReturnThis(),
@@ -199,7 +198,7 @@ describe("POST /api/equipment", () => {
         })
       );
       expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/serial/i);
+      expect((await res.json()).error).toMatch(/barcode/i);
     });
 
     it("returns 400 when serial count exceeds totalQuantity", async () => {
@@ -212,7 +211,7 @@ describe("POST /api/equipment", () => {
         })
       );
       expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/serial/i);
+      expect((await res.json()).error).toMatch(/barcode/i);
     });
   });
 

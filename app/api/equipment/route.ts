@@ -62,14 +62,14 @@ function validateSerialNumbers(
   if (categorySupportsSerialNumbers(category)) {
     const serialCount = parseSerialNumbers(serialNumber).length;
     if (serialCount < totalQuantity) {
-      return "Each item must have a serial number.";
+      return "Each item must have a barcode label.";
     }
     if (serialCount > totalQuantity) {
-      return "Serial tags cannot be more than the quantity.";
+      return "Barcode labels cannot be more than the quantity.";
     }
   }
   if ((serialNumber ?? "").length > 1000) {
-    return "Serial/asset tags must be 1000 characters or fewer.";
+    return "Barcode labels must be 1000 characters or fewer.";
   }
   return null;
 }

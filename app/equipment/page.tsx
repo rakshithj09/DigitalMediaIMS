@@ -132,12 +132,12 @@ function EquipmentContent() {
     if (categorySupportsSerialNumbers(form.category)) {
       const serialCount = parseSerialNumbers(form.serial_number).length;
       if (serialCount < qty) {
-        setSaveError("Each item must have a serial number.");
+        setSaveError("Each item must have a barcode label.");
         setSaving(false);
         return;
       }
       if (serialCount > qty) {
-        setSaveError("Serial tags cannot be more than the quantity.");
+        setSaveError("Barcode labels cannot be more than the quantity.");
         setSaving(false);
         return;
       }
@@ -224,11 +224,11 @@ function EquipmentContent() {
     if (categorySupportsSerialNumbers(editForm.category)) {
       const serialCount = parseSerialNumbers(editForm.serial_number).length;
       if (serialCount < qty) {
-        setEditError("Each item must have a serial number.");
+        setEditError("Each item must have a barcode label.");
         return;
       }
       if (serialCount > qty) {
-        setEditError("Serial tags cannot be more than the quantity.");
+        setEditError("Barcode labels cannot be more than the quantity.");
         return;
       }
     }
@@ -393,7 +393,7 @@ function EquipmentContent() {
               {addCategoryHasSerials && (
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="eq-serial" style={{ color: "#374151" }}>
-                  Serial / Asset Tags <span style={{ color: "#ef4444" }}>*</span>
+                  IGNITE Barcodes <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <textarea
                   id="eq-serial"
@@ -401,12 +401,12 @@ function EquipmentContent() {
                   maxLength={1000}
                   value={form.serial_number}
                   onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
-                  placeholder="One per line"
+                  placeholder="One barcode per line"
                   className="form-input"
                 />
                 {parseInt(form.total_quantity, 10) > 1 && (
                   <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
-                    {parseSerialNumbers(form.serial_number).length} / {form.total_quantity || "0"} tags entered
+                    {parseSerialNumbers(form.serial_number).length} / {form.total_quantity || "0"} barcodes entered
                   </p>
                 )}
               </div>
@@ -515,7 +515,7 @@ function EquipmentContent() {
               {editCategoryHasSerials && (
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-serial" style={{ color: "#374151" }}>
-                  Serial / Asset Tags <span style={{ color: "#ef4444" }}>*</span>
+                  IGNITE Barcodes <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <textarea
                   id="edit-eq-serial"
@@ -523,12 +523,12 @@ function EquipmentContent() {
                   maxLength={1000}
                   value={editForm.serial_number}
                   onChange={(e) => setEditForm((f) => ({ ...f, serial_number: e.target.value }))}
-                  placeholder="One per line"
+                  placeholder="One barcode per line"
                   className="form-input"
                 />
                 {parseInt(editForm.total_quantity, 10) > 1 && (
                   <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
-                    {parseSerialNumbers(editForm.serial_number).length} / {editForm.total_quantity || "0"} tags entered
+                    {parseSerialNumbers(editForm.serial_number).length} / {editForm.total_quantity || "0"} barcodes entered
                   </p>
                 )}
               </div>
@@ -694,7 +694,7 @@ function EquipmentContent() {
                   <th>Name</th>
                   <th>Category</th>
                   <th>Availability</th>
-                  <th>Serial</th>
+                  <th>Barcode</th>
                   <th>Condition</th>
                   <th>Action</th>
                 </tr>

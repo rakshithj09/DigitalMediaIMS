@@ -176,19 +176,19 @@ export async function POST(req: Request) {
     const requiresSerial = availability.serials.length > 0;
     if (requiresSerial) {
       if (requestedQuantity !== 1) {
-        return NextResponse.json({ error: "Checkout one serialized unit at a time." }, { status: 400 });
+        return NextResponse.json({ error: "Checkout one barcode-labeled unit at a time." }, { status: 400 });
       }
       if (!selectedSerial) {
-        return NextResponse.json({ error: "Please select a serial/asset tag for this checkout." }, { status: 400 });
+        return NextResponse.json({ error: "Please select a barcode label for this checkout." }, { status: 400 });
       }
 
       const validSerial = availability.serials.some((serial) => serial.toLowerCase() === selectedSerial.toLowerCase());
       if (!validSerial) {
-        return NextResponse.json({ error: "Please select a valid serial/asset tag for this equipment." }, { status: 400 });
+        return NextResponse.json({ error: "Please select a valid barcode label for this equipment." }, { status: 400 });
       }
 
       if (availability.activeSerials.has(selectedSerial.toLowerCase())) {
-        return NextResponse.json({ error: "That serial/asset tag is already checked out." }, { status: 409 });
+        return NextResponse.json({ error: "That barcode label is already checked out." }, { status: 409 });
       }
     }
 
