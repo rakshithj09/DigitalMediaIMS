@@ -188,20 +188,20 @@ describe("POST /api/equipment", () => {
       expect(res.status).toBe(400);
     });
 
-    it("returns 400 when serial count is less than totalQuantity for a serialized category", async () => {
+    it("returns 400 when a serialized item is created with quantity above 1", async () => {
       const res = await POST(
         makeRequest({
           name: "My Cam",
           category: "Camera",
           totalQuantity: 3,
-          serialNumber: "CAM-001\nCAM-002", // only 2 serials for qty 3
+          serialNumber: "CAM-001",
         })
       );
       expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/barcode/i);
+      expect((await res.json()).error).toMatch(/one item at a time/i);
     });
 
-    it("returns 400 when serial count exceeds totalQuantity", async () => {
+    it("returns 400 when a serialized item is created without exactly one barcode", async () => {
       const res = await POST(
         makeRequest({
           name: "My Cam",
@@ -211,7 +211,7 @@ describe("POST /api/equipment", () => {
         })
       );
       expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/barcode/i);
+      expect((await res.json()).error).toMatch(/exactly one barcode/i);
     });
   });
 
@@ -226,15 +226,15 @@ describe("POST /api/equipment", () => {
       expect((await res.json()).ok).toBe(true);
     });
 
-    it("returns 200 when serial count matches totalQuantity for a serialized category", async () => {
+    it("returns 200 when a serialized item is created with one barcode", async () => {
       mockTeacherAuth();
       mockInsert.mockResolvedValue({ error: null });
       const res = await POST(
         makeRequest({
           name: "Camera A",
           category: "Camera",
-          totalQuantity: 2,
-          serialNumber: "CAM-001\nCAM-002",
+          totalQuantity: 1,
+          serialNumber: "CAM-001",
         })
       );
       expect(res.status).toBe(200);

@@ -179,7 +179,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Checkout one barcode-labeled unit at a time." }, { status: 400 });
       }
       if (!selectedSerial) {
-        return NextResponse.json({ error: "Please select a barcode label for this checkout." }, { status: 400 });
+        return NextResponse.json({ error: "Scan the item's barcode to check it out." }, { status: 400 });
       }
 
       const validSerial = availability.serials.some((serial) => serial.toLowerCase() === selectedSerial.toLowerCase());

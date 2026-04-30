@@ -5,13 +5,24 @@ import Link from "next/link";
 import { User } from "@supabase/supabase-js";
 import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
+import BarcodeScanner from "@/app/components/BarcodeScanner";
 import SelectMenu from "@/components/ui/select-menu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
-import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
+import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
 
 type EquipmentWithAvail = Equipment & { available: number; checkedOutSerials: string[] };
 type EquipmentCategory = (typeof EQUIPMENT_CATEGORIES)[number];
+type EquipmentGroup = {
+  key: string;
+  name: string;
+  category: string;
+  items: EquipmentWithAvail[];
+  totalQuantity: number;
+  available: number;
+  barcodeTracked: boolean;
+  conditionSummary: string;
+};
 
 function isEquipmentCategory(value: string): value is EquipmentCategory {
   return EQUIPMENT_CATEGORIES.includes(value as EquipmentCategory);
@@ -45,6 +56,7 @@ function EquipmentContent() {
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [editingEquipment, setEditingEquipment] = useState<EquipmentWithAvail | null>(null);
   const [editForm, setEditForm] = useState<{
     name: string;
@@ -61,6 +73,12 @@ function EquipmentContent() {
   });
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editBarcodeFeedback, setEditBarcodeFeedback] = useState<string | null>(null);
+  const [addBarcodeFeedback, setAddBarcodeFeedback] = useState<string | null>(null);
+  const [scanToEditGroup, setScanToEditGroup] = useState<EquipmentGroup | null>(null);
+  const [scanToEditValue, setScanToEditValue] = useState("");
+  const [scanToEditError, setScanToEditError] = useState<string | null>(null);
+  const [scanToEditSuccess, setScanToEditSuccess] = useState<string | null>(null);
   const [removingEquipment, setRemovingEquipment] = useState<EquipmentWithAvail | null>(null);
   const [removePassword, setRemovePassword] = useState("");
   const [showRemovePassword, setShowRemovePassword] = useState(false);
@@ -130,14 +148,13 @@ function EquipmentContent() {
     if (!isEquipmentCategory(form.category)) { setSaveError("Please select a category."); setSaving(false); return; }
     if (isNaN(qty) || qty < 1) { setSaveError("Quantity must be at least 1."); setSaving(false); return; }
     if (categorySupportsSerialNumbers(form.category)) {
-      const serialCount = parseSerialNumbers(form.serial_number).length;
-      if (serialCount < qty) {
-        setSaveError("Each item must have a barcode label.");
+      if (qty !== 1) {
+        setSaveError("Barcode-labeled equipment must be added one item at a time.");
         setSaving(false);
         return;
       }
-      if (serialCount > qty) {
-        setSaveError("Barcode labels cannot be more than the quantity.");
+      if (parseSerialNumbers(form.serial_number).length !== 1) {
+        setSaveError("Scan exactly one barcode label for this item.");
         setSaving(false);
         return;
       }
@@ -159,14 +176,25 @@ function EquipmentContent() {
     if (!resp.ok) {
       setSaveError(String(data?.error?.message ?? data?.error ?? "Unable to add equipment."));
     } else {
-      setForm({
-        name: "",
-        category: isEquipmentCategory(categoryFilter) ? categoryFilter : "",
-        total_quantity: "1",
-        serial_number: "",
-        condition_notes: "",
-      });
-      setShowAdd(false);
+      if (categorySupportsSerialNumbers(form.category)) {
+        setForm((current) => ({
+          ...current,
+          total_quantity: "1",
+          serial_number: "",
+        }));
+        setAddBarcodeFeedback(null);
+        setSaveSuccess(`Saved ${form.name.trim()}. Scan the next barcode to add another copy.`);
+      } else {
+        setForm({
+          name: "",
+          category: isEquipmentCategory(categoryFilter) ? categoryFilter : "",
+          total_quantity: "1",
+          serial_number: "",
+          condition_notes: "",
+        });
+        setShowAdd(false);
+        setSaveSuccess(null);
+      }
       refresh();
     }
     setSaving(false);
@@ -212,6 +240,7 @@ function EquipmentContent() {
       condition_notes: item.condition_notes ?? "",
     });
     setEditError(null);
+    setEditBarcodeFeedback(null);
   };
 
   const handleEdit = async (e: FormEvent) => {
@@ -223,11 +252,15 @@ function EquipmentContent() {
     if (isNaN(qty) || qty < 1) { setEditError("Quantity must be at least 1."); return; }
     if (categorySupportsSerialNumbers(editForm.category)) {
       const serialCount = parseSerialNumbers(editForm.serial_number).length;
-      if (serialCount < qty) {
+      if (qty === 1 && serialCount !== 1) {
+        setEditError("Scan exactly one barcode label for this item.");
+        return;
+      }
+      if (qty > 1 && serialCount < qty) {
         setEditError("Each item must have a barcode label.");
         return;
       }
-      if (serialCount > qty) {
+      if (qty > 1 && serialCount > qty) {
         setEditError("Barcode labels cannot be more than the quantity.");
         return;
       }
@@ -270,20 +303,118 @@ function EquipmentContent() {
       return matchSearch && matchCat;
     })
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  const groupedEquipment = filtered.reduce<EquipmentGroup[]>((groups, item) => {
+    const key = `${item.name.trim().toLowerCase()}::${item.category.trim().toLowerCase()}`;
+    const existing = groups.find((group) => group.key === key);
+    if (existing) {
+      existing.items.push(item);
+      existing.totalQuantity += item.total_quantity;
+      existing.available += item.available;
+      return groups;
+    }
+
+    groups.push({
+      key,
+      name: item.name,
+      category: item.category,
+      items: [item],
+      totalQuantity: item.total_quantity,
+      available: item.available,
+      barcodeTracked: categorySupportsSerialNumbers(item.category),
+      conditionSummary: item.condition_notes?.trim() || "",
+    });
+    return groups;
+  }, []).map((group) => {
+    const notes = Array.from(
+      new Set(group.items.map((item) => item.condition_notes?.trim()).filter(Boolean))
+    ) as string[];
+
+    return {
+      ...group,
+      items: [...group.items].sort((a, b) => a.created_at.localeCompare(b.created_at)),
+      conditionSummary:
+        notes.length === 0 ? "—" : notes.length === 1 ? notes[0] : "Varies by item",
+    };
+  });
 
   const loading = equipment === null && error === null;
   const isTeacher = currentUser?.user_metadata?.role !== "Student";
   const addCategoryHasSerials = categorySupportsSerialNumbers(form.category);
   const editCategoryHasSerials = categorySupportsSerialNumbers(editForm.category);
+  const editingLegacyGroupedSerialized =
+    editCategoryHasSerials && parseInt(editForm.total_quantity, 10) > 1;
   const openAddForm = () => {
     const selectedCategory = isEquipmentCategory(categoryFilter) ? categoryFilter : "";
     setForm((current) => ({
       ...current,
       category: selectedCategory,
+      total_quantity: categorySupportsSerialNumbers(selectedCategory) ? "1" : current.total_quantity,
       serial_number: current.category === selectedCategory ? current.serial_number : "",
     }));
     setShowAdd((visible) => !visible);
     setSaveError(null);
+    setSaveSuccess(null);
+    setAddBarcodeFeedback(null);
+  };
+
+  const applyScannedAddBarcode = (rawValue: string) => {
+    const barcode = normalizeSerialNumber(rawValue);
+    if (!barcode) return;
+    setForm((current) => ({ ...current, serial_number: barcode }));
+    setAddBarcodeFeedback(`Scanned ${barcode}.`);
+    setSaveError(null);
+  };
+
+  const applyScannedEditBarcode = (rawValue: string) => {
+    const barcode = normalizeSerialNumber(rawValue);
+    if (!barcode) return;
+    setEditForm((current) => ({ ...current, serial_number: barcode }));
+    setEditBarcodeFeedback(`Scanned ${barcode}.`);
+    setEditError(null);
+  };
+
+  const openEditGroup = (group: EquipmentGroup) => {
+    if (!group.barcodeTracked || group.items.length === 1) {
+      openEdit(group.items[0]);
+      return;
+    }
+
+    setScanToEditGroup(group);
+    setScanToEditValue("");
+    setScanToEditError(null);
+    setScanToEditSuccess(null);
+  };
+
+  const matchScannedEditItem = (rawValue: string) => {
+    const barcode = normalizeSerialNumber(rawValue);
+    if (!barcode || !scanToEditGroup) {
+      setScanToEditError("Scan the item's barcode first.");
+      setScanToEditSuccess(null);
+      return;
+    }
+
+    setScanToEditValue(barcode);
+
+    const matches = scanToEditGroup.items.filter((item) =>
+      parseSerialNumbers(item.serial_number).some((savedBarcode) => savedBarcode.toLowerCase() === barcode.toLowerCase())
+    );
+
+    if (matches.length === 0) {
+      setScanToEditError(`That barcode does not belong to ${scanToEditGroup.name}.`);
+      setScanToEditSuccess(null);
+      return;
+    }
+
+    if (matches.length > 1) {
+      setScanToEditError("That barcode is duplicated inside this group. Fix the barcodes before editing.");
+      setScanToEditSuccess(null);
+      return;
+    }
+
+    setScanToEditError(null);
+    setScanToEditSuccess(`Editing ${matches[0].name} (${barcode}).`);
+    setScanToEditGroup(null);
+    openEdit(matches[0]);
   };
 
   return (
@@ -343,6 +474,17 @@ function EquipmentContent() {
               {saveError}
             </div>
           )}
+          {saveSuccess && (
+            <div
+              className="mb-4 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
+              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}
+            >
+              <svg className="mt-0.5 shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" />
+              </svg>
+              {saveSuccess}
+            </div>
+          )}
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
@@ -367,7 +509,12 @@ function EquipmentContent() {
                 <SelectMenu
                   id="eq-cat"
                   value={form.category}
-                  onChange={(nextValue) => setForm((f) => ({ ...f, category: nextValue as EquipmentCategory | "" }))}
+                  onChange={(nextValue) => setForm((f) => ({
+                    ...f,
+                    category: nextValue as EquipmentCategory | "",
+                    total_quantity: categorySupportsSerialNumbers(nextValue) ? "1" : f.total_quantity,
+                    serial_number: categorySupportsSerialNumbers(nextValue) ? f.serial_number : "",
+                  }))}
                   placeholder="Select category"
                   options={[
                     { label: "Select category", value: "" },
@@ -385,30 +532,42 @@ function EquipmentContent() {
                   required
                   min={1}
                   max={999}
-                  value={form.total_quantity}
+                  value={addCategoryHasSerials ? "1" : form.total_quantity}
                   onChange={(e) => setForm((f) => ({ ...f, total_quantity: e.target.value }))}
+                  disabled={addCategoryHasSerials}
                   className="form-input"
                 />
-              </div>
-              {addCategoryHasSerials && (
-              <div>
-                <label className="block text-sm font-medium mb-1.5" htmlFor="eq-serial" style={{ color: "#374151" }}>
-                  IGNITE Barcodes <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <textarea
-                  id="eq-serial"
-                  rows={3}
-                  maxLength={1000}
-                  value={form.serial_number}
-                  onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
-                  placeholder="One barcode per line"
-                  className="form-input"
-                />
-                {parseInt(form.total_quantity, 10) > 1 && (
+                {addCategoryHasSerials && (
                   <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
-                    {parseSerialNumbers(form.serial_number).length} / {form.total_quantity || "0"} barcodes entered
+                    Barcode-labeled gear is added one physical item at a time.
                   </p>
                 )}
+              </div>
+              {addCategoryHasSerials && (
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1.5" htmlFor="eq-serial" style={{ color: "#374151" }}>
+                  IGNITE Barcode <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  id="eq-serial"
+                  type="text"
+                  maxLength={1000}
+                  value={form.serial_number}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, serial_number: e.target.value }));
+                    setAddBarcodeFeedback(null);
+                  }}
+                  placeholder="Scan barcode label"
+                  className="form-input"
+                />
+                {addBarcodeFeedback && (
+                  <p className="text-xs mt-1.5" style={{ color: "#047857" }}>
+                    {addBarcodeFeedback}
+                  </p>
+                )}
+                <div className="mt-3">
+                  <BarcodeScanner onDetected={applyScannedAddBarcode} />
+                </div>
               </div>
               )}
               <div className="sm:col-span-2">
@@ -447,6 +606,68 @@ function EquipmentContent() {
       )}
 
       {/* Edit form */}
+      {scanToEditGroup && (
+        <div
+          className="rounded-2xl p-6 mb-6"
+          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
+        >
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div>
+              <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
+                Scan Item To Edit
+              </h3>
+              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                {scanToEditGroup.items.length} copies of {scanToEditGroup.name} are grouped together. Scan the exact item you want to change.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setScanToEditGroup(null)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+            >
+              Cancel
+            </button>
+          </div>
+          {scanToEditError && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+              {scanToEditError}
+            </div>
+          )}
+          {scanToEditSuccess && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}>
+              {scanToEditSuccess}
+            </div>
+          )}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5" htmlFor="scan-edit-barcode" style={{ color: "#374151" }}>
+                IGNITE Barcode <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <div className="flex gap-2 flex-col sm:flex-row">
+                <input
+                  id="scan-edit-barcode"
+                  type="text"
+                  value={scanToEditValue}
+                  onChange={(e) => setScanToEditValue(e.target.value)}
+                  placeholder="Scan barcode label"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => matchScannedEditItem(scanToEditValue)}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                  style={{ background: "var(--navy)" }}
+                >
+                  Match Item
+                </button>
+              </div>
+            </div>
+            <BarcodeScanner onDetected={matchScannedEditItem} />
+          </div>
+        </div>
+      )}
+
       {editingEquipment && (
         <div
           className="rounded-2xl p-6 mb-6"
@@ -507,29 +728,65 @@ function EquipmentContent() {
                   required
                   min={1}
                   max={999}
-                  value={editForm.total_quantity}
+                  value={editCategoryHasSerials && !editingLegacyGroupedSerialized ? "1" : editForm.total_quantity}
                   onChange={(e) => setEditForm((f) => ({ ...f, total_quantity: e.target.value }))}
+                  disabled={editCategoryHasSerials && !editingLegacyGroupedSerialized}
                   className="form-input"
                 />
+                {editCategoryHasSerials && !editingLegacyGroupedSerialized && (
+                  <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
+                    Barcode-labeled gear is stored one item per row.
+                  </p>
+                )}
+                {editingLegacyGroupedSerialized && (
+                  <p className="text-xs mt-1.5" style={{ color: "#ca8a04" }}>
+                    This is a legacy grouped record. Leave quantity above 1 to keep editing it as a batch.
+                  </p>
+                )}
               </div>
               {editCategoryHasSerials && (
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-serial" style={{ color: "#374151" }}>
-                  IGNITE Barcodes <span style={{ color: "#ef4444" }}>*</span>
+                  {editingLegacyGroupedSerialized ? "IGNITE Barcodes" : "IGNITE Barcode"} <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                <textarea
-                  id="edit-eq-serial"
-                  rows={3}
-                  maxLength={1000}
-                  value={editForm.serial_number}
-                  onChange={(e) => setEditForm((f) => ({ ...f, serial_number: e.target.value }))}
-                  placeholder="One barcode per line"
-                  className="form-input"
-                />
-                {parseInt(editForm.total_quantity, 10) > 1 && (
-                  <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
-                    {parseSerialNumbers(editForm.serial_number).length} / {editForm.total_quantity || "0"} barcodes entered
-                  </p>
+                {editingLegacyGroupedSerialized ? (
+                  <>
+                    <textarea
+                      id="edit-eq-serial"
+                      rows={3}
+                      maxLength={1000}
+                      value={editForm.serial_number}
+                      onChange={(e) => setEditForm((f) => ({ ...f, serial_number: e.target.value }))}
+                      placeholder="One barcode per line"
+                      className="form-input"
+                    />
+                    <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
+                      {parseSerialNumbers(editForm.serial_number).length} / {editForm.total_quantity || "0"} barcodes entered
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      id="edit-eq-serial"
+                      type="text"
+                      maxLength={1000}
+                      value={editForm.serial_number}
+                      onChange={(e) => {
+                        setEditForm((f) => ({ ...f, serial_number: e.target.value }));
+                        setEditBarcodeFeedback(null);
+                      }}
+                      placeholder="Scan barcode label"
+                      className="form-input"
+                    />
+                    {editBarcodeFeedback && (
+                      <p className="text-xs mt-1.5" style={{ color: "#047857" }}>
+                        {editBarcodeFeedback}
+                      </p>
+                    )}
+                    <div className="mt-3">
+                      <BarcodeScanner onDetected={applyScannedEditBarcode} />
+                    </div>
+                  </>
                 )}
               </div>
               )}
@@ -673,7 +930,7 @@ function EquipmentContent() {
           </div>
         ) : error ? (
           <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
-        ) : filtered.length === 0 ? (
+        ) : groupedEquipment.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
               <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
@@ -700,67 +957,85 @@ function EquipmentContent() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((e) => {
-                  const pct = e.total_quantity > 0 ? e.available / e.total_quantity : 1;
+                {groupedEquipment.map((group) => {
+                  const pct = group.totalQuantity > 0 ? group.available / group.totalQuantity : 1;
                   const availStyle =
                     pct === 0
                       ? { background: "#fee2e2", color: "#dc2626" }
                       : pct < 0.5
                       ? { background: "#fef9c3", color: "#ca8a04" }
                       : { background: "#dcfce7", color: "#16a34a" };
-                  const availableSerials = parseSerialNumbers(e.serial_number)
-                    .filter((serial) => !e.checkedOutSerials.includes(serial.toLowerCase()));
+                  const sampleBarcodes = group.barcodeTracked
+                    ? group.items
+                        .flatMap((item) =>
+                          parseSerialNumbers(item.serial_number).filter(
+                            (serial) => !item.checkedOutSerials.includes(serial.toLowerCase())
+                          )
+                        )
+                        .slice(0, 3)
+                    : [];
+                  const groupLink = group.items[0];
 
                   return (
-                    <tr key={e.id}>
+                    <tr key={group.key}>
                       <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
                         {isTeacher ? (
-                          <Link href={`/equipment/${e.id}`} className="hover:underline">
-                            {e.name}
+                          <Link href={`/equipment/${groupLink.id}`} className="hover:underline">
+                            {group.name}
                           </Link>
                         ) : (
-                          e.name
+                          group.name
                         )}
+                        <p className="text-xs font-normal mt-1" style={{ color: "var(--muted)" }}>
+                          {group.items.length} record{group.items.length === 1 ? "" : "s"} grouped
+                        </p>
                       </td>
                       <td>
                         <span className="badge" style={{ background: "#f1f5f9", color: "var(--muted)" }}>
-                          {e.category}
+                          {group.category}
                         </span>
                       </td>
                       <td>
                         <span className="badge font-bold" style={availStyle}>
-                          {e.available} / {e.total_quantity}
+                          {group.available} / {group.totalQuantity}
                         </span>
                       </td>
                       <td className="equipment-serial-cell font-mono text-xs" style={{ color: "var(--muted)" }}>
-                        {categorySupportsSerialNumbers(e.category) && availableSerials.length > 0
-                          ? availableSerials.join(", ")
+                        {group.barcodeTracked
+                          ? sampleBarcodes.length > 0
+                            ? `${sampleBarcodes.join(", ")}${group.items.length > 3 || sampleBarcodes.length === 3 ? "…" : ""}`
+                            : "All checked out"
                           : "—"}
                       </td>
                       <td className="equipment-condition-cell text-sm" style={{ color: "var(--muted)" }}>
-                        {e.condition_notes ?? "—"}
+                        {group.conditionSummary}
                       </td>
                       <td>
                         {isTeacher ? (
                           <div className="flex items-center gap-2 whitespace-nowrap">
                             <button
-                              onClick={() => openEdit(e)}
+                              onClick={() => openEditGroup(group)}
                               className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
                               style={{ color: "var(--ignite-navy)", background: "#e8f0fe" }}
                             >
-                              Edit
+                              {group.barcodeTracked && group.items.length > 1 ? "Scan To Edit" : "Edit"}
                             </button>
                             <button
-                              onClick={() => openRemove(e)}
+                              onClick={() => openRemove(group.items[0])}
+                              disabled={group.barcodeTracked && group.items.length > 1}
                               className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
-                              style={{ color: "#dc2626", background: "rgba(220,38,38,0.08)" }}
+                              style={
+                                group.barcodeTracked && group.items.length > 1
+                                  ? { color: "#94a3b8", background: "#e2e8f0" }
+                                  : { color: "#dc2626", background: "rgba(220,38,38,0.08)" }
+                              }
                             >
                               Remove
                             </button>
                           </div>
                         ) : (
                           <Link
-                            href={`/checkout?eq=${e.id}`}
+                            href={`/checkout?eq=${groupLink.id}`}
                             className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
                             style={{ background: "#e8f0fe", color: "#005a78" }}
                           >

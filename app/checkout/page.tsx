@@ -261,8 +261,12 @@ function CheckoutContent() {
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const maxQty = selectedEquipment?.available ?? 0;
-  const serialOptions = selectedEquipment?.availableSerialNumbers ?? [];
-  const requiresSerialSelection = serialOptions.length > 0;
+  const requiresBarcodeScan = Boolean(
+    selectedEquipment && categorySupportsSerialNumbers(selectedEquipment.category)
+  );
+  const manualEquipmentOptions = equipment.filter(
+    (item) => !categorySupportsSerialNumbers(item.category)
+  );
   const timeOptions = filterTimeOptionsForPeriod(checkoutPeriod, buildTimeOptions());
   const minimumReturnTime = createMinimumReturnTime(returnDate);
   const availableTimeOptions = timeOptions.filter((time) => !minimumReturnTime || time >= minimumReturnTime);
@@ -331,10 +335,10 @@ function CheckoutContent() {
     const qty = parseInt(quantity, 10);
     const finalStudentId = ownStudentId ?? studentId;
     if (!finalStudentId) { setSubmitError("Please select a student."); setSubmitting(false); return; }
-    if (!equipmentId) { setSubmitError("Please select an equipment item."); setSubmitting(false); return; }
+    if (!equipmentId) { setSubmitError("Scan a barcode or select an equipment item."); setSubmitting(false); return; }
     if (isNaN(qty) || qty < 1) { setSubmitError("Quantity must be at least 1."); setSubmitting(false); return; }
     if (qty > maxQty) { setSubmitError(`Only ${maxQty} unit(s) available.`); setSubmitting(false); return; }
-    if (requiresSerialSelection && !serialNumber) { setSubmitError("Please select a barcode label."); setSubmitting(false); return; }
+    if (requiresBarcodeScan && !serialNumber) { setSubmitError("Scan the item's barcode to check it out."); setSubmitting(false); return; }
     if (!returnDate || !selectedReturnTime) { setSubmitError("Please choose when the item should be returned."); setSubmitting(false); return; }
     const returnBy = new Date(`${returnDate}T${selectedReturnTime}:00`);
     if (Number.isNaN(returnBy.getTime()) || returnBy.getTime() <= Date.now()) {
@@ -544,11 +548,14 @@ function CheckoutContent() {
                 <div className="mt-3">
                   <BarcodeScanner onDetected={applyScannedBarcode} disabled={loadingData} />
                 </div>
+                <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+                  Barcode-labeled equipment must be checked out by scanning the sticker.
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="co-eq" style={{ color: "#374151" }}>
-                  Equipment <span style={{ color: "#ef4444" }}>*</span>
+                  Equipment Without Barcode Labels
                 </label>
                 <SelectMenu
                   id="co-eq"
@@ -557,14 +564,15 @@ function CheckoutContent() {
                     setEquipmentId(nextValue);
                     setQuantity("1");
                     setSerialNumber("");
+                    setBarcodeInput("");
                     setBarcodeFeedback(null);
                   }}
-                  placeholder="Select equipment…"
+                  placeholder="Select non-barcoded equipment…"
                   searchable
-                  searchPlaceholder="Search equipment..."
+                  searchPlaceholder="Search non-barcoded equipment..."
                   options={[
-                    { label: "Select equipment…", value: "" },
-                    ...equipment.map((eq) => ({
+                    { label: "Select non-barcoded equipment…", value: "" },
+                    ...manualEquipmentOptions.map((eq) => ({
                       label: `${eq.name} — ${eq.available} available${eq.available === 0 ? " (none left)" : ""}`,
                       value: eq.id,
                       disabled: eq.available === 0,
@@ -573,35 +581,12 @@ function CheckoutContent() {
                 />
               </div>
 
-              {requiresSerialSelection && (
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" htmlFor="co-serial" style={{ color: "#374151" }}>
-                    Barcode Label <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <SelectMenu
-                    id="co-serial"
-                    value={serialNumber}
-                    onChange={(nextValue) => {
-                      setSerialNumber(nextValue);
-                      setBarcodeInput(nextValue);
-                      setBarcodeFeedback(nextValue ? `Matched ${selectedEquipment?.name ?? "equipment"} (${nextValue}).` : null);
-                    }}
-                    placeholder="Select barcode label..."
-                    disabled={serialOptions.length === 0}
-                    options={[
-                      { label: "Select barcode label...", value: "" },
-                      ...serialOptions.map((serial) => ({ label: serial, value: serial })),
-                    ]}
-                  />
-                </div>
-              )}
-
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="co-qty" style={{ color: "#374151" }}>
                   Quantity <span style={{ color: "#ef4444" }}>*</span>
                   {selectedEquipment && (
                     <span className="ml-2 font-normal text-xs" style={{ color: "var(--muted)" }}>
-                    {requiresSerialSelection ? "(barcode-labeled items are checked out one at a time)" : `(max ${maxQty} available)`}
+                    {requiresBarcodeScan ? "(barcode-labeled items are checked out one at a time)" : `(max ${maxQty} available)`}
                     </span>
                   )}
                 </label>
@@ -609,10 +594,10 @@ function CheckoutContent() {
                   id="co-qty"
                   type="number"
                   min={1}
-                  max={requiresSerialSelection ? 1 : maxQty || 1}
-                  value={requiresSerialSelection ? "1" : quantity}
+                  max={requiresBarcodeScan ? 1 : maxQty || 1}
+                  value={requiresBarcodeScan ? "1" : quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  disabled={requiresSerialSelection}
+                  disabled={requiresBarcodeScan}
                   className="form-input"
                 />
               </div>

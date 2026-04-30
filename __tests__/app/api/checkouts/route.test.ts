@@ -255,7 +255,7 @@ describe("POST /api/checkouts", () => {
         })
       );
       expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/barcode/i);
+      expect((await res.json()).error).toMatch(/scan/i);
     });
 
     it("returns 400 when quantity > 1 is requested for a serialized item", async () => {
