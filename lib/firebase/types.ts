@@ -22,5 +22,5 @@ export type AuthSession = {
 
 export type QueryResult<T> = {
   data: T | null;
-  error: { message: string } | null;
+  error: { message: string; code?: string } | null;
 };

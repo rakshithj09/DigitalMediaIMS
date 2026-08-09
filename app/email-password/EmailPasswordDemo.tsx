@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SelectMenu from "@/components/ui/select-menu";
 import { firebaseFetch } from "@/lib/firebase/auth-fetch";
+import { formatAuthError } from "@/lib/firebase/auth-errors";
 import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 import type { AppUser as User } from "@/lib/firebase/types";
 
@@ -59,7 +60,7 @@ export default function EmailPasswordDemo({ user }: Props) {
     try {
       if (mode === "signIn") {
         const { error: signInError } = await firebaseClient.auth.signInWithPassword({ email, password });
-        if (signInError) setError(signInError.message ?? "Sign-in failed");
+        if (signInError) setError(formatAuthError(signInError, "Unable to sign in. Please try again."));
         else setMessage("Signed in successfully.");
       } else {
         const resp = await firebaseFetch("/api/auth/create-account", {
@@ -73,7 +74,7 @@ export default function EmailPasswordDemo({ user }: Props) {
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) {
-          setError(String(data?.error?.message ?? data?.error ?? "Account creation failed."));
+          setError(formatAuthError(String(data?.error?.message ?? data?.error ?? ""), "Account creation failed."));
           return;
         }
         setMessage("Account created. Check your email and verify your account before signing in.");
@@ -82,8 +83,7 @@ export default function EmailPasswordDemo({ user }: Props) {
         setConfirmPassword("");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg || "An error occurred.");
+      setError(formatAuthError(err instanceof Error ? err.message : String(err), "An error occurred."));
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock } from "lucide-react";
+import { formatAuthError } from "@/lib/firebase/auth-errors";
 import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 export default function ResetPasswordPage() {
@@ -52,7 +53,7 @@ export default function ResetPasswordPage() {
       ? await firebaseClient.auth.confirmPasswordReset(resetCode, password)
       : await firebaseClient.auth.updateUser({ password });
     if (updateError) {
-      setError(updateError.message);
+      setError(formatAuthError(updateError, "Unable to update password."));
     } else {
       setMessage("Password updated. Redirecting to sign in…");
       await firebaseClient.auth.signOut();

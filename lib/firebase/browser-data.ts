@@ -48,6 +48,16 @@ function normalizeRow(id: string, data: Row) {
   return Object.fromEntries(Object.entries({ id, ...data }).map(([key, value]) => [key, toIsoValue(value)]));
 }
 
+function toErrorResult(err: unknown) {
+  const code = typeof err === "object" && err !== null && "code" in err && typeof err.code === "string"
+    ? err.code
+    : undefined;
+  return {
+    message: err instanceof Error ? err.message : String(err),
+    ...(code ? { code } : {}),
+  };
+}
+
 async function toAppUser(user: FirebaseUser | null): Promise<AppUser | null> {
   if (!user) return null;
   const token = await getIdTokenResult(user, true).catch(() => null);
@@ -162,12 +172,12 @@ class FirebaseQuery<T = Row> implements PromiseLike<QueryResult<T[]>> {
       }
       return { data: rows, error: null };
     } catch (err) {
-      return { data: null, error: { message: err instanceof Error ? err.message : String(err) } };
+      return { data: null, error: toErrorResult(err) };
     }
   }
 }
 
-type AuthResponse<T> = Promise<{ data: T; error: { message: string } | null }>;
+type AuthResponse<T> = Promise<{ data: T; error: { message: string; code?: string } | null }>;
 
 type FirebaseDataClient = {
   auth: {
@@ -217,7 +227,7 @@ export function createFirebaseDataClient(): FirebaseDataClient {
           await signInWithEmailAndPassword(auth, email, password);
           return { data: {}, error: null };
         } catch (err) {
-          return { data: null, error: { message: err instanceof Error ? err.message : String(err) } };
+          return { data: null, error: toErrorResult(err) };
         }
       },
       async resetPasswordForEmail(email: string, options?: { redirectTo?: string }) {
@@ -225,7 +235,7 @@ export function createFirebaseDataClient(): FirebaseDataClient {
           await sendPasswordResetEmail(auth, email, options?.redirectTo ? { url: options.redirectTo } : undefined);
           return { data: {}, error: null };
         } catch (err) {
-          return { data: null, error: { message: err instanceof Error ? err.message : String(err) } };
+          return { data: null, error: toErrorResult(err) };
         }
       },
       async updateUser({ password }: { password?: string }) {
@@ -234,7 +244,7 @@ export function createFirebaseDataClient(): FirebaseDataClient {
           await updatePassword(auth.currentUser, password);
           return { data: {}, error: null };
         } catch (err) {
-          return { data: null, error: { message: err instanceof Error ? err.message : String(err) } };
+          return { data: null, error: toErrorResult(err) };
         }
       },
       async confirmPasswordReset(code: string, password: string) {
@@ -242,7 +252,7 @@ export function createFirebaseDataClient(): FirebaseDataClient {
           await confirmPasswordReset(auth, code, password);
           return { data: {}, error: null };
         } catch (err) {
-          return { data: null, error: { message: err instanceof Error ? err.message : String(err) } };
+          return { data: null, error: toErrorResult(err) };
         }
       },
       async signOut() {

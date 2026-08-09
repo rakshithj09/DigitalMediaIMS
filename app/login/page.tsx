@@ -8,6 +8,7 @@ import LoginSignupFrame, { authInputClassName } from "@/components/ui/login-sign
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatAuthError } from "@/lib/firebase/auth-errors";
 import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 export default function LoginPage() {
@@ -67,10 +68,7 @@ export default function LoginPage() {
     try {
       const { error: authError } = await firebaseClient.auth.signInWithPassword({ email, password });
       if (authError) {
-        const message = authError.message.toLowerCase().includes("email not confirmed")
-          ? "Please verify your email before signing in."
-          : authError.message;
-        setError(message);
+        setError(formatAuthError(authError, "Unable to sign in. Please try again."));
         setLoading(false);
       }
       else router.replace("/");
@@ -96,7 +94,7 @@ export default function LoginPage() {
     const { error: resetError } = await firebaseClient.auth.resetPasswordForEmail(emailToReset, { redirectTo });
 
     if (resetError) {
-      setError(resetError.message);
+      setError(formatAuthError(resetError, "Unable to send password reset email."));
     } else {
       setMessage("Password reset email sent. Check your inbox.");
       setShowReset(false);
