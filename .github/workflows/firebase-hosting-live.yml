@@ -68,12 +68,9 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
           } > .env
 
-      - name: Authenticate Firebase CLI
-        run: |
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" > "$RUNNER_TEMP/firebase-service-account.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-service-account.json" >> "$GITHUB_ENV"
-        env:
-          FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
-
       - name: Deploy to Firebase Hosting
-        run: npx firebase deploy --only hosting --project igndigitalmedia --non-interactive --force
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
+          projectId: igndigitalmedia
+          channelId: live
