@@ -14,13 +14,22 @@ import { filterTimeOptionsForPeriod, nextWeekday } from "@/app/lib/return-window
 import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 import { firebaseFetch } from "@/lib/firebase/auth-fetch";
 import { Student, Equipment, Checkout } from "@/app/lib/types";
-import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
+import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
 import { formatDateTime, formatRemainingTime, getCheckoutDeadlineMeta } from "@/lib/checkout-deadlines";
 
 type EquipmentWithAvail = Equipment & {
   available: number;
   availableSerialNumbers: string[];
   allSerialNumbers: string[];
+};
+
+type CheckoutOptionsResponse = {
+  role?: string;
+  period?: "AM" | "PM" | null;
+  students?: Student[];
+  equipment?: EquipmentWithAvail[];
+  activeCheckouts?: Checkout[];
+  error?: string | { message?: string };
 };
 
 function toLocalDateInputValue(date: Date) {
@@ -131,23 +140,9 @@ function CheckoutContent() {
 
         if (!u) return;
 
-        const meta = (u as unknown as { user_metadata?: { role?: string } }).user_metadata ?? {};
+        const meta = (u as unknown as { user_metadata?: { role?: string; period?: string } }).user_metadata ?? {};
         if (meta.role === "Student") {
-          const found = (await createFirebaseDataClient()
-            .from<{ id?: string; name?: string; period?: string }>("students")
-            .select("id, name, period")
-            .eq("user_id", u.id)
-            .eq("is_active", true)
-            .limit(1)
-            .maybeSingle()) as { data?: { id?: string; name?: string; period?: string } | null; error?: unknown } | null;
-          if (!mounted) return;
-          const foundId = found?.data?.id;
-          if (foundId) {
-            setStudentId(foundId);
-            setOwnStudentId(foundId);
-            setOwnStudentName(found.data?.name ?? null);
-            setOwnStudentPeriod(found.data?.period === "PM" ? "PM" : "AM");
-          }
+          setOwnStudentPeriod(meta.period === "PM" ? "PM" : "AM");
         }
       } catch {
         // ignore
@@ -163,109 +158,57 @@ function CheckoutContent() {
     if (!authResolved) return;
 
     let cancelled = false;
-    const isStudent = currentRole === "Student";
     queueMicrotask(() => setLoadFailed(false));
-
-    if (isStudent && !ownStudentId) {
-      queueMicrotask(() => {
-        setStudents([]);
-        setEquipment([]);
-        setActiveCheckouts([]);
-        setLoadingData(false);
-      });
-      return;
-    }
-
     queueMicrotask(() => setLoadingData(true));
 
-    const studentsQuery = createFirebaseDataClient()
-      .from<Student>("students")
-      .select("id, name, student_id, user_id, email, period, is_active, created_at")
-      .eq("is_active", true);
-
-    if (isStudent && currentUser?.id) {
-      studentsQuery.eq("user_id", currentUser.id);
-    } else {
-      studentsQuery.eq("period", checkoutPeriod).order("name");
-    }
-
-    const activeCheckoutsQuery = createFirebaseDataClient()
-      .from<Checkout>("checkouts")
-      .select(
-        `id, student_id, equipment_id, quantity, serial_number, checked_out_at, due_at, notes, period,
-         student:students(id, name, student_id, email),
-         equipment:equipment(id, name, category)`
-      )
-      .is("checked_in_at", null)
-      .eq("period", checkoutPeriod)
-      .order("checked_out_at", { ascending: false });
-
-    if (isStudent && ownStudentId) {
-      activeCheckoutsQuery.eq("student_id", ownStudentId);
-    }
-
-    Promise.all([
-      studentsQuery,
-      createFirebaseDataClient().from<Equipment>("equipment").select("*").eq("is_active", true).order("name"),
-      isStudent
-        ? Promise.resolve({ data: [] as Pick<Checkout, "equipment_id" | "quantity" | "serial_number">[], error: null })
-        : createFirebaseDataClient()
-            .from<Pick<Checkout, "equipment_id" | "quantity" | "serial_number">>("checkouts")
-            .select("equipment_id, quantity, serial_number")
-            .is("checked_in_at", null),
-      activeCheckoutsQuery,
-    ]).then(([{ data: stuData, error: stuError }, { data: eqData, error: eqError }, { data: coSums, error: sumsError }, { data: coData, error: coError }]) => {
-      if (cancelled) return;
-      const loadError = stuError ?? eqError ?? sumsError ?? coError;
-      if (loadError) {
-        const message = loadError.message ?? "Unable to load checkout data.";
-        setSubmitError(
-          message.includes("checkouts.serial_number")
-            ? "Firestore data is missing barcode labels for checkouts. Refresh and try again."
-            : message.includes("checkouts.due_at")
-            ? "Firestore data is missing return deadlines for checkouts. Refresh and try again."
-            : message
-        );
-        setLoadFailed(true);
-        setStudents([]);
-        setEquipment([]);
-        setActiveCheckouts([]);
-        setLoadingData(false);
-        return;
-      }
-
-      setStudents(stuData ?? []);
-
-      const checkedOutMap = new Map<string, number>();
-      const checkedOutSerials = new Map<string, Set<string>>();
-      (coSums ?? []).forEach((c) => {
-        checkedOutMap.set(c.equipment_id, (checkedOutMap.get(c.equipment_id) ?? 0) + c.quantity);
-        const serial = normalizeSerialNumber(c.serial_number);
-        if (serial) {
-          const serials = checkedOutSerials.get(c.equipment_id) ?? new Set<string>();
-          serials.add(serial.toLowerCase());
-          checkedOutSerials.set(c.equipment_id, serials);
+    firebaseFetch(`/api/checkouts/options?period=${encodeURIComponent(period)}`, { cache: "no-store" })
+      .then(async (resp) => {
+        const data = await resp.json().catch(() => ({})) as CheckoutOptionsResponse;
+        if (!resp.ok) {
+          const message = typeof data.error === "string" ? data.error : data.error?.message;
+          throw new Error(message ?? "Unable to load checkout data.");
         }
-      });
-      const withAvail = (eqData ?? []).map((e) => ({
-        ...e,
-        available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
-        allSerialNumbers: categorySupportsSerialNumbers(e.category)
-          ? parseSerialNumbers(e.serial_number)
-          : [],
-        availableSerialNumbers: categorySupportsSerialNumbers(e.category)
-          ? parseSerialNumbers(e.serial_number).filter(
-              (serial) => !(checkedOutSerials.get(e.id) ?? new Set<string>()).has(serial.toLowerCase())
-            )
-          : [],
+        return data;
+      })
+      .then((data) => {
+      if (cancelled) return;
+      const nextStudents = data.students ?? [];
+      const ownStudent = currentRole === "Student" ? nextStudents[0] : null;
+      setStudents(nextStudents);
+      if (ownStudent) {
+        setStudentId(ownStudent.id);
+        setOwnStudentId(ownStudent.id);
+        setOwnStudentName(ownStudent.name ?? null);
+        setOwnStudentPeriod(ownStudent.period === "PM" ? "PM" : "AM");
+      } else if (currentRole === "Student") {
+        setStudentId("");
+        setOwnStudentId(null);
+        setOwnStudentName(null);
+        setOwnStudentPeriod(data.period === "PM" ? "PM" : data.period === "AM" ? "AM" : ownStudentPeriod);
+      }
+      setEquipment((data.equipment ?? []).map((item) => {
+        const allSerialNumbers = item.allSerialNumbers ?? (categorySupportsSerialNumbers(item.category) ? parseSerialNumbers(item.serial_number) : []);
+        return {
+          ...item,
+          available: Number(item.available ?? item.total_quantity ?? 0),
+          allSerialNumbers,
+          availableSerialNumbers: item.availableSerialNumbers ?? allSerialNumbers,
+        };
       }));
-      setEquipment(withAvail);
-      setActiveCheckouts((coData as unknown as Checkout[]) ?? []);
+      setActiveCheckouts(data.activeCheckouts ?? []);
+      setLoadingData(false);
+    }).catch(() => {
+      if (cancelled) return;
+      setSubmitError("Unable to load checkout data. Please refresh or contact your teacher.");
+      setLoadFailed(true);
+      setStudents([]);
+      setEquipment([]);
+      setActiveCheckouts([]);
       setLoadingData(false);
     });
 
     return () => { cancelled = true; };
-  }, [authResolved, checkoutPeriod, currentRole, currentUser?.id, ownStudentId, period, tick]);
+  }, [authResolved, currentRole, ownStudentPeriod, period, tick]);
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const maxQty = selectedEquipment?.available ?? 0;
