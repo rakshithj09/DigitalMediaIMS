@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 function toLocalDateInputValue(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -110,9 +111,7 @@ export default function DatePicker({
         aria-expanded={open}
       >
         <span className={value ? "" : "text-slate-400"}>{formatDisplayDate(value, placeholder)}</span>
-        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <ChevronDown size={16} strokeWidth={2.2} />
       </button>
 
       {open && (
@@ -136,9 +135,7 @@ export default function DatePicker({
                 disabled={disablePrevMonth}
                 aria-label="Previous month"
               >
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
-                  <path d="m15 18-6-6 6-6" />
-                </svg>
+                <ChevronLeft size={14} strokeWidth={2.4} />
               </button>
               <button
                 type="button"
@@ -146,9 +143,7 @@ export default function DatePicker({
                 onClick={() => setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
                 aria-label="Next month"
               >
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
+                <ChevronRight size={14} strokeWidth={2.4} />
               </button>
             </div>
           </div>

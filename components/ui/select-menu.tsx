@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Check, ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -104,17 +105,7 @@ export default function SelectMenu({
         <span className={cn("truncate", !selectedOption && "text-slate-400")}>
           {selectedOption?.label ?? placeholder}
         </span>
-        <svg
-          className={cn("shrink-0 transition-transform", open && "rotate-180")}
-          width="16"
-          height="16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          viewBox="0 0 24 24"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <ChevronDown className={cn("shrink-0 transition-transform", open && "rotate-180")} size={16} strokeWidth={2.2} />
       </button>
 
       {open && !disabled && (
@@ -164,11 +155,7 @@ export default function SelectMenu({
                 )}
               >
                 <span className="truncate">{option.label}</span>
-                {isSelected && (
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
-                    <path d="m5 12 5 5L20 7" />
-                  </svg>
-                )}
+                {isSelected && <Check size={14} strokeWidth={2.4} />}
               </button>
             );
           })}

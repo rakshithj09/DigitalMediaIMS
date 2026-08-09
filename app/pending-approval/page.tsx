@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TriangleAlert } from "lucide-react";
 import LoginSignupFrame from "@/components/ui/login-signup";
 import { Button } from "@/components/ui/button";
 import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
@@ -67,11 +68,7 @@ export default function PendingApprovalPage() {
           className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl"
           style={{ background: "#fff7ed", color: "#c2410c" }}
         >
-          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M12 3 21 19H3L12 3Z" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M12 9v4" strokeLinecap="round" />
-            <path d="M12 16h.01" strokeLinecap="round" />
-          </svg>
+          <TriangleAlert size={22} strokeWidth={2} />
         </div>
 
         <h1 className="text-2xl font-bold leading-none" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>

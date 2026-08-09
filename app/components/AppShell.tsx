@@ -4,49 +4,29 @@ import { useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  History,
+  IdCard,
+  LayoutDashboard,
+  LoaderCircle,
+  UserRoundCog,
+  UsersRound,
+} from "lucide-react";
 import type { AppUser as User, AuthSession as Session } from "@/lib/firebase/types";
 import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 import { PeriodProvider, usePeriod } from "@/app/lib/period-context";
 
 /* ── Nav icons ──────────────────────────────────────── */
 const ICONS: Record<string, ReactNode> = {
-  "/": (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
-    </svg>
-  ),
-  "/students": (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="9" cy="7" r="4"/><path d="M3 21v-2a6 6 0 0 1 6-6"/><circle cx="17" cy="14" r="3"/><path d="M14 21v-1a3 3 0 0 1 6 0v1"/>
-    </svg>
-  ),
-  "/equipment": (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-      <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-    </svg>
-  ),
-  "/checkout": (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
-    </svg>
-  ),
-  "/my-info": (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/><path d="M9 12h6"/>
-    </svg>
-  ),
-  "/history": (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
-    </svg>
-  ),
-  "/profile": (
-    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/><path d="M18 7h3"/><path d="M19.5 5.5v3"/>
-    </svg>
-  ),
+  "/": <LayoutDashboard size={16} strokeWidth={1.9} />,
+  "/students": <UsersRound size={16} strokeWidth={1.9} />,
+  "/equipment": <BriefcaseBusiness size={16} strokeWidth={1.9} />,
+  "/checkout": <ArrowRight size={16} strokeWidth={1.9} />,
+  "/my-info": <IdCard size={16} strokeWidth={1.9} />,
+  "/history": <History size={16} strokeWidth={1.9} />,
+  "/profile": <UserRoundCog size={16} strokeWidth={1.9} />,
 };
 
 const NAV = [
@@ -286,10 +266,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           style={{ background: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
           <Image src="/ignite-logo.png" alt="Ignite logo" width={36} height={36} className="object-contain" priority />
         </div>
-        <svg className="animate-spin mx-auto mb-3" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" strokeWidth="2.5">
-          <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
-          <path d="M12 2a10 10 0 0 1 10 10" />
-        </svg>
+        <LoaderCircle className="animate-spin mx-auto mb-3" size={18} color="var(--mint)" strokeWidth={2.5} />
         <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.38)" }}>Loading…</p>
       </div>
     </div>

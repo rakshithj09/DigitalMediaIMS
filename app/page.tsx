@@ -2,6 +2,17 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import {
+  Activity,
+  ArrowRight,
+  BriefcaseBusiness,
+  Check,
+  CircleAlert,
+  Clock,
+  LoaderCircle,
+  PackageCheck,
+  UsersRound,
+} from "lucide-react";
 import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import PeriodBadge from "@/app/components/PeriodBadge";
@@ -136,9 +147,7 @@ function DashboardContent() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
             style={{ background: "var(--navy)", boxShadow: "0 2px 8px rgba(0,90,120,0.22)" }}
           >
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
-            </svg>
+            <ArrowRight size={14} strokeWidth={2.5} />
             Check Out Item
           </Link>
         </div>
@@ -147,14 +156,14 @@ function DashboardContent() {
           <StatCard
             label="Items You Have"
             value={totalItemsOut}
-            icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>}
+            icon={<BriefcaseBusiness size={20} strokeWidth={2} />}
             iconBg="#e8f0fe"
             iconColor="#005a78"
           />
           <StatCard
             label="Needs Attention"
             value={attentionCount}
-            icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5" /><path d="M12 16h.01" /></svg>}
+            icon={<CircleAlert size={20} strokeWidth={2} />}
             iconBg="#fee2e2"
             iconColor="#dc2626"
           />
@@ -162,7 +171,7 @@ function DashboardContent() {
             label={nextDueCheckout ? "Next Due" : "Ready To Go"}
             value={nextDueMeta ? Math.max(1, Math.round(Math.abs(nextDueMeta.remainingMs) / 3600000)) : 0}
             suffix={nextDueCheckout ? "h" : ""}
-            icon={<svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></svg>}
+            icon={<Clock size={20} strokeWidth={2} />}
             iconBg="#dcfce7"
             iconColor="#16a34a"
           />
@@ -184,9 +193,7 @@ function DashboardContent() {
             ) : list.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
-                  <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+                  <Check size={22} color="#94a3b8" strokeWidth={1.75} />
                 </div>
                 <p className="font-medium text-sm" style={{ color: "#374151" }}>No equipment checked out</p>
                 <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>You are clear for {period} period.</p>
@@ -269,13 +276,7 @@ function DashboardContent() {
         <StatCard
           label="Items Checked Out"
           value={totalItemsOut}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" viewBox="0 0 24 24">
-              <path d="M4 8.5 12 5l8 3.5-8 3.5-8-3.5Z" />
-              <path d="M4 8.5V16l8 3 8-3V8.5" />
-              <path d="M12 12v7" />
-            </svg>
-          }
+          icon={<PackageCheck size={20} strokeWidth={2} />}
           iconBg="#fef9c3"
           iconColor="#ca8a04"
         />
@@ -283,12 +284,7 @@ function DashboardContent() {
           label="Students with Items"
           value={studentsWithCheckouts}
           icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+            <UsersRound size={20} strokeWidth={2} />
           }
           iconBg="#dcfce7"
           iconColor="#16a34a"
@@ -312,10 +308,7 @@ function DashboardContent() {
         {loading ? (
           <div className="px-6 py-16 text-center">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
-              <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
+              <LoaderCircle className="animate-spin" size={16} color="#94a3b8" strokeWidth={2.5} />
             </div>
             <p className="text-sm" style={{ color: "var(--muted)" }}>Loading checkouts…</p>
           </div>
@@ -327,9 +320,7 @@ function DashboardContent() {
               className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
               style={{ background: "#f8fafc" }}
             >
-              <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-              </svg>
+              <Activity size={22} color="#94a3b8" strokeWidth={1.75} />
             </div>
             <p className="font-medium text-sm" style={{ color: "#374151" }}>All clear</p>
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>

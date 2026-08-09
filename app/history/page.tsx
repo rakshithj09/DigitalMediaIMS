@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Clock, LoaderCircle, Search, X } from "lucide-react";
 import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import DatePicker from "@/app/components/DatePicker";
@@ -110,13 +111,12 @@ function HistoryContent() {
         style={{ background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 4px 16px rgba(15,36,55,0.05)" }}
       >
         <div className="relative">
-          <svg
+          <Search
             className="absolute pointer-events-none"
             style={{ left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}
-            width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
-          >
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+            size={14}
+            strokeWidth={2}
+          />
           <input
             type="search"
             placeholder="Filter by student…"
@@ -169,9 +169,7 @@ function HistoryContent() {
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
             style={{ color: "var(--ignite-navy)", background: "#f1f5f9" }}
           >
-            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={12} strokeWidth={2.5} />
             Clear
           </button>
         )}
@@ -189,10 +187,7 @@ function HistoryContent() {
         {loading ? (
           <div className="px-6 py-16 text-center">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
-              <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
+              <LoaderCircle className="animate-spin" size={16} color="#94a3b8" strokeWidth={2.5} />
             </div>
             <p className="text-sm" style={{ color: "var(--muted)" }}>Loading history…</p>
           </div>
@@ -201,9 +196,7 @@ function HistoryContent() {
         ) : filtered.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
-              <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" />
-              </svg>
+              <Clock size={22} color="#94a3b8" strokeWidth={1.75} />
             </div>
             <p className="font-medium text-sm" style={{ color: "#374151" }}>No records found</p>
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>

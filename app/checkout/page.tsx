@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
+import { ArrowDownLeft, ArrowUpRight, Check, CheckCircle2, CircleAlert, LoaderCircle } from "lucide-react";
 import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
@@ -435,9 +436,7 @@ function CheckoutContent() {
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
               style={{ background: "#e8f0fe" }}
             >
-              <svg width="16" height="16" fill="none" stroke="#005a78" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 3h5v5" /><path d="M21 3 9 15" /><path d="M3 9v11a2 2 0 0 0 2 2h11" />
-              </svg>
+              <ArrowUpRight size={16} color="#005a78" strokeWidth={2} />
             </div>
             <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
               Check Out Equipment
@@ -449,9 +448,7 @@ function CheckoutContent() {
               className="mb-5 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
               style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a" }}
             >
-              <svg className="mt-0.5 shrink-0" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" />
-              </svg>
+              <CheckCircle2 className="mt-0.5 shrink-0" size={15} strokeWidth={2} />
               Checkout recorded successfully!
             </div>
           )}
@@ -461,19 +458,14 @@ function CheckoutContent() {
               className="mb-5 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
               style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}
             >
-              <svg className="mt-0.5 shrink-0" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
+              <CircleAlert className="mt-0.5 shrink-0" size={15} strokeWidth={2} />
               {submitError}
             </div>
           )}
 
           {loadingData ? (
             <div className="py-8 text-center">
-              <svg className="animate-spin mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
+              <LoaderCircle className="animate-spin mx-auto" size={20} color="#94a3b8" strokeWidth={2.5} />
               <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>Loading…</p>
             </div>
           ) : currentRole === "Student" && !ownStudentId ? (
@@ -666,10 +658,7 @@ function CheckoutContent() {
               >
                 {submitting ? (
                   <>
-                    <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                      <path d="M12 2a10 10 0 0 1 10 10" />
-                    </svg>
+                    <LoaderCircle className="animate-spin" size={15} strokeWidth={2.5} />
                     Recording…
                   </>
                 ) : "Confirm Checkout"}
@@ -689,9 +678,7 @@ function CheckoutContent() {
                 className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                 style={{ background: "#dcfce7" }}
               >
-                <svg width="16" height="16" fill="none" stroke="#16a34a" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 3 15 15" /><path d="M10 15h5v-5" /><path d="M21 9v11a2 2 0 0 1-2 2H8" />
-                </svg>
+                <ArrowDownLeft size={16} color="#16a34a" strokeWidth={2} />
               </div>
               <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
                 Check In Equipment
@@ -709,10 +696,7 @@ function CheckoutContent() {
 
           {activeCheckouts === null ? (
             <div className="py-8 text-center">
-              <svg className="animate-spin mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
+              <LoaderCircle className="animate-spin mx-auto" size={20} color="#94a3b8" strokeWidth={2.5} />
               <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>Loading…</p>
             </div>
           ) : visibleActiveCheckouts.length === 0 ? (
@@ -721,9 +705,7 @@ function CheckoutContent() {
                 className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
                 style={{ background: "#f8fafc" }}
               >
-                <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.75" viewBox="0 0 24 24">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+                <Check size={22} color="#94a3b8" strokeWidth={1.75} />
               </div>
               <p className="font-medium text-sm" style={{ color: "#374151" }}>All clear</p>
               <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
