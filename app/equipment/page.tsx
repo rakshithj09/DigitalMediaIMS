@@ -842,19 +842,21 @@ function EquipmentContent() {
 
                   return (
                     <tr key={group.key}>
-                      <td className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
-                        {isTeacher ? (
-                          <Link href={`/equipment/${groupLink.id}`} className="hover:underline">
-                            {group.name}
-                          </Link>
-                        ) : (
-                          group.name
-                        )}
-                        <p className="text-xs font-normal mt-1" style={{ color: "var(--muted)" }}>
-                          {group.barcodeTracked
-                            ? `Barcode ${parseSerialNumbers(group.items[0].serial_number)[0] ?? "not set"}`
-                            : `${group.items.length} record${group.items.length === 1 ? "" : "s"} grouped`}
-                        </p>
+                      <td className="equipment-name-cell font-semibold" style={{ color: "var(--ignite-navy)" }}>
+                        <div className="equipment-name-wrap">
+                          {isTeacher ? (
+                            <Link href={`/equipment/${groupLink.id}`} className="equipment-name-link hover:underline">
+                              {group.name}
+                            </Link>
+                          ) : (
+                            <span className="equipment-name-link">{group.name}</span>
+                          )}
+                          <p className="equipment-row-subtext">
+                            {group.barcodeTracked
+                              ? "Individual barcode item"
+                              : `${group.items.length} record${group.items.length === 1 ? "" : "s"} grouped`}
+                          </p>
+                        </div>
                       </td>
                       <td>
                         <span className="badge" style={{ background: "#f1f5f9", color: "var(--muted)" }}>
@@ -867,14 +869,25 @@ function EquipmentContent() {
                         </span>
                       </td>
                       <td className="equipment-serial-cell font-mono text-xs" style={{ color: "var(--muted)" }}>
-                        {group.barcodeTracked
-                          ? sampleBarcodes.length > 0
-                            ? `${sampleBarcodes.join(", ")}${group.items.length > 3 || sampleBarcodes.length === 3 ? "…" : ""}`
-                            : "All checked out"
-                          : "—"}
+                        <span
+                          className="equipment-serial-value"
+                          title={
+                            group.barcodeTracked
+                              ? parseSerialNumbers(group.items[0].serial_number)[0] ?? "Barcode not set"
+                              : undefined
+                          }
+                        >
+                          {group.barcodeTracked
+                            ? sampleBarcodes.length > 0
+                              ? `${sampleBarcodes.join(", ")}${group.items.length > 3 || sampleBarcodes.length === 3 ? "..." : ""}`
+                              : "All checked out"
+                            : "-"}
+                        </span>
                       </td>
                       <td className="equipment-condition-cell text-sm" style={{ color: "var(--muted)" }}>
-                        {group.conditionSummary}
+                        <span className="equipment-condition-value" title={group.conditionSummary === "—" ? undefined : group.conditionSummary}>
+                          {group.conditionSummary}
+                        </span>
                       </td>
                       <td>
                         {isTeacher ? (

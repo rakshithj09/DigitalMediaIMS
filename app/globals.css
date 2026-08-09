@@ -303,11 +303,11 @@ body {
 
 .equipment-table {
   table-layout: fixed;
-  min-width: 900px;
+  min-width: 1060px;
 }
 .equipment-table th:nth-child(1),
 .equipment-table td:nth-child(1) {
-  width: 24%;
+  width: 28%;
 }
 .equipment-table th:nth-child(2),
 .equipment-table td:nth-child(2) {
@@ -319,21 +319,48 @@ body {
 }
 .equipment-table th:nth-child(4),
 .equipment-table td:nth-child(4) {
-  width: 14%;
+  width: 20%;
 }
 .equipment-table th:nth-child(5),
 .equipment-table td:nth-child(5) {
-  width: 22%;
+  width: 14%;
 }
 .equipment-table th:nth-child(6),
 .equipment-table td:nth-child(6) {
-  width: 14%;
+  width: 12%;
 }
+.equipment-name-cell,
 .equipment-serial-cell,
-.equipment-condition-cell {
+.equipment-condition-cell,
+.equipment-table td:last-child {
+  min-width: 0;
+}
+.equipment-name-wrap,
+.equipment-name-link,
+.equipment-row-subtext,
+.equipment-serial-value,
+.equipment-condition-value {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.equipment-name-link {
+  line-height: 1.35;
+}
+.equipment-row-subtext {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 400;
+  line-height: 1.25;
+}
+.equipment-serial-value,
+.equipment-condition-value {
+  max-width: 100%;
+}
+.equipment-table td:last-child > div {
+  justify-content: flex-start;
 }
 
 .dashboard-checkouts-table {
