@@ -4,8 +4,8 @@ import { useEffect, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { User, Session } from "@supabase/supabase-js";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import type { AppUser as User, AuthSession as Session } from "@/lib/firebase/types";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 import { PeriodProvider, usePeriod } from "@/app/lib/period-context";
 
 /* ── Nav icons ──────────────────────────────────────── */
@@ -231,21 +231,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [studentApproved, setStudentApproved] = useState(true);
   const router   = useRouter();
-  const supabase = createSupabaseBrowserClient();
+  const firebaseClient = createFirebaseDataClient();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await supabase.auth.getUser();
+        const res = await firebaseClient.auth.getUser();
         if (!mounted) return;
         if (!res.data?.user) {
           router.replace("/login");
         } else {
           setUser(res.data.user);
           if (res.data.user.user_metadata?.role === "Student") {
-            const { data } = await supabase
-              .from("students")
+            const { data } = await firebaseClient
+              .from<{ id?: string }>("students")
               .select("id")
               .eq("user_id", res.data.user.id)
               .eq("is_active", true)
@@ -262,7 +262,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       }
     })();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_: string, session: Session | null) => {
+    const { data: { subscription } } = firebaseClient.auth.onAuthStateChange((_: string, session: Session | null) => {
       if (!session?.user) {
         router.replace("/login");
       } else {
@@ -277,7 +277,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.replace("/login"); };
+  const handleLogout = async () => { await firebaseClient.auth.signOut(); router.replace("/login"); };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #004f6b 0%, #005a78 100%)" }}>

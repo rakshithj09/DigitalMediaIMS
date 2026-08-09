@@ -2,10 +2,11 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
+import type { AppUser as User } from "@/lib/firebase/types";
 import { Eye, EyeOff } from "lucide-react";
+import { firebaseFetch } from "@/lib/firebase/auth-fetch";
 import AppShell from "@/app/components/AppShell";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 type PendingStudentApproval = {
   userId: string;
@@ -48,7 +49,7 @@ function ProfileContent() {
     setPendingStudentsError(null);
 
     try {
-      const resp = await fetch("/api/admin/student-approvals", { cache: "no-store" });
+      const resp = await firebaseFetch("/api/admin/student-approvals", { cache: "no-store" });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
         setPendingStudentsError(String(data?.error?.message ?? data?.error ?? "Unable to load pending student approvals."));
@@ -68,7 +69,7 @@ function ProfileContent() {
     let mounted = true;
     (async () => {
       try {
-        const res = await createSupabaseBrowserClient().auth.getUser();
+        const res = await createFirebaseDataClient().auth.getUser();
         if (!mounted) return;
         const user = res.data.user ?? null;
         setCurrentUser(user);
@@ -93,7 +94,7 @@ function ProfileContent() {
     setTeacherApprovalError(null);
     setTeacherApprovalMessage(null);
 
-    const resp = await fetch("/api/admin/teacher-approvals", {
+    const resp = await firebaseFetch("/api/admin/teacher-approvals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: teacherApprovalEmail, teacherPassword: teacherApprovalPassword }),
@@ -118,7 +119,7 @@ function ProfileContent() {
     setStudentApprovalMessage(null);
 
     try {
-      const resp = await fetch("/api/admin/student-approvals", {
+      const resp = await firebaseFetch("/api/admin/student-approvals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),

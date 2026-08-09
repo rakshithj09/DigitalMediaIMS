@@ -8,7 +8,7 @@ import LoginSignupFrame, { authInputClassName } from "@/components/ui/login-sign
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 export default function LoginPage() {
   const [email,    setEmail]    = useState("");
@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router   = useRouter();
-  const supabase = createSupabaseBrowserClient();
+  const firebaseClient = createFirebaseDataClient();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -65,7 +65,7 @@ export default function LoginPage() {
     setMessage(null);
     setLoading(true);
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: authError } = await firebaseClient.auth.signInWithPassword({ email, password });
       if (authError) {
         const message = authError.message.toLowerCase().includes("email not confirmed")
           ? "Please verify your email before signing in."
@@ -93,7 +93,7 @@ export default function LoginPage() {
 
     setResetLoading(true);
     const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? window.location.origin}/reset-password`;
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(emailToReset, { redirectTo });
+    const { error: resetError } = await firebaseClient.auth.resetPasswordForEmail(emailToReset, { redirectTo });
 
     if (resetError) {
       setError(resetError.message);

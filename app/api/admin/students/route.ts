@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
+import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { verifyFirebasePassword } from "@/lib/firebase/server-password";
 import { Period } from "@/app/lib/types";
 
 type UpdateBody = {
@@ -18,42 +19,11 @@ type DeleteBody = {
   teacherPassword?: string;
 };
 
-function getSupabaseAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!url || !serviceRole) return null;
-
-  return createClient(url, serviceRole, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
-function getSupabasePublicClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
-
-  if (!url || !anonKey) return null;
-
-  return createClient(url, anonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
 async function requireTeacher() {
-  const supabase = await createSupabaseServerClient();
+  const firebaseClient = await createFirebaseServerAuthClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await firebaseClient.auth.getUser();
 
   if (!user) {
     return { error: "You must be signed in.", status: 401 };
@@ -71,19 +41,7 @@ async function verifyTeacherPassword(email: string | undefined, password: string
     return "Teacher password is required.";
   }
 
-  const supabase = getSupabasePublicClient();
-  if (!supabase) {
-    return "Server is missing Supabase public auth configuration.";
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  await supabase.auth.signOut();
-
-  if (error) {
-    return "Teacher password was incorrect.";
-  }
-
-  return null;
+  return verifyFirebasePassword(email, password);
 }
 
 export async function PATCH(req: Request) {
@@ -92,10 +50,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
+  const admin = getFirebaseAdminDataClient();
 
   const body = (await req.json().catch(() => ({}))) as UpdateBody;
   if (!body.id) {
@@ -154,7 +109,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  const userId = body.userId ?? student?.user_id;
+  const userId = body.userId ?? (typeof student?.user_id === "string" ? student.user_id : null);
   if (userId) {
     const name = String(student?.name ?? "").trim();
     const [firstName = "", ...lastParts] = name.split(/\s+/);
@@ -185,17 +140,14 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
+  const admin = getFirebaseAdminDataClient();
 
   const body = (await req.json().catch(() => ({}))) as DeleteBody;
   if (!body.id) {
     return NextResponse.json({ error: "Student id is required." }, { status: 400 });
   }
 
-  const passwordError = await verifyTeacherPassword(auth.user.email, body.teacherPassword);
+  const passwordError = await verifyTeacherPassword(auth.user.email ?? undefined, body.teacherPassword);
   if (passwordError) {
     return NextResponse.json({ error: passwordError }, { status: 403 });
   }
@@ -241,8 +193,9 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: deleteStudentError.message }, { status: 400 });
   }
 
-  if (student?.user_id) {
-    const { error: deleteAuthError } = await admin.auth.admin.deleteUser(student.user_id, false);
+  const studentAuthUserId = typeof student?.user_id === "string" ? student.user_id : null;
+  if (studentAuthUserId) {
+    const { error: deleteAuthError } = await admin.auth.admin.deleteUser(studentAuthUserId, false);
     if (deleteAuthError) {
       return NextResponse.json({ error: deleteAuthError.message }, { status: 400 });
     }

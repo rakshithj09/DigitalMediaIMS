@@ -11,14 +11,6 @@ jobs:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
 
-    env:
-      # Provide placeholder values so API routes don't short-circuit
-      # with a 500 "missing config" response during the test run.
-      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-anon-key
-      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
-      NEXT_PUBLIC_SITE_URL: http://localhost:3000
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

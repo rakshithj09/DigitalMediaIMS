@@ -26,9 +26,7 @@ jobs:
       FIREBASE_PROJECT_ID: igndigitalmedia
       FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
       FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
 
     steps:
       - name: Checkout code
@@ -49,6 +47,27 @@ jobs:
       - name: Test
         run: npm test -- --ci --forceExit
 
+      - name: Check deploy environment
+        run: |
+          missing=0
+          for name in \
+            NEXT_PUBLIC_FIREBASE_API_KEY \
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID \
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET \
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID \
+            NEXT_PUBLIC_FIREBASE_APP_ID \
+            FIREBASE_CLIENT_EMAIL \
+            FIREBASE_PRIVATE_KEY \
+            FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA
+          do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions secret or env value for $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Create Firebase env file
         run: |
           {
@@ -63,9 +82,6 @@ jobs:
             echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"
             echo "FIREBASE_CLIENT_EMAIL=$FIREBASE_CLIENT_EMAIL"
             echo "FIREBASE_PRIVATE_KEY=$FIREBASE_PRIVATE_KEY"
-            echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL"
-            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-            echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
           } > .env
 
       - name: Deploy to Firebase Hosting

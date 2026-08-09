@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import { Checkout, Student } from "@/app/lib/types";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 type CheckoutWithEquipment = Checkout & {
   equipment?: {
@@ -54,12 +54,12 @@ function StudentDetailContent() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createSupabaseBrowserClient();
+    const firebaseClient = createFirebaseDataClient();
 
     Promise.all([
-      supabase.from("students").select("*").eq("id", studentId).maybeSingle(),
-      supabase
-        .from("checkouts")
+      firebaseClient.from<Student>("students").select("*").eq("id", studentId).maybeSingle(),
+      firebaseClient
+        .from<CheckoutWithEquipment>("checkouts")
         .select(
           `id, student_id, equipment_id, quantity, serial_number, checked_out_at, due_at, checked_in_at, notes, return_notes, period, created_at,
            equipment:equipment(id, name, category)`
@@ -77,8 +77,8 @@ function StudentDetailContent() {
         return;
       }
 
-      setStudent((studentResult.data as Student | null) ?? null);
-      setCheckouts((checkoutResult.data as unknown as CheckoutWithEquipment[]) ?? []);
+      setStudent(studentResult.data ?? null);
+      setCheckouts(checkoutResult.data ?? []);
     });
 
     return () => {

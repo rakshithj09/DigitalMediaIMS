@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server-client";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
+import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
 import { ensureVerifiedStudentRosterRow } from "@/lib/auth/student-roster";
 import { getStudentApprovalRequestByUserId } from "@/lib/auth/student-approvals";
 
@@ -9,10 +9,10 @@ type ApproveBody = {
 };
 
 async function requireTeacher() {
-  const supabase = await createSupabaseServerClient();
+  const firebaseClient = await createFirebaseServerAuthClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await firebaseClient.auth.getUser();
 
   if (!user) {
     return { error: "You must be signed in.", status: 401 };
@@ -31,10 +31,7 @@ export async function GET() {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
+  const admin = getFirebaseAdminDataClient();
 
   const { data, error } = await admin
     .from("student_approval_requests")
@@ -44,7 +41,7 @@ export async function GET() {
 
   if (error) {
     const message = error.code === "42P01"
-      ? "Database update needed: run supabase/student-approval-requests.sql in Supabase, then refresh this page."
+      ? "Firestore collection missing: student_approval_requests."
       : error.message;
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -71,10 +68,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
+  const admin = getFirebaseAdminDataClient();
 
   const body = (await req.json().catch(() => ({}))) as ApproveBody;
   if (!body.userId) {

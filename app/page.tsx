@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { User } from "@supabase/supabase-js";
+import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import PeriodBadge from "@/app/components/PeriodBadge";
 import { usePeriod } from "@/app/lib/period-context";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 import { Checkout } from "@/app/lib/types";
+import { firebaseFetch } from "@/lib/firebase/auth-fetch";
 import { formatDateTime, formatRemainingTime, getCheckoutDeadlineMeta } from "@/lib/checkout-deadlines";
 
 function DashboardContent() {
@@ -18,7 +19,7 @@ function DashboardContent() {
   const [tick, setTick] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
-  const supabase = createSupabaseBrowserClient();
+  const firebaseClient = createFirebaseDataClient();
 
   const refresh = useCallback(() => {
     setCheckouts(null);
@@ -28,8 +29,8 @@ function DashboardContent() {
   useEffect(() => {
     let cancelled = false;
 
-    createSupabaseBrowserClient()
-      .from("checkouts")
+    createFirebaseDataClient()
+      .from<Checkout>("checkouts")
       .select(
         `id, student_id, quantity, serial_number, checked_out_at, due_at, notes, period,
          student:students(id, name, student_id, email),
@@ -38,10 +39,10 @@ function DashboardContent() {
       .is("checked_in_at", null)
       .eq("period", period)
       .order("checked_out_at", { ascending: false })
-      .then(({ data, error: fetchError }: { data: Checkout[] | null; error: { message?: string } | null }) => {
+      .then(({ data, error: fetchError }) => {
         if (cancelled) return;
         if (fetchError) setError(fetchError.message ?? "Unknown error");
-        else setCheckouts((data as unknown as Checkout[]) ?? []);
+        else setCheckouts(data ?? []);
       });
 
     return () => { cancelled = true; };
@@ -51,14 +52,14 @@ function DashboardContent() {
     let mounted = true;
 
     (async () => {
-      const res = await supabase.auth.getUser();
+      const res = await firebaseClient.auth.getUser();
       const user = res.data.user ?? null;
       if (!mounted) return;
       setCurrentUser(user);
 
       if (user?.user_metadata?.role === "Student") {
-        const found = (await supabase
-          .from("students")
+        const found = (await firebaseClient
+          .from<{ id?: string }>("students")
           .select("id")
           .eq("user_id", user.id)
           .eq("is_active", true)
@@ -70,7 +71,7 @@ function DashboardContent() {
     })();
 
     return () => { mounted = false; };
-  }, [supabase]);
+  }, [firebaseClient]);
 
   const handleCheckIn = async (checkoutId: string) => {
     if (currentUser?.user_metadata?.role === "Student") {
@@ -82,7 +83,7 @@ function DashboardContent() {
     }
 
     setCheckingIn(checkoutId);
-    const checkInResp = await fetch("/api/checkouts/check-in", {
+    const checkInResp = await firebaseFetch("/api/checkouts/check-in", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ checkoutId }),

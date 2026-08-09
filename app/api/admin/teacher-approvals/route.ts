@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server-client";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
+import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { verifyFirebasePassword } from "@/lib/firebase/server-password";
 
 type Body = {
   email?: string;
@@ -12,28 +12,11 @@ function cleanEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function getSupabasePublicClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
-
-  if (!url || !anonKey) return null;
-
-  return createClient(url, anonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
 async function requireTeacher() {
-  const supabase = await createSupabaseServerClient();
+  const firebaseClient = await createFirebaseServerAuthClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await firebaseClient.auth.getUser();
 
   if (!user) {
     return { error: "You must be signed in.", status: 401 };
@@ -51,19 +34,7 @@ async function verifyTeacherPassword(email: string | undefined, password: string
     return "Teacher password is required.";
   }
 
-  const supabase = getSupabasePublicClient();
-  if (!supabase) {
-    return "Server is missing Supabase public auth configuration.";
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  await supabase.auth.signOut();
-
-  if (error) {
-    return "Teacher password was incorrect.";
-  }
-
-  return null;
+  return verifyFirebasePassword(email, password);
 }
 
 export async function POST(req: Request) {
@@ -72,15 +43,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
+  const admin = getFirebaseAdminDataClient();
 
   const body = (await req.json().catch(() => ({}))) as Body;
   const email = cleanEmail(body.email);
 
-  const passwordError = await verifyTeacherPassword(auth.user.email, body.teacherPassword);
+  const passwordError = await verifyTeacherPassword(auth.user.email ?? undefined, body.teacherPassword);
   if (passwordError) {
     return NextResponse.json({ error: passwordError }, { status: 403 });
   }
@@ -107,7 +75,7 @@ export async function POST(req: Request) {
 
   if (error) {
     const message = error.code === "42P01"
-      ? "Database update needed: run supabase/approved-teachers.sql in Supabase, then try again."
+      ? "Firestore collection missing: approved_teachers."
       : error.message;
     return NextResponse.json({ error: message }, { status: 400 });
   }

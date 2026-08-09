@@ -50,5 +50,5 @@ Additional manual test: Email sign-up
 5. For student accounts, confirm the student appears in the selected AM/PM roster.
 
 Notes for maintainers
-- The client enforces the @bentonvillek12.org domain before calling Supabase, but you should also enforce domain restrictions server-side or with RLS policies to prevent abuse.
-- Ensure `.env.local` contains `NEXT_PUBLIC_SUPABASE_URL`, either `NEXT_PUBLIC_SUPABASE_ANON_KEY` or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
+- The client enforces the @bentonvillek12.org domain before calling Firebase, and the server-side account route also validates approved teacher/student flows before writing to Auth or Firestore.
+- Ensure `.env.local` contains the Firebase web config values plus `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` for local admin operations.

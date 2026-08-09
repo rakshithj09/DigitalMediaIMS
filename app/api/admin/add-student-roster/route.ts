@@ -1,30 +1,13 @@
 import { NextResponse } from "next/server";
+import { getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 
 type Body = {
   name: string;
   period: string;
   user_id?: string;
   email?: string;
+  student_id?: string;
 };
-
-function getSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!url || !serviceRole) {
-    return null;
-  }
-
-  return { url, serviceRole };
-}
-
-function restHeaders(serviceRole: string) {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${serviceRole}`,
-    apikey: serviceRole,
-  };
-}
 
 export async function POST(req: Request) {
   try {
@@ -40,72 +23,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "period must be AM or PM" }, { status: 400 });
     }
 
-    const config = getSupabaseConfig();
-    if (!config) {
-      return NextResponse.json({ error: "Server not configured with Supabase service role" }, { status: 500 });
-    }
-
-    const { url, serviceRole } = config;
+    const db = getFirebaseAdminDb();
     const studentBody: Record<string, unknown> = {
       name,
       period,
+      student_id: body.student_id ?? null,
       is_active: true,
+      updated_at: new Date().toISOString(),
     };
     if (body.user_id) studentBody.user_id = body.user_id;
     if (body.email) studentBody.email = body.email.trim().toLowerCase();
 
     if (body.user_id) {
-      const lookup = await fetch(
-        `${url}/rest/v1/students?select=id&user_id=eq.${encodeURIComponent(body.user_id)}&limit=1`,
-        { headers: restHeaders(serviceRole) }
-      );
-      const existing = (await lookup.json().catch(() => [])) as Array<{ id: string }>;
-
-      if (!lookup.ok) {
-        return NextResponse.json({ error: existing }, { status: lookup.status });
-      }
-
-      if (existing[0]?.id) {
-        const updateRes = await fetch(`${url}/rest/v1/students?id=eq.${existing[0].id}`, {
-          method: "PATCH",
-          headers: {
-            ...restHeaders(serviceRole),
-            Prefer: "return=representation",
-          },
-          body: JSON.stringify(studentBody),
-        });
-
-        const updated = await updateRes.json().catch(() => null);
-        if (!updateRes.ok) {
-          return NextResponse.json({ error: updated }, { status: updateRes.status });
-        }
-
-        return NextResponse.json({ ok: true, student: Array.isArray(updated) ? updated[0] : updated });
+      const existing = await db.collection("students").where("user_id", "==", body.user_id).limit(1).get();
+      const existingDoc = existing.docs[0];
+      if (existingDoc) {
+        await existingDoc.ref.set(studentBody, { merge: true });
+        return NextResponse.json({ ok: true, student: { id: existingDoc.id, ...studentBody } });
       }
     }
 
-    const res = await fetch(`${url}/rest/v1/students`, {
-      method: "POST",
-      headers: {
-        ...restHeaders(serviceRole),
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify([studentBody]),
-    });
+    const ref = db.collection("students").doc();
+    const student = {
+      id: ref.id,
+      created_at: new Date().toISOString(),
+      ...studentBody,
+    };
+    await ref.set(student);
 
-    const text = await res.text();
-    let json: unknown;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      json = text;
-    }
-
-    if (!res.ok) {
-      return NextResponse.json({ error: json }, { status: res.status });
-    }
-
-    return NextResponse.json({ ok: true, student: Array.isArray(json) ? json[0] : json });
+    return NextResponse.json({ ok: true, student });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

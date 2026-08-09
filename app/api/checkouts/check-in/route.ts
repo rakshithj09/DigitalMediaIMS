@@ -1,55 +1,27 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server-client";
+import { getFirebaseAdminDb } from "@/lib/firebase/admin-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
 
 type Body = {
   checkoutId?: string;
   returnNotes?: string | null;
 };
 
-type CheckoutRow = {
-  id: string;
-  student_id: string;
-  checked_in_at: string | null;
-};
-
-const restUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-const serviceKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-function headers() {
-  const key = serviceKey();
-  if (!key) return null;
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${key}`,
-    apikey: key,
-  };
-}
-
 async function getOwnedStudentId(userId: string): Promise<string | null> {
-  const url = restUrl();
-  const h = headers();
-  if (!url || !h) throw new Error("Server is missing Supabase service configuration.");
-
-  const res = await fetch(
-    `${url}/rest/v1/students?select=id&user_id=eq.${encodeURIComponent(userId)}&is_active=eq.true&limit=1`,
-    { headers: h }
-  );
-  const data = (await res.json().catch(() => [])) as Array<{ id: string }>;
-  if (!res.ok) throw new Error("Unable to find linked student roster entry.");
-  return data[0]?.id ?? null;
+  const snap = await getFirebaseAdminDb()
+    .collection("students")
+    .where("user_id", "==", userId)
+    .where("is_active", "==", true)
+    .limit(1)
+    .get();
+  return snap.docs[0]?.id ?? null;
 }
 
 export async function POST(req: Request) {
-  const url = restUrl();
-  const h = headers();
-  if (!url || !h) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
-
-  const supabase = await createSupabaseServerClient();
+  const firebaseClient = await createFirebaseServerAuthClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await firebaseClient.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "You must be signed in to check in equipment." }, { status: 401 });
@@ -61,17 +33,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const checkoutRes = await fetch(
-      `${url}/rest/v1/checkouts?select=id,student_id,checked_in_at&id=eq.${encodeURIComponent(body.checkoutId)}&limit=1`,
-      { headers: h }
-    );
-    const checkoutData = (await checkoutRes.json().catch(() => [])) as CheckoutRow[];
+    const checkoutRef = getFirebaseAdminDb().collection("checkouts").doc(body.checkoutId);
+    const checkoutDoc = await checkoutRef.get();
+    const checkout = checkoutDoc.exists ? checkoutDoc.data() as { student_id?: string; checked_in_at?: string | null } : null;
 
-    if (!checkoutRes.ok) {
-      return NextResponse.json({ error: checkoutData }, { status: checkoutRes.status });
-    }
-
-    const checkout = checkoutData[0];
     if (!checkout || checkout.checked_in_at) {
       return NextResponse.json({ error: "Active checkout was not found." }, { status: 404 });
     }
@@ -83,24 +48,13 @@ export async function POST(req: Request) {
       }
     }
 
-    const updateRes = await fetch(`${url}/rest/v1/checkouts?id=eq.${encodeURIComponent(body.checkoutId)}`, {
-      method: "PATCH",
-      headers: {
-        ...h,
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify({
-        checked_in_at: new Date().toISOString(),
-        return_notes: body.returnNotes?.trim() || null,
-      }),
-    });
+    const update = {
+      checked_in_at: new Date().toISOString(),
+      return_notes: body.returnNotes?.trim() || null,
+    };
+    await checkoutRef.set(update, { merge: true });
 
-    const updated = await updateRes.json().catch(() => null);
-    if (!updateRes.ok) {
-      return NextResponse.json({ error: updated ?? "Check in failed." }, { status: updateRes.status });
-    }
-
-    return NextResponse.json({ checkout: Array.isArray(updated) ? updated[0] : updated });
+    return NextResponse.json({ checkout: { id: body.checkoutId, ...checkout, ...update } });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }

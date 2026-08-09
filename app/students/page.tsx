@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
-import { User } from "@supabase/supabase-js";
+import type { AppUser as User } from "@/lib/firebase/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
@@ -9,7 +9,8 @@ import AppShell from "@/app/components/AppShell";
 import PeriodBadge from "@/app/components/PeriodBadge";
 import SelectMenu from "@/components/ui/select-menu";
 import { usePeriod } from "@/app/lib/period-context";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { firebaseFetch } from "@/lib/firebase/auth-fetch";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 import { Period, Student } from "@/app/lib/types";
 
 function StudentsContent() {
@@ -54,16 +55,16 @@ function StudentsContent() {
 
     let cancelled = false;
 
-    createSupabaseBrowserClient()
-      .from("students")
+    createFirebaseDataClient()
+      .from<Student>("students")
       .select("*")
       .eq("period", period)
       .eq("is_active", true)
       .order("name")
-      .then(({ data, error: fetchError }: { data: Student[] | null; error: { message?: string } | null }) => {
+      .then(({ data, error: fetchError }) => {
         if (cancelled) return;
         if (fetchError) setError(fetchError.message ?? "Unknown error");
-        else setStudents((data as Student[]) ?? []);
+        else setStudents(data ?? []);
       });
 
     return () => { cancelled = true; };
@@ -73,7 +74,7 @@ function StudentsContent() {
     let mounted = true;
     (async () => {
       try {
-        const res = await createSupabaseBrowserClient().auth.getUser();
+        const res = await createFirebaseDataClient().auth.getUser();
         if (!mounted) return;
         const user = res.data.user ?? null;
         setCurrentUser(user);
@@ -113,7 +114,7 @@ function StudentsContent() {
     }
 
     try {
-      const resp = await fetch("/api/admin/create-student", {
+      const resp = await firebaseFetch("/api/admin/create-student", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -159,7 +160,7 @@ function StudentsContent() {
     setDeleteSaving(true);
     setDeleteError(null);
 
-    const resp = await fetch("/api/admin/students", {
+    const resp = await firebaseFetch("/api/admin/students", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: deletingStudent.id, teacherPassword: deletePassword }),
@@ -196,7 +197,7 @@ function StudentsContent() {
     setEditSaving(true);
     setEditError(null);
 
-    const resp = await fetch("/api/admin/students", {
+    const resp = await firebaseFetch("/api/admin/students", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

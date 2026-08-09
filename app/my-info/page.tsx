@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
+import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import { Checkout, Student } from "@/app/lib/types";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 type CheckoutWithEquipment = Checkout & {
   equipment?: {
@@ -54,10 +54,10 @@ function MyInfoContent() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createSupabaseBrowserClient();
+    const firebaseClient = createFirebaseDataClient();
 
     (async () => {
-      const authResult = await supabase.auth.getUser();
+      const authResult = await firebaseClient.auth.getUser();
       if (cancelled) return;
 
       const user = authResult.data.user;
@@ -73,8 +73,8 @@ function MyInfoContent() {
         return;
       }
 
-      const studentResult = await supabase
-        .from("students")
+      const studentResult = await firebaseClient
+        .from<Student>("students")
         .select("*")
         .eq("user_id", user.id)
         .eq("is_active", true)
@@ -87,7 +87,7 @@ function MyInfoContent() {
         return;
       }
 
-      const studentData = (studentResult.data as Student | null) ?? null;
+      const studentData = studentResult.data ?? null;
       setStudent(studentData);
 
       if (!studentData?.id) {
@@ -95,8 +95,8 @@ function MyInfoContent() {
         return;
       }
 
-      const checkoutResult = await supabase
-        .from("checkouts")
+      const checkoutResult = await firebaseClient
+        .from<CheckoutWithEquipment>("checkouts")
         .select(
           `id, student_id, equipment_id, quantity, serial_number, checked_out_at, due_at, checked_in_at, notes, return_notes, period, created_at,
            equipment:equipment(id, name, category)`
@@ -110,7 +110,7 @@ function MyInfoContent() {
         return;
       }
 
-      setCheckouts((checkoutResult.data as unknown as CheckoutWithEquipment[]) ?? []);
+      setCheckouts(checkoutResult.data ?? []);
     })();
 
     return () => {

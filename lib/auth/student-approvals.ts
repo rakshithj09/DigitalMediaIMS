@@ -1,5 +1,5 @@
-import { User } from "@supabase/supabase-js";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import type { AppUser as User } from "@/lib/firebase/types";
+import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -17,8 +17,7 @@ export async function createStudentApprovalRequest(user: User) {
   if (!isStudent(user)) return { skipped: "not_student" as const };
 
   const metadata = user.user_metadata ?? {};
-  const admin = getSupabaseAdminClient();
-  if (!admin) throw new Error("Server is missing Supabase service configuration.");
+  const admin = getFirebaseAdminDataClient();
 
   const email = clean(user.email).toLowerCase();
   const firstName = clean(metadata.first_name);
@@ -44,7 +43,7 @@ export async function createStudentApprovalRequest(user: User) {
 
   if (!error) return { ok: true as const };
   if (error.code === "42P01") {
-    throw new Error("Database update needed: run supabase/student-approval-requests.sql in Supabase, then try again.");
+    throw new Error("Firestore collection missing: student_approval_requests.");
   }
   throw new Error(error.message);
 }
@@ -52,8 +51,7 @@ export async function createStudentApprovalRequest(user: User) {
 export async function markStudentApprovalEmailVerified(user: User) {
   if (!isStudent(user)) return { skipped: "not_student" as const };
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) throw new Error("Server is missing Supabase service configuration.");
+  const admin = getFirebaseAdminDataClient();
 
   const emailVerifiedAt = confirmedAt(user);
   if (!emailVerifiedAt) return { skipped: "unverified" as const };
@@ -65,14 +63,13 @@ export async function markStudentApprovalEmailVerified(user: User) {
 
   if (!error) return { ok: true as const };
   if (error.code === "42P01") {
-    throw new Error("Database update needed: run supabase/student-approval-requests.sql in Supabase, then try again.");
+    throw new Error("Firestore collection missing: student_approval_requests.");
   }
   throw new Error(error.message);
 }
 
 export async function getStudentApprovalRequestByUserId(userId: string) {
-  const admin = getSupabaseAdminClient();
-  if (!admin) throw new Error("Server is missing Supabase service configuration.");
+  const admin = getFirebaseAdminDataClient();
 
   const { data, error } = await admin
     .from("student_approval_requests")
@@ -82,7 +79,7 @@ export async function getStudentApprovalRequestByUserId(userId: string) {
 
   if (!error) return data;
   if (error.code === "42P01") {
-    throw new Error("Database update needed: run supabase/student-approval-requests.sql in Supabase, then try again.");
+    throw new Error("Firestore collection missing: student_approval_requests.");
   }
   throw new Error(error.message);
 }

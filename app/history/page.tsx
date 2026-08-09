@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User } from "@supabase/supabase-js";
+import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import DatePicker from "@/app/components/DatePicker";
 import SelectMenu from "@/components/ui/select-menu";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 import { Checkout, Period } from "@/app/lib/types";
 
 function duration(start: string, end: string | null | undefined): string {
@@ -30,10 +30,10 @@ function HistoryContent() {
 
   useEffect(() => {
     let cancelled = false;
-    const supabase = createSupabaseBrowserClient();
+    const firebaseClient = createFirebaseDataClient();
 
-    supabase
-      .from("checkouts")
+    firebaseClient
+      .from<Checkout>("checkouts")
       .select(
         `id, student_id, quantity, serial_number, checked_out_at, checked_in_at, notes, return_notes, period,
          student:students(id, name, student_id),
@@ -41,10 +41,10 @@ function HistoryContent() {
       )
       .order("checked_out_at", { ascending: false })
       .limit(500)
-      .then(({ data, error: fetchError }: { data: Checkout[] | null; error: { message?: string } | null }) => {
+      .then(({ data, error: fetchError }) => {
         if (cancelled) return;
         if (fetchError) setError(fetchError.message ?? "Unknown error");
-        else setHistory((data as unknown as Checkout[]) ?? []);
+        else setHistory(data ?? []);
       });
 
     return () => { cancelled = true; };
@@ -52,17 +52,17 @@ function HistoryContent() {
 
   useEffect(() => {
     let mounted = true;
-    const supabase = createSupabaseBrowserClient();
+    const firebaseClient = createFirebaseDataClient();
 
     (async () => {
-      const res = await supabase.auth.getUser();
+      const res = await firebaseClient.auth.getUser();
       const user = res.data.user ?? null;
       if (!mounted) return;
       setCurrentUser(user);
 
       if (user?.user_metadata?.role === "Student") {
-        const found = (await supabase
-          .from("students")
+        const found = (await firebaseClient
+          .from<{ id?: string }>("students")
           .select("id")
           .eq("user_id", user.id)
           .eq("is_active", true)

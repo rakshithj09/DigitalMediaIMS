@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoginSignupFrame from "@/components/ui/login-signup";
 import { Button } from "@/components/ui/button";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 export default function PendingApprovalPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
+  const firebaseClient = createFirebaseDataClient();
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export default function PendingApprovalPage() {
     setError(null);
 
     try {
-      const { data: userResult } = await supabase.auth.getUser();
+      const { data: userResult } = await firebaseClient.auth.getUser();
       const user = userResult.user;
 
       if (!user) {
@@ -31,8 +31,8 @@ export default function PendingApprovalPage() {
         return;
       }
 
-      const { data, error: studentError } = await supabase
-        .from("students")
+      const { data, error: studentError } = await firebaseClient
+        .from<{ id?: string }>("students")
         .select("id")
         .eq("user_id", user.id)
         .eq("is_active", true)
@@ -104,7 +104,7 @@ export default function PendingApprovalPage() {
           <Button
             type="button"
             onClick={async () => {
-              await supabase.auth.signOut();
+              await firebaseClient.auth.signOut();
               router.replace("/login");
             }}
             className="h-10 w-full rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"

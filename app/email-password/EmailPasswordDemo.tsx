@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SelectMenu from "@/components/ui/select-menu";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { User } from "@supabase/supabase-js";
+import { firebaseFetch } from "@/lib/firebase/auth-fetch";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
+import type { AppUser as User } from "@/lib/firebase/types";
 
 type Props = { user?: User | null };
 
@@ -34,7 +35,7 @@ export default function EmailPasswordDemo({ user }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const supabase = createSupabaseBrowserClient();
+  const firebaseClient = createFirebaseDataClient();
 
   const domainAllowed = (e: string) => e.toLowerCase().endsWith("@bentonvillek12.org");
 
@@ -57,11 +58,11 @@ export default function EmailPasswordDemo({ user }: Props) {
     setLoading(true);
     try {
       if (mode === "signIn") {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: signInError } = await firebaseClient.auth.signInWithPassword({ email, password });
         if (signInError) setError(signInError.message ?? "Sign-in failed");
         else setMessage("Signed in successfully.");
       } else {
-        const resp = await fetch("/api/auth/create-account", {
+        const resp = await firebaseFetch("/api/auth/create-account", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -96,7 +97,7 @@ export default function EmailPasswordDemo({ user }: Props) {
           <p className="mb-6 font-semibold" style={{ color: "var(--ignite-navy)" }}>{user.email}</p>
           <div className="flex justify-center gap-3">
             <Button
-              onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
+              onClick={async () => { await firebaseClient.auth.signOut(); window.location.reload(); }}
               className="rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
             >
               Sign out

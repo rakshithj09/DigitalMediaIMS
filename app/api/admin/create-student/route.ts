@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 
 export async function POST(req: Request) {
-  if (!SUPABASE_URL || !SERVICE_KEY) {
-    return NextResponse.json({ error: "Server not configured: missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL" }, { status: 500 });
-  }
-
   const body = await req.json().catch(() => ({}));
   const { first_name, last_name, student_id, email, password, period } = body ?? {};
 
@@ -15,49 +9,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields: first_name, last_name, student_id, email, password" }, { status: 400 });
   }
 
+  if (period !== "AM" && period !== "PM") {
+    return NextResponse.json({ error: "period must be AM or PM" }, { status: 400 });
+  }
+
   try {
-    // 1) Create the auth user via Supabase Admin REST endpoint
-    const userResp = await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/auth/v1/admin/users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SERVICE_KEY,
-        Authorization: `Bearer ${SERVICE_KEY}`,
-      },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-        email_confirm: true,
-        user_metadata: { first_name, last_name, role: "Student", period, student_id },
-      }),
+    const auth = getFirebaseAdminAuth();
+    const db = getFirebaseAdminDb();
+    const user = await auth.createUser({
+      email,
+      password,
+      emailVerified: true,
+      displayName: `${first_name} ${last_name}`,
+    });
+    await auth.setCustomUserClaims(user.uid, {
+      first_name,
+      last_name,
+      role: "Student",
+      period,
+      student_id,
     });
 
-    const userData = await userResp.json().catch(() => null);
-    if (!userResp.ok) {
-      return NextResponse.json({ error: userData ?? "Failed to create auth user" }, { status: 400 });
-    }
+    const ref = db.collection("students").doc();
+    const student = {
+      id: ref.id,
+      name: `${first_name} ${last_name}`,
+      student_id,
+      period,
+      email,
+      user_id: user.uid,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    await ref.set(student);
 
-    // 2) Insert into students table using PostgREST (service key bypasses RLS)
-    const name = `${first_name} ${last_name}`;
-    const studentResp = await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/students`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SERVICE_KEY,
-        Authorization: `Bearer ${SERVICE_KEY}`,
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify([{ name, student_id, period, email, user_id: userData.id, is_active: true }]),
-    });
-
-    const studentData = await studentResp.json().catch(() => null);
-    if (![200, 201].includes(studentResp.status)) {
-      // If student insert fails, attempt to rollback created user? For now, return an error.
-      return NextResponse.json({ error: studentData ?? "Failed to insert student row", user: userData }, { status: 400 });
-    }
-
-    return NextResponse.json({ user: userData, student: Array.isArray(studentData) ? studentData[0] : studentData });
+    return NextResponse.json({ user, student });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

@@ -1,11 +1,11 @@
 import EmailPasswordDemo from "./EmailPasswordDemo";
-import { createSupabaseServerClient } from "../../lib/supabase/server-client";
+import { createFirebaseServerAuthClient } from "../../lib/firebase/server-auth";
 
 export default async function EmailPasswordPage() {
-    const supabase = await createSupabaseServerClient();
+    const firebaseClient = await createFirebaseServerAuthClient();
     const {
         data: { user },
-    } = await supabase.auth.getUser();
+    } = await firebaseClient.auth.getUser();
 
     return <EmailPasswordDemo user={user} />;
 }

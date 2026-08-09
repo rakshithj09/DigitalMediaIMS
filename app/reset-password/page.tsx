@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AuthChangeEvent } from "@supabase/supabase-js";
 import { Eye, EyeOff, Lock } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
+  const firebaseClient = createFirebaseDataClient();
+  const [resetCode, setResetCode] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,22 +21,16 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+    const code = new URLSearchParams(window.location.search).get("oobCode");
+    queueMicrotask(() => {
+      if (code) {
+        setResetCode(code);
         setReady(true);
+      } else {
+        setError("Open this page from the password reset email link.");
       }
     });
-
-    (async () => {
-      const result = await supabase.auth.getSession();
-      if (result.data.session) setReady(true);
-      else setError("Open this page from the password reset email link.");
-    })();
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,12 +48,14 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const { error: updateError } = resetCode
+      ? await firebaseClient.auth.confirmPasswordReset(resetCode, password)
+      : await firebaseClient.auth.updateUser({ password });
     if (updateError) {
       setError(updateError.message);
     } else {
       setMessage("Password updated. Redirecting to sign in…");
-      await supabase.auth.signOut();
+      await firebaseClient.auth.signOut();
       setTimeout(() => router.replace("/login"), 900);
     }
     setLoading(false);

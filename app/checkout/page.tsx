@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
-import { User } from "@supabase/supabase-js";
+import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
 import PeriodBadge from "@/app/components/PeriodBadge";
@@ -10,7 +10,8 @@ import SelectMenu from "@/components/ui/select-menu";
 import { findEquipmentByBarcode } from "@/app/lib/barcodes";
 import { usePeriod } from "@/app/lib/period-context";
 import { filterTimeOptionsForPeriod, nextWeekday } from "@/app/lib/return-windows";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
+import { firebaseFetch } from "@/lib/firebase/auth-fetch";
 import { Student, Equipment, Checkout } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
 import { formatDateTime, formatRemainingTime, getCheckoutDeadlineMeta } from "@/lib/checkout-deadlines";
@@ -122,15 +123,17 @@ function CheckoutContent() {
     let mounted = true;
     (async () => {
       try {
-        const res = await createSupabaseBrowserClient().auth.getUser();
+        const res = await createFirebaseDataClient().auth.getUser();
         const u = res.data.user ?? null;
         if (!mounted) return;
         setCurrentUser(u);
 
+        if (!u) return;
+
         const meta = (u as unknown as { user_metadata?: { role?: string } }).user_metadata ?? {};
         if (meta.role === "Student") {
-          const found = (await createSupabaseBrowserClient()
-            .from("students")
+          const found = (await createFirebaseDataClient()
+            .from<{ id?: string; name?: string; period?: string }>("students")
             .select("id, name, period")
             .eq("user_id", u.id)
             .eq("is_active", true)
@@ -174,8 +177,8 @@ function CheckoutContent() {
 
     queueMicrotask(() => setLoadingData(true));
 
-    const studentsQuery = createSupabaseBrowserClient()
-      .from("students")
+    const studentsQuery = createFirebaseDataClient()
+      .from<Student>("students")
       .select("id, name, student_id, user_id, email, period, is_active, created_at")
       .eq("is_active", true)
       .order("name");
@@ -186,8 +189,8 @@ function CheckoutContent() {
       studentsQuery.eq("period", checkoutPeriod);
     }
 
-    const activeCheckoutsQuery = createSupabaseBrowserClient()
-      .from("checkouts")
+    const activeCheckoutsQuery = createFirebaseDataClient()
+      .from<Checkout>("checkouts")
       .select(
         `id, student_id, equipment_id, quantity, serial_number, checked_out_at, due_at, notes, period,
          student:students(id, name, student_id, email),
@@ -203,8 +206,8 @@ function CheckoutContent() {
 
     Promise.all([
       studentsQuery,
-      createSupabaseBrowserClient().from("equipment").select("*").eq("is_active", true).order("name"),
-      createSupabaseBrowserClient().from("checkouts").select("equipment_id, quantity, serial_number").is("checked_in_at", null),
+      createFirebaseDataClient().from<Equipment>("equipment").select("*").eq("is_active", true).order("name"),
+      createFirebaseDataClient().from<Pick<Checkout, "equipment_id" | "quantity" | "serial_number">>("checkouts").select("equipment_id, quantity, serial_number").is("checked_in_at", null),
       activeCheckoutsQuery,
     ]).then(([{ data: stuData, error: stuError }, { data: eqData, error: eqError }, { data: coSums, error: sumsError }, { data: coData, error: coError }]) => {
       if (cancelled) return;
@@ -213,9 +216,9 @@ function CheckoutContent() {
         const message = loadError.message ?? "Unable to load checkout data.";
         setSubmitError(
           message.includes("checkouts.serial_number")
-            ? "Database update needed: run supabase/checkout-serial-number.sql in Supabase, then refresh this page."
+            ? "Firestore data is missing barcode labels for checkouts. Refresh and try again."
             : message.includes("checkouts.due_at")
-            ? "Database update needed: run supabase/checkout-return-deadline.sql in Supabase, then refresh this page."
+            ? "Firestore data is missing return deadlines for checkouts. Refresh and try again."
             : message
         );
         setLoadFailed(true);
@@ -226,11 +229,11 @@ function CheckoutContent() {
         return;
       }
 
-      setStudents((stuData as Student[]) ?? []);
+      setStudents(stuData ?? []);
 
       const checkedOutMap = new Map<string, number>();
       const checkedOutSerials = new Map<string, Set<string>>();
-      (coSums ?? []).forEach((c: { equipment_id: string; quantity: number; serial_number?: string | null }) => {
+      (coSums ?? []).forEach((c) => {
         checkedOutMap.set(c.equipment_id, (checkedOutMap.get(c.equipment_id) ?? 0) + c.quantity);
         const serial = normalizeSerialNumber(c.serial_number);
         if (serial) {
@@ -239,7 +242,7 @@ function CheckoutContent() {
           checkedOutSerials.set(c.equipment_id, serials);
         }
       });
-      const withAvail = ((eqData ?? []) as Equipment[]).map((e) => ({
+      const withAvail = (eqData ?? []).map((e) => ({
         ...e,
         available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
         allSerialNumbers: categorySupportsSerialNumbers(e.category)
@@ -347,7 +350,7 @@ function CheckoutContent() {
       return;
     }
 
-    const checkoutResp = await fetch("/api/checkouts", {
+    const checkoutResp = await firebaseFetch("/api/checkouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -394,7 +397,7 @@ function CheckoutContent() {
     }
 
     setCheckingIn(checkoutId);
-    const checkInResp = await fetch("/api/checkouts/check in", {
+    const checkInResp = await firebaseFetch("/api/checkouts/check-in", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ checkoutId, returnNotes: returnNotes[checkoutId] ?? null }),

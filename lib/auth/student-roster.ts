@@ -1,5 +1,5 @@
-import { User } from "@supabase/supabase-js";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import type { AppUser as User } from "@/lib/firebase/types";
+import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -22,8 +22,7 @@ export async function ensureVerifiedStudentRosterRow(user: User) {
     throw new Error("Verified student account is missing required roster metadata.");
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) throw new Error("Server is missing Supabase service configuration.");
+  const admin = getFirebaseAdminDataClient();
 
   const studentBody = {
     name: `${firstName} ${lastName}`,
@@ -42,9 +41,7 @@ export async function ensureVerifiedStudentRosterRow(user: User) {
     .maybeSingle();
 
   if (lookupError) {
-    throw new Error(
-      `${lookupError.message}. If this mentions user_id or email, run supabase/student-account-link.sql in Supabase SQL Editor.`,
-    );
+    throw new Error(lookupError.message);
   }
 
   if (existing?.id) {

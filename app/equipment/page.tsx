@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
 import Link from "next/link";
-import { User } from "@supabase/supabase-js";
+import type { AppUser as User } from "@/lib/firebase/types";
 import { Eye, EyeOff } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
 import SelectMenu from "@/components/ui/select-menu";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
+import { firebaseFetch } from "@/lib/firebase/auth-fetch";
 import { Equipment, EQUIPMENT_CATEGORIES } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, normalizeSerialNumber, parseSerialNumbers } from "@/app/lib/serials";
 
@@ -89,7 +90,7 @@ function EquipmentContent() {
     let mounted = true;
     (async () => {
       try {
-        const res = await createSupabaseBrowserClient().auth.getUser();
+        const res = await createFirebaseDataClient().auth.getUser();
         if (!mounted) return;
         setCurrentUser(res.data.user ?? null);
       } catch {
@@ -100,13 +101,13 @@ function EquipmentContent() {
     let cancelled = false;
 
     Promise.all([
-      createSupabaseBrowserClient()
-        .from("equipment")
+      createFirebaseDataClient()
+        .from<Equipment>("equipment")
         .select("*")
         .eq("is_active", true)
         .order("name"),
-      createSupabaseBrowserClient()
-        .from("checkouts")
+      createFirebaseDataClient()
+        .from<{ equipment_id: string; quantity: number; serial_number?: string | null }>("checkouts")
         .select("equipment_id, quantity, serial_number")
         .is("checked_in_at", null),
     ]).then(([{ data: eqData, error: eqErr }, { data: coData }]) => {
@@ -115,7 +116,7 @@ function EquipmentContent() {
 
       const checkedOutMap = new Map<string, number>();
       const checkedOutSerialsMap = new Map<string, Set<string>>();
-      (coData ?? []).forEach((c: { equipment_id: string; quantity: number; serial_number?: string | null }) => {
+      (coData ?? []).forEach((c) => {
         checkedOutMap.set(c.equipment_id, (checkedOutMap.get(c.equipment_id) ?? 0) + c.quantity);
         if (c.serial_number) {
           const serials = checkedOutSerialsMap.get(c.equipment_id) ?? new Set<string>();
@@ -124,7 +125,7 @@ function EquipmentContent() {
         }
       });
 
-      const withAvail = ((eqData ?? []) as Equipment[]).map((e) => ({
+      const withAvail = (eqData ?? []).map((e) => ({
         ...e,
         available: e.total_quantity - (checkedOutMap.get(e.id) ?? 0),
         checkedOutSerials: Array.from(checkedOutSerialsMap.get(e.id) ?? []),
@@ -160,7 +161,7 @@ function EquipmentContent() {
       }
     }
 
-    const resp = await fetch("/api/equipment", {
+    const resp = await firebaseFetch("/api/equipment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -214,7 +215,7 @@ function EquipmentContent() {
     setRemoveSaving(true);
     setRemoveError(null);
 
-    const resp = await fetch("/api/equipment", {
+    const resp = await firebaseFetch("/api/equipment", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: removingEquipment.id, isActive: false, teacherPassword: removePassword }),
@@ -269,7 +270,7 @@ function EquipmentContent() {
     setEditSaving(true);
     setEditError(null);
 
-    const resp = await fetch("/api/equipment", {
+    const resp = await firebaseFetch("/api/equipment", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -150,8 +150,8 @@ Students cannot access this page.
 
 When a teacher creates a student from this page, the app creates:
 
-- a Supabase Auth user
-- a linked row in the `students` table
+- a Firebase Auth user
+- a linked document in the `students` Firestore collection
 
 The created student account is email-confirmed immediately by the server-side admin flow.
 

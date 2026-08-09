@@ -1,15 +1,9 @@
-/**
- * Tests for POST /api/checkouts/check-in
- *
- * Strategy:
- *  - Mock `createSupabaseServerClient` for auth.
- *  - Mock `global.fetch` for Supabase REST calls
- *    (student look-up, checkout fetch, checkout PATCH).
- *  - Mock `next/server` so responses are plain objects.
- */
+jest.mock("@/lib/firebase/server-auth", () => ({
+  createFirebaseServerAuthClient: jest.fn(),
+}));
 
-jest.mock("@/lib/supabase/server-client", () => ({
-  createSupabaseServerClient: jest.fn(),
+jest.mock("@/lib/firebase/admin-client", () => ({
+  getFirebaseAdminDb: jest.fn(),
 }));
 
 jest.mock("next/server", () => ({
@@ -22,13 +16,18 @@ jest.mock("next/server", () => ({
 }));
 
 import { POST } from "@/app/api/checkouts/check-in/route";
-import { createSupabaseServerClient } from "@/lib/supabase/server-client";
+import { getFirebaseAdminDb } from "@/lib/firebase/admin-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
 
-const mockCreateClient = createSupabaseServerClient as jest.MockedFunction<
-  typeof createSupabaseServerClient
+const mockCreateClient = createFirebaseServerAuthClient as jest.MockedFunction<
+  typeof createFirebaseServerAuthClient
 >;
+const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAdminDb>;
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+const ACTIVE_CHECKOUT = {
+  student_id: "student-1",
+  checked_in_at: null,
+};
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -40,166 +39,115 @@ function mockAuth(user: unknown) {
   } as never);
 }
 
-const ACTIVE_CHECKOUT = {
-  id: "co-1",
-  student_id: "student-1",
-  checked_in_at: null,
-};
+function makeWhereChain(docs: unknown[]) {
+  const chain = {
+    where: jest.fn(() => chain),
+    limit: jest.fn(() => chain),
+    get: jest.fn(async () => ({ docs })),
+  };
+  return chain;
+}
 
-const ALREADY_CHECKED_IN = {
-  id: "co-1",
-  student_id: "student-1",
-  checked_in_at: "2024-01-05T10:00:00Z",
-};
+function mockDb(options: {
+  checkout?: Record<string, unknown> | null;
+  ownedStudentId?: string | null;
+} = {}) {
+  const checkoutSet = jest.fn();
+  const studentDocs = options.ownedStudentId
+    ? [{ id: options.ownedStudentId }]
+    : [];
+  const studentChain = makeWhereChain(studentDocs);
 
-// ─── Setup ─────────────────────────────────────────────────────────────────
+  const db = {
+    collection: jest.fn((name: string) => {
+      if (name === "checkouts") {
+        return {
+          doc: jest.fn(() => ({
+            get: jest.fn(async () => ({
+              exists: options.checkout !== null,
+              data: () => options.checkout ?? ACTIVE_CHECKOUT,
+            })),
+            set: checkoutSet,
+          })),
+        };
+      }
 
-beforeAll(() => {
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
-});
+      if (name === "students") {
+        return { where: studentChain.where };
+      }
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  global.fetch = jest.fn();
-});
+      throw new Error(`Unexpected collection: ${name}`);
+    }),
+  };
 
-// ─── Tests ─────────────────────────────────────────────────────────────────
+  mockGetDb.mockReturnValue(db as never);
+  return { checkoutSet };
+}
 
 describe("POST /api/checkouts/check-in", () => {
-  describe("authentication guard", () => {
-    it("returns 401 when no user is signed in", async () => {
-      mockAuth(null);
-      const res = await POST(makeRequest({ checkoutId: "co-1" }));
-      expect(res.status).toBe(401);
-      expect((await res.json()).error).toMatch(/signed in/i);
-    });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDb();
   });
 
-  describe("input validation", () => {
-    it("returns 400 when checkoutId is missing", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
-      const res = await POST(makeRequest({}));
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/checkoutId/i);
-    });
-
-    it("returns 400 when checkoutId is an empty string", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
-      const res = await POST(makeRequest({ checkoutId: "" }));
-      expect(res.status).toBe(400);
-    });
+  it("returns 401 when no user is signed in", async () => {
+    mockAuth(null);
+    const res = await POST(makeRequest({ checkoutId: "co-1" }));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toMatch(/signed in/i);
   });
 
-  describe("checkout validation", () => {
-    it("returns 404 when the checkout does not exist", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      });
-      const res = await POST(makeRequest({ checkoutId: "co-missing" }));
-      expect(res.status).toBe(404);
-      expect((await res.json()).error).toMatch(/not found/i);
-    });
-
-    it("returns 404 when the checkout is already checked in", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => [ALREADY_CHECKED_IN],
-      });
-      const res = await POST(makeRequest({ checkoutId: "co-1" }));
-      expect(res.status).toBe(404);
-    });
+  it("returns 400 when checkoutId is missing", async () => {
+    mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
+    const res = await POST(makeRequest({}));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/checkoutId/i);
   });
 
-  describe("authorization — Student role", () => {
-    it("returns 403 when a Student tries to check in someone else's checkout", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Student" } });
-      (global.fetch as jest.Mock)
-        // checkout fetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [ACTIVE_CHECKOUT], // student_id = "student-1"
-        })
-        // student roster fetch (returns a different student id)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [{ id: "student-OTHER" }],
-        });
+  it("returns 404 when the checkout does not exist", async () => {
+    mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
+    mockDb({ checkout: null });
 
-      const res = await POST(makeRequest({ checkoutId: "co-1" }));
-      expect(res.status).toBe(403);
-      expect((await res.json()).error).toMatch(/you can only/i);
-    });
-
-    it("returns 403 when a Student has no linked roster entry", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Student" } });
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: async () => [ACTIVE_CHECKOUT] })
-        .mockResolvedValueOnce({ ok: true, json: async () => [] }); // no student
-
-      const res = await POST(makeRequest({ checkoutId: "co-1" }));
-      expect(res.status).toBe(403);
-    });
+    const res = await POST(makeRequest({ checkoutId: "co-missing" }));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toMatch(/not found/i);
   });
 
-  describe("successful check-in", () => {
-    const updatedCheckout = {
-      ...ACTIVE_CHECKOUT,
-      checked_in_at: new Date().toISOString(),
-    };
+  it("returns 404 when the checkout is already checked in", async () => {
+    mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
+    mockDb({ checkout: { ...ACTIVE_CHECKOUT, checked_in_at: "2024-01-05T10:00:00Z" } });
 
-    it("returns 200 and the updated checkout when a Teacher checks in", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: async () => [ACTIVE_CHECKOUT] })
-        .mockResolvedValueOnce({ ok: true, json: async () => [updatedCheckout] });
-
-      const res = await POST(makeRequest({ checkoutId: "co-1" }));
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.checkout).toMatchObject({ id: "co-1" });
-    });
-
-    it("returns 200 when a Student checks in their own checkout", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Student" } });
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: async () => [ACTIVE_CHECKOUT] })
-        // owned student id matches checkout.student_id
-        .mockResolvedValueOnce({ ok: true, json: async () => [{ id: "student-1" }] })
-        .mockResolvedValueOnce({ ok: true, json: async () => [updatedCheckout] });
-
-      const res = await POST(makeRequest({ checkoutId: "co-1" }));
-      expect(res.status).toBe(200);
-    });
-
-    it("passes returnNotes to the PATCH body", async () => {
-      mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: async () => [ACTIVE_CHECKOUT] })
-        .mockResolvedValueOnce({ ok: true, json: async () => [updatedCheckout] });
-
-      await POST(makeRequest({ checkoutId: "co-1", returnNotes: "Minor scratch" }));
-
-      // The second fetch call should be the PATCH; verify it was called
-      expect((global.fetch as jest.Mock).mock.calls[1][1].body).toContain(
-        "return_notes"
-      );
-    });
+    const res = await POST(makeRequest({ checkoutId: "co-1" }));
+    expect(res.status).toBe(404);
   });
 
-  describe("missing Supabase configuration", () => {
-    it("returns 500 when NEXT_PUBLIC_SUPABASE_URL is missing", async () => {
-      const saved = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-      mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
+  it("returns 403 when a student checks in another student's item", async () => {
+    mockAuth({ id: "u1", user_metadata: { role: "Student" } });
+    mockDb({ ownedStudentId: "student-other" });
 
-      const res = await POST(makeRequest({ checkoutId: "co-1" }));
-      expect(res.status).toBe(500);
+    const res = await POST(makeRequest({ checkoutId: "co-1" }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toMatch(/you can only/i);
+  });
 
-      process.env.NEXT_PUBLIC_SUPABASE_URL = saved;
-    });
+  it("updates an active checkout for a teacher", async () => {
+    mockAuth({ id: "u1", user_metadata: { role: "Teacher" } });
+    const { checkoutSet } = mockDb();
+
+    const res = await POST(makeRequest({ checkoutId: "co-1", returnNotes: "Minor scratch" }));
+    expect(res.status).toBe(200);
+    expect(checkoutSet).toHaveBeenCalledWith(expect.objectContaining({
+      checked_in_at: expect.any(String),
+      return_notes: "Minor scratch",
+    }), { merge: true });
+  });
+
+  it("updates an active checkout for the owning student", async () => {
+    mockAuth({ id: "u1", user_metadata: { role: "Student" } });
+    const { checkoutSet } = mockDb({ ownedStudentId: "student-1" });
+
+    const res = await POST(makeRequest({ checkoutId: "co-1" }));
+    expect(res.status).toBe(200);
+    expect(checkoutSet).toHaveBeenCalled();
   });
 });

@@ -11,17 +11,20 @@ function requiredEnv(name: string) {
 }
 
 export function getFirebaseAdminApp() {
-  const credential = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim()
-    ? applicationDefault()
-    : cert({
-        projectId: requiredEnv("FIREBASE_PROJECT_ID"),
-        clientEmail: requiredEnv("FIREBASE_CLIENT_EMAIL"),
-        privateKey: requiredEnv("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n"),
-      });
+  const projectId = process.env.FIREBASE_PROJECT_ID?.trim() ?? process.env.GCLOUD_PROJECT?.trim();
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.trim();
+  const credential = clientEmail && privateKey
+    ? cert({
+        projectId: projectId ?? requiredEnv("FIREBASE_PROJECT_ID"),
+        clientEmail,
+        privateKey: privateKey.replace(/\\n/g, "\n"),
+      })
+    : applicationDefault();
 
   return getApps()[0] ?? initializeApp({
     credential,
-    projectId: requiredEnv("FIREBASE_PROJECT_ID"),
+    projectId: projectId ?? requiredEnv("FIREBASE_PROJECT_ID"),
   });
 }
 

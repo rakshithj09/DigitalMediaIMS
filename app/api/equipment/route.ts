@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
+import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { verifyFirebasePassword } from "@/lib/firebase/server-password";
 import { EQUIPMENT_CATEGORIES } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
 
@@ -22,37 +23,6 @@ type UpdateBody = {
   serialNumber?: string | null;
   conditionNotes?: string | null;
 };
-
-function getSupabaseAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!url || !serviceRole) return null;
-
-  return createClient(url, serviceRole, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
-function getSupabasePublicClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE?.trim();
-
-  if (!url || !anonKey) return null;
-
-  return createClient(url, anonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
 
 function validateSerialNumbers(
   serialNumber: string | null | undefined,
@@ -85,10 +55,10 @@ function validateSerialNumbers(
 }
 
 async function requireTeacher() {
-  const supabase = await createSupabaseServerClient();
+  const firebaseClient = await createFirebaseServerAuthClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await firebaseClient.auth.getUser();
 
   if (!user) {
     return { error: "You must be signed in.", status: 401 };
@@ -106,19 +76,7 @@ async function verifyTeacherPassword(email: string | undefined, password: string
     return "Teacher password is required.";
   }
 
-  const supabase = getSupabasePublicClient();
-  if (!supabase) {
-    return "Server is missing Supabase public auth configuration.";
-  }
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  await supabase.auth.signOut();
-
-  if (error) {
-    return "Teacher password was incorrect.";
-  }
-
-  return null;
+  return verifyFirebasePassword(email, password);
 }
 
 export async function POST(req: Request) {
@@ -127,10 +85,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
+  const admin = getFirebaseAdminDataClient();
 
   const body = (await req.json().catch(() => ({}))) as CreateBody;
   const name = body.name?.trim() ?? "";
@@ -176,10 +131,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return NextResponse.json({ error: "Server is missing Supabase service configuration." }, { status: 500 });
-  }
+  const admin = getFirebaseAdminDataClient();
 
   const body = (await req.json().catch(() => ({}))) as UpdateBody;
   if (!body.id) {
@@ -204,7 +156,7 @@ export async function PATCH(req: Request) {
 
   if (typeof body.isActive === "boolean") {
     if (body.isActive === false) {
-      const passwordError = await verifyTeacherPassword(auth.user.email, body.teacherPassword);
+      const passwordError = await verifyTeacherPassword(auth.user.email ?? undefined, body.teacherPassword);
       if (passwordError) {
         return NextResponse.json({ error: passwordError }, { status: 403 });
       }
@@ -244,7 +196,9 @@ export async function PATCH(req: Request) {
     const nextCategory = String(update.category ?? currentEquipment.category);
     const nextQuantity = Number(update.total_quantity ?? currentEquipment.total_quantity);
     const nextSerialNumber =
-      body.serialNumber === undefined ? currentEquipment.serial_number : body.serialNumber;
+      body.serialNumber === undefined
+        ? (typeof currentEquipment.serial_number === "string" ? currentEquipment.serial_number : null)
+        : body.serialNumber;
     const serialError = validateSerialNumbers(nextSerialNumber, nextCategory, nextQuantity, {
       allowGroupedSerialized: categorySupportsSerialNumbers(nextCategory) && nextQuantity > 1,
     });

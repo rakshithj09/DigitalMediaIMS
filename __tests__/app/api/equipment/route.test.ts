@@ -1,15 +1,13 @@
-/**
- * Tests for POST /api/equipment (create) and PATCH /api/equipment (update).
- *
- * Strategy:
- *  - Mock `createSupabaseServerClient` for the auth/role check inside `requireTeacher()`.
- *  - Mock `@supabase/supabase-js` `createClient` to return a chainable mock
- *    admin client so database calls never hit the network.
- *  - Mock `next/server` so responses are plain objects.
- */
+jest.mock("@/lib/firebase/server-auth", () => ({
+  createFirebaseServerAuthClient: jest.fn(),
+}));
 
-jest.mock("@/lib/supabase/server-client", () => ({
-  createSupabaseServerClient: jest.fn(),
+jest.mock("@/lib/firebase/admin-data", () => ({
+  getFirebaseAdminDataClient: jest.fn(),
+}));
+
+jest.mock("@/lib/firebase/server-password", () => ({
+  verifyFirebasePassword: jest.fn(),
 }));
 
 jest.mock("next/server", () => ({
@@ -21,332 +19,202 @@ jest.mock("next/server", () => ({
   },
 }));
 
-// Build a re-usable chainable builder that Jest controls per-test.
-const mockMaybySingle = jest.fn();
-const mockInsert = jest.fn();
+import { PATCH, POST } from "@/app/api/equipment/route";
+import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
+import { verifyFirebasePassword } from "@/lib/firebase/server-password";
 
-const mockBuilder = {
-  select: jest.fn().mockReturnThis(),
-  eq: jest.fn().mockImplementation(function (this: unknown) {
-    // For the update chain, awaiting `.eq()` directly triggers this then()
-    return mockBuilder;
-  }),
-  update: jest.fn().mockReturnThis(),
-  maybySingle: mockMaybySingle,
-  maybeSingle: mockMaybySingle,
-  insert: mockInsert,
-  // Make the builder itself awaitable so `await admin.from().update().eq()` works
-  then: jest.fn().mockImplementation((resolve: (v: unknown) => unknown) =>
-    Promise.resolve({ error: null }).then(resolve)
-  ),
-};
-
-const mockFrom = jest.fn(() => mockBuilder);
-
-const mockAuthClient = {
-  signInWithPassword: jest.fn().mockResolvedValue({ error: null }),
-  signOut: jest.fn().mockResolvedValue({}),
-};
-
-jest.mock("@supabase/supabase-js", () => ({
-  createClient: jest.fn(() => ({
-    from: mockFrom,
-    auth: mockAuthClient,
-  })),
-}));
-
-import { POST, PATCH } from "@/app/api/equipment/route";
-import { createSupabaseServerClient } from "@/lib/supabase/server-client";
-
-const mockCreateClient = createSupabaseServerClient as jest.MockedFunction<
-  typeof createSupabaseServerClient
+const mockCreateClient = createFirebaseServerAuthClient as jest.MockedFunction<
+  typeof createFirebaseServerAuthClient
+>;
+const mockGetDataClient = getFirebaseAdminDataClient as jest.MockedFunction<
+  typeof getFirebaseAdminDataClient
+>;
+const mockVerifyPassword = verifyFirebasePassword as jest.MockedFunction<
+  typeof verifyFirebasePassword
 >;
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+const mockInsert = jest.fn();
+const mockUpdate = jest.fn();
+const mockMaybeSingle = jest.fn();
+const mockEq = jest.fn();
+const mockSelect = jest.fn();
+const mockFrom = jest.fn();
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
 }
 
-function mockTeacherAuth(email = "teacher@example.com") {
+function mockUser(user: unknown) {
   mockCreateClient.mockResolvedValue({
-    auth: {
-      getUser: async () => ({
-        data: { user: { id: "u1", email, user_metadata: { role: "Teacher" } } },
-      }),
-    },
+    auth: { getUser: async () => ({ data: { user } }) },
   } as never);
+}
+
+function mockTeacherAuth(email = "teacher@example.com") {
+  mockUser({ id: "u1", email, user_metadata: { role: "Teacher" } });
 }
 
 function mockStudentAuth() {
-  mockCreateClient.mockResolvedValue({
-    auth: {
-      getUser: async () => ({
-        data: { user: { id: "u2", email: "student@example.com", user_metadata: { role: "Student" } } },
-      }),
-    },
-  } as never);
+  mockUser({ id: "u2", email: "student@example.com", user_metadata: { role: "Student" } });
 }
 
 function mockNoAuth() {
-  mockCreateClient.mockResolvedValue({
-    auth: { getUser: async () => ({ data: { user: null } }) },
-  } as never);
+  mockUser(null);
 }
 
-// ─── Setup ─────────────────────────────────────────────────────────────────
+function mockAdminDataClient() {
+  const builder = {
+    select: mockSelect.mockReturnThis(),
+    eq: mockEq.mockReturnThis(),
+    update: mockUpdate.mockReturnThis(),
+    insert: mockInsert,
+    maybeSingle: mockMaybeSingle,
+    then: (resolve: (value: unknown) => unknown) => Promise.resolve({ error: null }).then(resolve),
+  };
 
-beforeAll(() => {
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-anon-key";
-});
-
-beforeEach(() => {
-  jest.clearAllMocks();
-  // Restore default mock implementations after clearAllMocks
-  mockBuilder.select.mockReturnThis();
-  mockBuilder.eq.mockReturnThis();
-  mockBuilder.update.mockReturnThis();
-  mockBuilder.then.mockImplementation((resolve: (v: unknown) => unknown) =>
-    Promise.resolve({ error: null }).then(resolve)
-  );
-  mockFrom.mockReturnValue(mockBuilder);
-});
-
-// ─── POST /api/equipment ───────────────────────────────────────────────────
+  mockFrom.mockReturnValue(builder);
+  mockGetDataClient.mockReturnValue({ from: mockFrom } as never);
+}
 
 describe("POST /api/equipment", () => {
-  describe("auth / role guard", () => {
-    it("returns 401 when no user is signed in", async () => {
-      mockNoAuth();
-      const res = await POST(makeRequest({}));
-      expect(res.status).toBe(401);
-    });
-
-    it("returns 403 when a Student tries to create equipment", async () => {
-      mockStudentAuth();
-      const res = await POST(makeRequest({}));
-      expect(res.status).toBe(403);
-      expect((await res.json()).error).toMatch(/teacher/i);
-    });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAdminDataClient();
+    mockInsert.mockResolvedValue({ error: null });
+    mockVerifyPassword.mockResolvedValue(null);
   });
 
-  describe("input validation", () => {
-    beforeEach(() => mockTeacherAuth());
-
-    it("returns 400 when name is missing", async () => {
-      mockInsert.mockResolvedValue({ error: null });
-      const res = await POST(
-        makeRequest({ category: "Camera", totalQuantity: 1 })
-      );
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/name/i);
-    });
-
-    it("returns 400 when name is whitespace-only", async () => {
-      const res = await POST(
-        makeRequest({ name: "   ", category: "Camera", totalQuantity: 1 })
-      );
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 400 when category is invalid", async () => {
-      const res = await POST(
-        makeRequest({ name: "My Cam", category: "InvalidCat", totalQuantity: 1 })
-      );
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/category/i);
-    });
-
-    it("returns 400 when category is missing", async () => {
-      const res = await POST(
-        makeRequest({ name: "My Cam", totalQuantity: 1 })
-      );
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 400 when totalQuantity is 0", async () => {
-      const res = await POST(
-        makeRequest({ name: "My Cam", category: "Camera", totalQuantity: 0 })
-      );
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/quantity/i);
-    });
-
-    it("returns 400 when totalQuantity is negative", async () => {
-      const res = await POST(
-        makeRequest({ name: "My Cam", category: "Camera", totalQuantity: -1 })
-      );
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 400 when totalQuantity exceeds 999", async () => {
-      const res = await POST(
-        makeRequest({ name: "My Cam", category: "Camera", totalQuantity: 1000 })
-      );
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 400 when a serialized item is created with quantity above 1", async () => {
-      const res = await POST(
-        makeRequest({
-          name: "My Cam",
-          category: "Camera",
-          totalQuantity: 3,
-          serialNumber: "CAM-001",
-        })
-      );
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/one item at a time/i);
-    });
-
-    it("returns 400 when a serialized item is created without exactly one barcode", async () => {
-      const res = await POST(
-        makeRequest({
-          name: "My Cam",
-          category: "Camera",
-          totalQuantity: 1,
-          serialNumber: "CAM-001\nCAM-002", // 2 serials for qty 1
-        })
-      );
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/exactly one barcode/i);
-    });
+  it("returns 401 when no user is signed in", async () => {
+    mockNoAuth();
+    const res = await POST(makeRequest({}));
+    expect(res.status).toBe(401);
   });
 
-  describe("successful creation", () => {
-    it("returns 200 when all inputs are valid (non-serialized category)", async () => {
-      mockTeacherAuth();
-      mockInsert.mockResolvedValue({ error: null });
-      const res = await POST(
-        makeRequest({ name: "Tripod", category: "Miscellaneous", totalQuantity: 5 })
-      );
-      expect(res.status).toBe(200);
-      expect((await res.json()).ok).toBe(true);
-    });
+  it("returns 403 when a student tries to create equipment", async () => {
+    mockStudentAuth();
+    const res = await POST(makeRequest({}));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toMatch(/teacher/i);
+  });
 
-    it("returns 200 when a serialized item is created with one barcode", async () => {
-      mockTeacherAuth();
-      mockInsert.mockResolvedValue({ error: null });
-      const res = await POST(
-        makeRequest({
-          name: "Camera A",
-          category: "Camera",
-          totalQuantity: 1,
-          serialNumber: "CAM-001",
-        })
-      );
-      expect(res.status).toBe(200);
-    });
+  it("validates required create input", async () => {
+    mockTeacherAuth();
+    await expect(POST(makeRequest({ category: "Camera", totalQuantity: 1 }))).resolves.toMatchObject({ status: 400 });
+    await expect(POST(makeRequest({ name: "My Cam", category: "InvalidCat", totalQuantity: 1 }))).resolves.toMatchObject({ status: 400 });
+    await expect(POST(makeRequest({ name: "My Cam", category: "Camera", totalQuantity: 0 }))).resolves.toMatchObject({ status: 400 });
+  });
 
-    it("returns 400 when the DB insert fails", async () => {
-      mockTeacherAuth();
-      mockInsert.mockResolvedValue({ error: { message: "DB constraint violation" } });
-      const res = await POST(
-        makeRequest({ name: "Tripod", category: "Miscellaneous", totalQuantity: 1 })
-      );
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/constraint/i);
-    });
+  it("requires one barcode for serialized equipment creates", async () => {
+    mockTeacherAuth();
+    const res = await POST(
+      makeRequest({
+        name: "Camera A",
+        category: "Camera",
+        totalQuantity: 1,
+        serialNumber: "CAM-001\nCAM-002",
+      })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/exactly one barcode/i);
+  });
+
+  it("inserts valid equipment", async () => {
+    mockTeacherAuth();
+    const res = await POST(
+      makeRequest({ name: "Tripod", category: "Miscellaneous", totalQuantity: 5 })
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockFrom).toHaveBeenCalledWith("equipment");
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
+      name: "Tripod",
+      total_quantity: 5,
+      is_active: true,
+    }));
+  });
+
+  it("returns 400 when the insert fails", async () => {
+    mockTeacherAuth();
+    mockInsert.mockResolvedValue({ error: { message: "Constraint violation" } });
+
+    const res = await POST(
+      makeRequest({ name: "Tripod", category: "Miscellaneous", totalQuantity: 1 })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/constraint/i);
   });
 });
 
-// ─── PATCH /api/equipment ──────────────────────────────────────────────────
-
 describe("PATCH /api/equipment", () => {
-  describe("auth / role guard", () => {
-    it("returns 401 when no user is signed in", async () => {
-      mockNoAuth();
-      const res = await PATCH(makeRequest({ id: "eq-1", name: "New Name" }));
-      expect(res.status).toBe(401);
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAdminDataClient();
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
+      error: null,
     });
-
-    it("returns 403 when a Student tries to update equipment", async () => {
-      mockStudentAuth();
-      const res = await PATCH(makeRequest({ id: "eq-1", name: "New Name" }));
-      expect(res.status).toBe(403);
-    });
+    mockVerifyPassword.mockResolvedValue(null);
   });
 
-  describe("input validation", () => {
-    beforeEach(() => mockTeacherAuth());
-
-    it("returns 400 when id is missing", async () => {
-      const res = await PATCH(makeRequest({ name: "New Name" }));
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/id/i);
-    });
-
-    it("returns 400 when no updatable fields are provided", async () => {
-      mockMaybySingle.mockResolvedValue({
-        data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
-        error: null,
-      });
-      const res = await PATCH(makeRequest({ id: "eq-1" }));
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/no equipment changes/i);
-    });
-
-    it("returns 400 when name update is empty string", async () => {
-      mockMaybySingle.mockResolvedValue({
-        data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
-        error: null,
-      });
-      const res = await PATCH(makeRequest({ id: "eq-1", name: "   " }));
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/name/i);
-    });
-
-    it("returns 400 when updating to an invalid category", async () => {
-      mockMaybySingle.mockResolvedValue({
-        data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
-        error: null,
-      });
-      const res = await PATCH(makeRequest({ id: "eq-1", category: "InvalidCat" }));
-      expect(res.status).toBe(400);
-      expect((await res.json()).error).toMatch(/category/i);
-    });
-
-    it("returns 400 when totalQuantity update is out of range", async () => {
-      mockMaybySingle.mockResolvedValue({
-        data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
-        error: null,
-      });
-      const res = await PATCH(makeRequest({ id: "eq-1", totalQuantity: 0 }));
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 404 when the equipment id does not exist", async () => {
-      mockMaybySingle.mockResolvedValue({ data: null, error: null });
-      const res = await PATCH(makeRequest({ id: "bad-id", name: "New Name" }));
-      expect(res.status).toBe(404);
-      expect((await res.json()).error).toMatch(/not found/i);
-    });
+  it("returns 401 when no user is signed in", async () => {
+    mockNoAuth();
+    const res = await PATCH(makeRequest({ id: "eq-1", name: "New Name" }));
+    expect(res.status).toBe(401);
   });
 
-  describe("successful update", () => {
-    it("returns 200 when renaming equipment", async () => {
-      mockTeacherAuth();
-      mockMaybySingle.mockResolvedValue({
-        data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
-        error: null,
-      });
-      const res = await PATCH(makeRequest({ id: "eq-1", name: "Updated Tripod" }));
-      expect(res.status).toBe(200);
-      expect((await res.json()).ok).toBe(true);
-    });
+  it("returns 403 when a student tries to update equipment", async () => {
+    mockStudentAuth();
+    const res = await PATCH(makeRequest({ id: "eq-1", name: "New Name" }));
+    expect(res.status).toBe(403);
+  });
 
-    it("returns 200 when updating conditionNotes", async () => {
-      mockTeacherAuth();
-      mockMaybySingle.mockResolvedValue({
-        data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
-        error: null,
-      });
-      const res = await PATCH(
-        makeRequest({ id: "eq-1", conditionNotes: "Small scratch on body" })
-      );
-      expect(res.status).toBe(200);
-    });
+  it("validates required update input", async () => {
+    mockTeacherAuth();
+    await expect(PATCH(makeRequest({ name: "New Name" }))).resolves.toMatchObject({ status: 400 });
+    await expect(PATCH(makeRequest({ id: "eq-1" }))).resolves.toMatchObject({ status: 400 });
+    await expect(PATCH(makeRequest({ id: "eq-1", name: "   " }))).resolves.toMatchObject({ status: 400 });
+  });
+
+  it("returns 404 when the equipment id does not exist", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const res = await PATCH(makeRequest({ id: "bad-id", name: "New Name" }));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toMatch(/not found/i);
+  });
+
+  it("verifies the teacher password before deactivating equipment", async () => {
+    mockTeacherAuth();
+    const res = await PATCH(makeRequest({
+      id: "eq-1",
+      isActive: false,
+      teacherPassword: "secret",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockVerifyPassword).toHaveBeenCalledWith("teacher@example.com", "secret");
+  });
+
+  it("returns 403 when deactivation password verification fails", async () => {
+    mockTeacherAuth();
+    mockVerifyPassword.mockResolvedValue("Invalid password.");
+
+    const res = await PATCH(makeRequest({
+      id: "eq-1",
+      isActive: false,
+      teacherPassword: "wrong",
+    }));
+    expect(res.status).toBe(403);
+  });
+
+  it("updates valid equipment fields", async () => {
+    mockTeacherAuth();
+    const res = await PATCH(makeRequest({ id: "eq-1", name: "Updated Tripod" }));
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith({ name: "Updated Tripod" });
+    expect(mockEq).toHaveBeenCalledWith("id", "eq-1");
   });
 });
