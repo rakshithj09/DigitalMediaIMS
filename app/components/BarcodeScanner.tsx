@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type BarcodeScannerProps = {
   onDetected: (barcode: string) => void;
@@ -29,11 +29,13 @@ export default function BarcodeScanner({ onDetected, disabled = false }: Barcode
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
+  const scanFrameRef = useRef<(() => Promise<void>) | null>(null);
   const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const stopScanning = () => {
+  const stopScanning = useCallback(() => {
     if (frameRef.current !== null) {
       cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
@@ -41,18 +43,26 @@ export default function BarcodeScanner({ onDetected, disabled = false }: Barcode
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) {
+      videoRef.current.pause();
       videoRef.current.srcObject = null;
     }
+    setIsCameraReady(false);
     setIsScanning(false);
-  };
+  }, []);
 
-  useEffect(() => stopScanning, []);
+  useEffect(() => stopScanning, [stopScanning]);
 
-  const scanFrame = async () => {
+  const scheduleScanFrame = useCallback(() => {
+    frameRef.current = requestAnimationFrame(() => {
+      void scanFrameRef.current?.();
+    });
+  }, []);
+
+  const scanFrame = useCallback(async () => {
     const detector = detectorRef.current;
     const video = videoRef.current;
     if (!detector || !video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-      frameRef.current = requestAnimationFrame(scanFrame);
+      scheduleScanFrame();
       return;
     }
 
@@ -70,11 +80,45 @@ export default function BarcodeScanner({ onDetected, disabled = false }: Barcode
       return;
     }
 
-    frameRef.current = requestAnimationFrame(scanFrame);
-  };
+    scheduleScanFrame();
+  }, [onDetected, scheduleScanFrame, stopScanning]);
+
+  useEffect(() => {
+    scanFrameRef.current = scanFrame;
+  }, [scanFrame]);
+
+  useEffect(() => {
+    if (!isScanning) return;
+
+    let cancelled = false;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+
+    video.srcObject = stream;
+    video
+      .play()
+      .then(() => {
+        if (!cancelled) {
+          setIsCameraReady(true);
+          scheduleScanFrame();
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("Camera started, but the preview could not play. Refresh and allow camera access, then try again.");
+          stopScanning();
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isScanning, scheduleScanFrame, stopScanning]);
 
   const startScanning = async () => {
     setError(null);
+    setIsCameraReady(false);
 
     if (typeof window === "undefined" || !window.BarcodeDetector) {
       setError("Camera barcode scanning is not supported in this browser. You can still type or use a USB scanner.");
@@ -98,13 +142,6 @@ export default function BarcodeScanner({ onDetected, disabled = false }: Barcode
 
       streamRef.current = stream;
       setIsScanning(true);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-
-      frameRef.current = requestAnimationFrame(scanFrame);
     } catch {
       setError("Camera access was blocked. Allow camera access, then try again.");
       stopScanning();
@@ -143,17 +180,24 @@ export default function BarcodeScanner({ onDetected, disabled = false }: Barcode
 
       {isScanning && (
         <div
-          className="rounded-2xl p-3"
+          className="rounded-2xl p-3 barcode-preview-shell"
           style={{ background: "#0f172a", border: "1px solid rgba(148,163,184,0.35)" }}
         >
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            className="w-full rounded-xl"
-            style={{ maxHeight: 280, objectFit: "cover" }}
-          />
+          <div className="barcode-preview-frame">
+            {!isCameraReady && (
+              <div className="barcode-preview-status">
+                Starting camera...
+              </div>
+            )}
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="barcode-preview-video"
+              onLoadedMetadata={() => setIsCameraReady(true)}
+            />
+          </div>
           <p className="text-xs mt-2" style={{ color: "#cbd5e1" }}>
             Center the IGNITE barcode inside the frame.
           </p>
