@@ -2,11 +2,20 @@
   "name": "igniteims",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "firebase:deploy": "firebase deploy",
+    "firebase:deploy:firestore": "firebase deploy --only firestore",
+    "firebase:deploy:hosting": "firebase deploy --only hosting",
+    "firebase:migrate": "node scripts/migrate-supabase-to-firestore.mjs",
+    "firebase:migrate:dry-run": "node scripts/migrate-supabase-to-firestore.mjs --dry-run",
+    "firebase:verify": "node scripts/verify-firestore-counts.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -23,8 +32,10 @@
     "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "firebase": "^12.17.1",
+    "firebase-admin": "^13.10.0",
     "lucide-react": "^1.8.0",
-    "next": "16.2.4",
+    "next": "16.0.11",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.5.0"
@@ -39,7 +50,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.0.11",
+    "firebase-tools": "^15.26.0",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",

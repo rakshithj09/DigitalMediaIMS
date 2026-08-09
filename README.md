@@ -276,15 +276,15 @@ In **Supabase Dashboard → Authentication → URL Configuration**, set:
 **Site URL**
 
 ```text
-https://digital-media-ims.vercel.app
+https://igndigitalmedia.web.app
 ```
 
 **Redirect URLs**
 
 ```text
-https://digital-media-ims.vercel.app/auth/callback
-https://digital-media-ims.vercel.app/login
-https://digital-media-ims.vercel.app/reset-password
+https://igndigitalmedia.web.app/auth/callback
+https://igndigitalmedia.web.app/login
+https://igndigitalmedia.web.app/reset-password
 http://localhost:3000/auth/callback
 http://localhost:3000/login
 http://localhost:3000/reset-password
@@ -402,16 +402,16 @@ The due date picker blocks past dates, and the due time list removes earlier tim
 
 ---
 
-## Deployment (Vercel)
+## Deployment (Firebase Hosting)
 
-The production app runs at `https://digital-media-ims.vercel.app`.
+The production app runs at `https://igndigitalmedia.web.app`.
 
-Add these environment variables in Vercel:
+Add these environment variables for Firebase Hosting / framework deployment:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
-NEXT_PUBLIC_SITE_URL=https://digital-media-ims.vercel.app
+NEXT_PUBLIC_SITE_URL=https://igndigitalmedia.web.app
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
@@ -456,6 +456,82 @@ Clear `.next` and restart the dev server:
 ```bash
 rm -rf .next && npm run dev
 ```
+
+---
+
+## Firebase Migration Setup
+
+Firebase project files live at the repo root:
+
+| File | What it does |
+|---|---|
+| `firebase.json` | Firebase Hosting and Firestore deploy configuration |
+| `firestore.rules` | Firestore security rules for students, teachers, equipment, checkouts, approvals, and profiles |
+| `firestore.indexes.json` | Firestore composite indexes matching the app's current query patterns |
+| `scripts/migrate-supabase-to-firestore.mjs` | Copies current Supabase table rows into Firestore collections |
+| `lib/firebase/browser-client.ts` | Browser Firebase app, Auth, and Firestore helpers |
+| `lib/firebase/admin-client.ts` | Server-only Firebase Admin Auth and Firestore helpers |
+
+Add the Firebase values shown in `.env.example` to `.env.local`. The migration script still needs the current Supabase env values because it reads from Supabase and writes to Firestore.
+
+Required Firebase browser envs:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+```
+
+Required Firebase Admin envs:
+
+```env
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+```
+
+Instead of `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY`, you can set `GOOGLE_APPLICATION_CREDENTIALS` to the local path of a Firebase service account JSON file.
+
+To check how many rows will be copied from Supabase:
+
+```bash
+npm run firebase:migrate:dry-run
+```
+
+To copy the rows into Firestore:
+
+```bash
+npm run firebase:migrate
+```
+
+The migration creates these Firestore collections:
+
+- `profiles`
+- `students`
+- `equipment`
+- `checkouts`
+- `student_approval_requests`
+- `approved_teachers`
+
+To deploy Firestore rules and indexes:
+
+```bash
+npm run firebase:deploy:firestore
+```
+
+To deploy the Next.js app to Firebase Hosting:
+
+```bash
+npm run firebase:deploy:hosting
+```
+
+Because this app uses Next.js API routes and server-rendered pages, Firebase Hosting deploys a Cloud Function behind the Hosting rewrite. The Firebase project must have Cloud Functions enabled, which may require the Blaze plan.
+
+Important auth note: this migration copies database rows. It does not migrate Supabase Auth passwords into Firebase Auth. Existing users will need Firebase Auth accounts created separately and may need password-reset emails after the auth migration.
 
 ---
 

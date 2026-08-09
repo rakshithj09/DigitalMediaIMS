@@ -13,7 +13,7 @@ type Body = {
   studentId?: string;
 };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://digital-media-ims.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://igndigitalmedia.web.app";
 
 function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";

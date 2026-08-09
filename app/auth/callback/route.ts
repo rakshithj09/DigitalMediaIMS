@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { markStudentApprovalEmailVerified } from "@/lib/auth/student-approvals";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://digital-media-ims.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://igndigitalmedia.web.app";
 
 function redirectUrl(pathname: string, params?: Record<string, string>) {
   const url = new URL(pathname, SITE_URL);
