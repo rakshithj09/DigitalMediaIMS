@@ -119,6 +119,21 @@ describe("POST /api/equipment", () => {
     expect((await res.json()).error).toMatch(/exactly one barcode/i);
   });
 
+  it("rejects grouped barcode-tracked equipment creates", async () => {
+    mockTeacherAuth();
+    const res = await POST(
+      makeRequest({
+        name: "Camera A",
+        category: "Camera",
+        totalQuantity: 2,
+        serialNumber: "IGNITE-CAMERA-A-001",
+      })
+    );
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/one physical item/i);
+  });
+
   it("inserts valid equipment", async () => {
     mockTeacherAuth();
     const res = await POST(
@@ -216,5 +231,26 @@ describe("PATCH /api/equipment", () => {
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalledWith({ name: "Updated Tripod" });
     expect(mockEq).toHaveBeenCalledWith("id", "eq-1");
+  });
+
+  it("allows non-barcoded equipment quantities above one", async () => {
+    mockTeacherAuth();
+    const res = await PATCH(makeRequest({ id: "eq-1", totalQuantity: 6 }));
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith({ total_quantity: 6 });
+  });
+
+  it("rejects barcode-tracked equipment updates with quantity above one", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "eq-1", total_quantity: 1, serial_number: "IGNITE-CAMERA-001", category: "Camera" },
+      error: null,
+    });
+
+    const res = await PATCH(makeRequest({ id: "eq-1", totalQuantity: 2 }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/one physical item/i);
   });
 });

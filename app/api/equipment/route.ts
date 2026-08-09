@@ -27,25 +27,15 @@ type UpdateBody = {
 function validateSerialNumbers(
   serialNumber: string | null | undefined,
   category: string | null | undefined,
-  totalQuantity: number,
-  options?: { allowGroupedSerialized?: boolean }
+  totalQuantity: number
 ): string | null {
   if (categorySupportsSerialNumbers(category)) {
     const serialCount = parseSerialNumbers(serialNumber).length;
-    if (options?.allowGroupedSerialized) {
-      if (serialCount < totalQuantity) {
-        return "Each item must have a barcode label.";
-      }
-      if (serialCount > totalQuantity) {
-        return "Barcode labels cannot be more than the quantity.";
-      }
-    } else {
-      if (totalQuantity !== 1) {
-        return "Barcode-labeled equipment must be added one item at a time.";
-      }
-      if (serialCount !== 1) {
-        return "Scan exactly one barcode label for this item.";
-      }
+    if (totalQuantity !== 1) {
+      return "Barcode-labeled equipment must be stored one physical item at a time.";
+    }
+    if (serialCount !== 1) {
+      return "Scan exactly one barcode label for this item.";
     }
   }
   if ((serialNumber ?? "").length > 1000) {
@@ -199,9 +189,7 @@ export async function PATCH(req: Request) {
       body.serialNumber === undefined
         ? (typeof currentEquipment.serial_number === "string" ? currentEquipment.serial_number : null)
         : body.serialNumber;
-    const serialError = validateSerialNumbers(nextSerialNumber, nextCategory, nextQuantity, {
-      allowGroupedSerialized: categorySupportsSerialNumbers(nextCategory) && nextQuantity > 1,
-    });
+    const serialError = validateSerialNumbers(nextSerialNumber, nextCategory, nextQuantity);
     if (serialError) {
       return NextResponse.json({ error: serialError }, { status: 400 });
     }
