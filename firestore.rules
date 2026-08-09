@@ -14,6 +14,12 @@ service cloud.firestore {
       return signedIn() && resource.data.user_id == request.auth.uid;
     }
 
+    function ownsCheckoutRecord() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/students/$(resource.data.student_id))
+        && get(/databases/$(database)/documents/students/$(resource.data.student_id)).data.user_id == request.auth.uid;
+    }
+
     match /equipment/{equipmentId} {
       allow read: if signedIn() && (resource.data.is_active == true || isTeacher());
       allow create, update, delete: if isTeacher();
@@ -25,11 +31,9 @@ service cloud.firestore {
     }
 
     match /checkouts/{checkoutId} {
-      allow read: if isTeacher() || (
-        signedIn()
-        && exists(/databases/$(database)/documents/students/$(resource.data.student_id))
-        && get(/databases/$(database)/documents/students/$(resource.data.student_id)).data.user_id == request.auth.uid
-      );
+      allow read: if isTeacher()
+        || ownsCheckoutRecord()
+        || (signedIn() && resource.data.checked_in_at == null);
       allow create, update: if signedIn();
       allow delete: if isTeacher();
     }

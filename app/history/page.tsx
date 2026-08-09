@@ -23,33 +23,12 @@ function HistoryContent() {
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
+  const [authResolved, setAuthResolved] = useState(false);
 
   const [periodFilter, setPeriodFilter] = useState<Period | "All">("All");
   const [studentFilter, setStudentFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    const firebaseClient = createFirebaseDataClient();
-
-    firebaseClient
-      .from<Checkout>("checkouts")
-      .select(
-        `id, student_id, quantity, serial_number, checked_out_at, checked_in_at, notes, return_notes, period,
-         student:students(id, name, student_id),
-         equipment:equipment(id, name, category)`
-      )
-      .order("checked_out_at", { ascending: false })
-      .limit(500)
-      .then(({ data, error: fetchError }) => {
-        if (cancelled) return;
-        if (fetchError) setError(fetchError.message ?? "Unknown error");
-        else setHistory(data ?? []);
-      });
-
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -72,10 +51,46 @@ function HistoryContent() {
 
         if (mounted) setOwnStudentId(found?.data?.id ?? null);
       }
+
+      if (mounted) setAuthResolved(true);
     })();
 
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!authResolved) return;
+
+    let cancelled = false;
+    const firebaseClient = createFirebaseDataClient();
+    const isStudent = currentUser?.user_metadata?.role === "Student";
+
+    if (isStudent && !ownStudentId) {
+      queueMicrotask(() => setHistory([]));
+      return;
+    }
+
+    const query = firebaseClient
+      .from<Checkout>("checkouts")
+      .select(
+        `id, student_id, quantity, serial_number, checked_out_at, checked_in_at, notes, return_notes, period,
+         student:students(id, name, student_id),
+         equipment:equipment(id, name, category)`
+      )
+      .limit(500);
+
+    if (isStudent && ownStudentId) {
+      query.eq("student_id", ownStudentId);
+    }
+
+    query.order("checked_out_at", { ascending: false }).then(({ data, error: fetchError }) => {
+      if (cancelled) return;
+      if (fetchError) setError(fetchError.message ?? "Unknown error");
+      else setHistory(data ?? []);
+    });
+
+    return () => { cancelled = true; };
+  }, [authResolved, currentUser, ownStudentId]);
 
   const filtered = (history ?? []).filter((c) => {
     if (currentUser?.user_metadata?.role === "Student" && c.student_id !== ownStudentId) return false;

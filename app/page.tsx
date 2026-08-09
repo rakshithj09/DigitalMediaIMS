@@ -30,6 +30,7 @@ function DashboardContent() {
   const [tick, setTick] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
+  const [authResolved, setAuthResolved] = useState(false);
   const firebaseClient = createFirebaseDataClient();
 
   const refresh = useCallback(() => {
@@ -38,9 +39,17 @@ function DashboardContent() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!authResolved) return;
 
-    createFirebaseDataClient()
+    let cancelled = false;
+    const currentRole = currentUser?.user_metadata?.role;
+
+    if (currentRole === "Student" && !ownStudentId) {
+      queueMicrotask(() => setCheckouts([]));
+      return;
+    }
+
+    const query = createFirebaseDataClient()
       .from<Checkout>("checkouts")
       .select(
         `id, student_id, quantity, serial_number, checked_out_at, due_at, notes, period,
@@ -48,16 +57,20 @@ function DashboardContent() {
          equipment:equipment(id, name, category)`
       )
       .is("checked_in_at", null)
-      .eq("period", period)
-      .order("checked_out_at", { ascending: false })
-      .then(({ data, error: fetchError }) => {
-        if (cancelled) return;
-        if (fetchError) setError(fetchError.message ?? "Unknown error");
-        else setCheckouts(data ?? []);
-      });
+      .eq("period", period);
+
+    if (currentRole === "Student" && ownStudentId) {
+      query.eq("student_id", ownStudentId);
+    }
+
+    query.order("checked_out_at", { ascending: false }).then(({ data, error: fetchError }) => {
+      if (cancelled) return;
+      if (fetchError) setError(fetchError.message ?? "Unknown error");
+      else setCheckouts(data ?? []);
+    });
 
     return () => { cancelled = true; };
-  }, [period, tick]);
+  }, [authResolved, currentUser, ownStudentId, period, tick]);
 
   useEffect(() => {
     let mounted = true;
@@ -79,6 +92,7 @@ function DashboardContent() {
 
         if (mounted) setOwnStudentId(found?.data?.id ?? null);
       }
+      if (mounted) setAuthResolved(true);
     })();
 
     return () => { mounted = false; };
