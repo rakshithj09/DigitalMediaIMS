@@ -11,6 +11,8 @@ function requiredEnv(name: string) {
 }
 
 function getFirebaseConfig() {
+  const measurementId = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID?.trim();
+
   return {
     apiKey: requiredEnv("NEXT_PUBLIC_FIREBASE_API_KEY"),
     authDomain: requiredEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"),
@@ -18,6 +20,7 @@ function getFirebaseConfig() {
     storageBucket: requiredEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"),
     messagingSenderId: requiredEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
     appId: requiredEnv("NEXT_PUBLIC_FIREBASE_APP_ID"),
+    ...(measurementId ? { measurementId } : {}),
   };
 }
 
