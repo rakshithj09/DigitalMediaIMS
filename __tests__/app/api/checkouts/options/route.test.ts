@@ -155,6 +155,7 @@ describe("GET /api/checkouts/options", () => {
         student_id: "student-owned",
         equipment_id: "equipment-1",
         quantity: 1,
+        serial_number: "CAM-001",
         checked_out_at: "2026-08-09T12:00:00.000Z",
         checked_in_at: null,
         period: "PM",
@@ -172,10 +173,31 @@ describe("GET /api/checkouts/options", () => {
     expect(data.activeCheckouts[0].student).toMatchObject({ id: "student-owned" });
     expect(data.equipment[0]).toMatchObject({
       id: "equipment-1",
-      available: 1,
-      availableSerialNumbers: ["CAM-001"],
+      available: 0,
+      availableSerialNumbers: [],
     });
     expect(activeCheckouts.where).toHaveBeenCalledWith("student_id", "==", "student-owned");
+  });
+
+  it("excludes active checked-out barcode serials from student equipment availability", async () => {
+    mockAuth({ id: "student-auth-1", user_metadata: { role: "Student" } });
+    mockDb({
+      ownedStudent: { name: "Student One", period: "PM", is_active: true, user_id: "student-auth-1" },
+      equipment: [{ name: "Camera", category: "Camera", total_quantity: 1, serial_number: "CAM-001", is_active: true }],
+      activeCheckouts: [],
+      activeCheckoutSums: [{ equipment_id: "equipment-1", quantity: 1, serial_number: "CAM-001" }],
+    });
+
+    const res = await GET(makeRequest());
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.activeCheckouts).toEqual([]);
+    expect(data.equipment[0]).toMatchObject({
+      id: "equipment-1",
+      available: 0,
+      availableSerialNumbers: [],
+    });
   });
 
   it("returns period roster, active checkouts, and availability for teachers", async () => {

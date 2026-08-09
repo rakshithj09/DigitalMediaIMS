@@ -118,6 +118,8 @@ function CheckoutContent() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [requestedEquipmentId, setRequestedEquipmentId] = useState<string | null>(null);
+  const [handledRequestedEquipmentId, setHandledRequestedEquipmentId] = useState<string | null>(null);
 
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [returnNotes, setReturnNotes] = useState<Record<string, string>>({});
@@ -126,7 +128,12 @@ function CheckoutContent() {
 
   useEffect(() => {
     const eq = new URLSearchParams(window.location.search).get("eq");
-    if (eq) queueMicrotask(() => setEquipmentId(eq));
+    if (eq) {
+      queueMicrotask(() => {
+        setRequestedEquipmentId(eq);
+        setEquipmentId(eq);
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -229,6 +236,71 @@ function CheckoutContent() {
     return true;
   });
 
+  useEffect(() => {
+    if (!requestedEquipmentId || handledRequestedEquipmentId === requestedEquipmentId || loadingData) return;
+
+    queueMicrotask(() => {
+      const requestedEquipment = equipment.find((item) => item.id === requestedEquipmentId);
+      if (!requestedEquipment) {
+        setSubmitError("That equipment item is not available for checkout.");
+        setHandledRequestedEquipmentId(requestedEquipmentId);
+        return;
+      }
+
+      setEquipmentId(requestedEquipment.id);
+      setQuantity("1");
+
+      if (!categorySupportsSerialNumbers(requestedEquipment.category)) {
+        setSerialNumber("");
+        setBarcodeInput("");
+        setBarcodeFeedback(null);
+        setSubmitError(null);
+        setHandledRequestedEquipmentId(requestedEquipmentId);
+        return;
+      }
+
+      const allSerialNumbers = requestedEquipment.allSerialNumbers.length > 0
+        ? requestedEquipment.allSerialNumbers
+        : parseSerialNumbers(requestedEquipment.serial_number);
+
+      if (allSerialNumbers.length === 0) {
+        setSerialNumber("");
+        setBarcodeInput("");
+        setBarcodeFeedback(null);
+        setSubmitError("This barcode item does not have a saved barcode. Scan or type the barcode label to continue.");
+        setHandledRequestedEquipmentId(requestedEquipmentId);
+        return;
+      }
+
+      if (allSerialNumbers.length > 1) {
+        setSerialNumber("");
+        setBarcodeInput("");
+        setBarcodeFeedback(null);
+        setSubmitError("This equipment has multiple barcode labels. Scan or type the exact barcode label to continue.");
+        setHandledRequestedEquipmentId(requestedEquipmentId);
+        return;
+      }
+
+      const barcode = allSerialNumbers[0];
+      setSerialNumber(barcode);
+      setBarcodeInput(barcode);
+
+      const isAvailable = requestedEquipment.availableSerialNumbers.some(
+        (serial) => serial.toLowerCase() === barcode.toLowerCase()
+      );
+      if (!isAvailable || requestedEquipment.available <= 0) {
+        setBarcodeFeedback(null);
+        setSubmitError(`${requestedEquipment.name} is already checked out.`);
+        setHandledRequestedEquipmentId(requestedEquipmentId);
+        return;
+      }
+
+      setSubmitError(null);
+      setBarcodeFeedback(`Selected ${requestedEquipment.name} (${barcode}).`);
+      setHandledRequestedEquipmentId(requestedEquipmentId);
+    });
+  }, [equipment, handledRequestedEquipmentId, loadingData, requestedEquipmentId]);
+
   const applyScannedBarcode = useCallback(
     (rawBarcode: string) => {
       const result = findEquipmentByBarcode(
@@ -323,6 +395,8 @@ function CheckoutContent() {
       setSerialNumber("");
       setBarcodeInput("");
       setBarcodeFeedback(null);
+      setRequestedEquipmentId(null);
+      setHandledRequestedEquipmentId(null);
       setNotes("");
       {
         const nextDefault = createDefaultReturnDateTime();
@@ -495,6 +569,37 @@ function CheckoutContent() {
                 </p>
               </div>
 
+              {selectedEquipment && requiresBarcodeScan && (
+                <div
+                  className="rounded-xl px-4 py-3 text-sm"
+                  style={{ background: "#f8fafc", border: "1px solid #dbeafe" }}
+                >
+                  <p className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
+                    Selected barcode item
+                  </p>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <p className="text-xs font-medium uppercase" style={{ color: "var(--muted)", letterSpacing: "0.04em" }}>
+                        Item
+                      </p>
+                      <p className="mt-0.5 font-medium" style={{ color: "#374151" }}>{selectedEquipment.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase" style={{ color: "var(--muted)", letterSpacing: "0.04em" }}>
+                        Category
+                      </p>
+                      <p className="mt-0.5" style={{ color: "#374151" }}>{selectedEquipment.category}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase" style={{ color: "var(--muted)", letterSpacing: "0.04em" }}>
+                        Barcode
+                      </p>
+                      <p className="mt-0.5 font-mono text-xs" style={{ color: "#374151" }}>{serialNumber || "Scan required"}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium mb-1.5" htmlFor="co-eq" style={{ color: "#374151" }}>
                   Equipment Without Barcode Labels
@@ -508,6 +613,8 @@ function CheckoutContent() {
                     setSerialNumber("");
                     setBarcodeInput("");
                     setBarcodeFeedback(null);
+                    setRequestedEquipmentId(null);
+                    setHandledRequestedEquipmentId(null);
                   }}
                   placeholder="Select non-barcoded equipment…"
                   searchable

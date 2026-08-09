@@ -157,16 +157,17 @@ export async function GET(req: Request) {
       }
 
       const studentPeriod = student.period === "PM" ? "PM" : "AM";
-      const [equipment, activeCheckouts] = await Promise.all([
+      const [equipment, activeCheckouts, checkoutSums] = await Promise.all([
         getActiveEquipment(),
         getActiveCheckouts(studentPeriod, student.id),
+        getAllActiveCheckoutSummaries(),
       ]);
 
       return NextResponse.json({
         role,
         period: studentPeriod,
         students: [student],
-        equipment: attachAvailability(equipment, []),
+        equipment: attachAvailability(equipment, checkoutSums),
         activeCheckouts: await enrichCheckouts(activeCheckouts),
       });
     }
