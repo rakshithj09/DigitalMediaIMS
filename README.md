@@ -276,15 +276,15 @@ In **Supabase Dashboard → Authentication → URL Configuration**, set:
 **Site URL**
 
 ```text
-https://digital-media-ims.vercel.app
+https://igndigitalmedia.web.app
 ```
 
 **Redirect URLs**
 
 ```text
-https://digital-media-ims.vercel.app/auth/callback
-https://digital-media-ims.vercel.app/login
-https://digital-media-ims.vercel.app/reset-password
+https://igndigitalmedia.web.app/auth/callback
+https://igndigitalmedia.web.app/login
+https://igndigitalmedia.web.app/reset-password
 http://localhost:3000/auth/callback
 http://localhost:3000/login
 http://localhost:3000/reset-password
@@ -402,16 +402,16 @@ The due date picker blocks past dates, and the due time list removes earlier tim
 
 ---
 
-## Deployment (Vercel)
+## Deployment (Firebase Hosting)
 
-The production app runs at `https://digital-media-ims.vercel.app`.
+The production app runs at `https://igndigitalmedia.web.app`.
 
-Add these environment variables in Vercel:
+Add these environment variables for Firebase Hosting / framework deployment:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
-NEXT_PUBLIC_SITE_URL=https://digital-media-ims.vercel.app
+NEXT_PUBLIC_SITE_URL=https://igndigitalmedia.web.app
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
@@ -528,6 +528,8 @@ To deploy the Next.js app to Firebase Hosting:
 ```bash
 npm run firebase:deploy:hosting
 ```
+
+Because this app uses Next.js API routes and server-rendered pages, Firebase Hosting deploys a Cloud Function behind the Hosting rewrite. The Firebase project must have Cloud Functions enabled, which may require the Blaze plan.
 
 Important auth note: this migration copies database rows. It does not migrate Supabase Auth passwords into Firebase Auth. Existing users will need Firebase Auth accounts created separately and may need password-reset emails after the auth migration.
 
