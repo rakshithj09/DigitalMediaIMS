@@ -77,7 +77,25 @@ export default function EmailPasswordDemo({ user }: Props) {
           setError(formatAuthError(String(data?.error?.message ?? data?.error ?? ""), "Account creation failed."));
           return;
         }
-        setMessage("Account created. Check your email and verify your account before signing in.");
+
+        const { error: signInError } = await firebaseClient.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          setError(formatAuthError(signInError, "Account created, but the verification email could not be sent. Try signing in and requesting another verification email."));
+          return;
+        }
+
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? window.location.origin;
+        const verificationReason = role === "Student" ? "student_email_verified" : "email_verified";
+        const verificationUrl = `${siteUrl}/auth/callback?next=${encodeURIComponent(`/login?verified=success&reason=${verificationReason}`)}`;
+        const { error: verificationError } = await firebaseClient.auth.sendEmailVerification({ redirectTo: verificationUrl });
+        await firebaseClient.auth.signOut();
+
+        if (verificationError) {
+          setError(formatAuthError(verificationError, "Account created, but the verification email could not be sent. Try signing in and requesting another verification email."));
+          return;
+        }
+
+        setMessage("Account created. Check your school email and verify your account, then a teacher can approve your request.");
         setMode("signIn");
         setPassword("");
         setConfirmPassword("");

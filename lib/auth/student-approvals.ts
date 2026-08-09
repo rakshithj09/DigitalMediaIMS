@@ -29,17 +29,59 @@ export async function createStudentApprovalRequest(user: User) {
     throw new Error("Student account is missing required approval metadata.");
   }
 
-  const { error } = await admin
+  const requestBody = {
+    user_id: user.id,
+    email,
+    first_name: firstName,
+    last_name: lastName,
+    student_id: studentId,
+    period,
+    email_verified_at: confirmedAt(user),
+  };
+
+  const { data: existing, error: lookupError } = await admin
     .from("student_approval_requests")
-    .upsert({
+    .select("id, requested_at, email_verified_at")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (lookupError) {
+    if (lookupError.code === "42P01") {
+      throw new Error("Firestore collection missing: student_approval_requests.");
+    }
+    throw new Error(lookupError.message);
+  }
+
+  const existingId = typeof existing?.id === "string" ? existing.id : null;
+  const existingRequestedAt = typeof existing?.requested_at === "string" ? existing.requested_at : null;
+  const existingEmailVerifiedAt = typeof existing?.email_verified_at === "string" ? existing.email_verified_at : null;
+
+  const { error } = existingId
+    ? await admin
+        .from("student_approval_requests")
+        .update({
+          ...requestBody,
+          requested_at: existingRequestedAt ?? new Date().toISOString(),
+          email_verified_at: requestBody.email_verified_at ?? existingEmailVerifiedAt,
+        })
+        .eq("id", existingId)
+    : await admin
+        .from("student_approval_requests")
+        .insert({
+      id: user.id,
       user_id: user.id,
       email,
       first_name: firstName,
       last_name: lastName,
       student_id: studentId,
       period,
+      requested_at: new Date().toISOString(),
       email_verified_at: confirmedAt(user),
-    }, { onConflict: "user_id" });
+      approved_at: null,
+      approved_by: null,
+      roster_student_id: null,
+    });
 
   if (!error) return { ok: true as const };
   if (error.code === "42P01") {

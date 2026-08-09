@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import LoginSignupFrame from "@/components/ui/login-signup";
 import { Button } from "@/components/ui/button";
+import { firebaseFetch } from "@/lib/firebase/auth-fetch";
+import { formatAuthError } from "@/lib/firebase/auth-errors";
 import { createFirebaseDataClient } from "@/lib/firebase/browser-data";
 
 export default function PendingApprovalPage() {
@@ -12,11 +14,15 @@ export default function PendingApprovalPage() {
   const firebaseClient = createFirebaseDataClient();
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const checkApproval = async () => {
     setChecking(true);
     setError(null);
+    setMessage(null);
 
     try {
       const { data: userResult } = await firebaseClient.auth.getUser();
@@ -31,6 +37,18 @@ export default function PendingApprovalPage() {
         router.replace("/");
         return;
       }
+
+      const syncResp = await firebaseFetch("/api/auth/student-approval-request", {
+        method: "POST",
+        cache: "no-store",
+      });
+      const syncData = await syncResp.json().catch(() => ({}));
+      if (!syncResp.ok) {
+        setError(String(syncData?.error?.message ?? syncData?.error ?? "Unable to sync your approval request."));
+        return;
+      }
+
+      setEmailVerified(Boolean(syncData.emailVerified));
 
       const { data, error: studentError } = await firebaseClient
         .from<{ id?: string }>("students")
@@ -56,6 +74,24 @@ export default function PendingApprovalPage() {
     }
   };
 
+  const sendVerificationEmail = async () => {
+    setSendingVerification(true);
+    setError(null);
+    setMessage(null);
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? window.location.origin;
+    const verificationUrl = `${siteUrl}/auth/callback?next=${encodeURIComponent("/login?verified=success&reason=student_email_verified")}`;
+    const { error: verificationError } = await firebaseClient.auth.sendEmailVerification({ redirectTo: verificationUrl });
+
+    if (verificationError) {
+      setError(formatAuthError(verificationError, "Unable to send verification email."));
+    } else {
+      setMessage("Verification email sent. Check your school inbox and spam folder.");
+    }
+
+    setSendingVerification(false);
+  };
+
   useEffect(() => {
     void Promise.resolve().then(() => checkApproval());
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,7 +111,9 @@ export default function PendingApprovalPage() {
           Waiting For Teacher Approval
         </h1>
         <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
-          Your email is verified, but a teacher still needs to approve your account before you can join the class roster.
+          {emailVerified === false
+            ? "Check your school email and verify your account. Your teacher will be able to approve you after that."
+            : "Your request has been sent. A teacher still needs to approve your account before you can join the class roster."}
         </p>
 
         {error && (
@@ -86,8 +124,26 @@ export default function PendingApprovalPage() {
             {error}
           </div>
         )}
+        {message && (
+          <div
+            className="mt-5 rounded-lg border border-emerald-400/30 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200 text-left"
+          >
+            {message}
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col gap-3">
+          {emailVerified === false && (
+            <Button
+              type="button"
+              onClick={sendVerificationEmail}
+              disabled={sendingVerification}
+              className="h-10 w-full rounded-lg text-white hover:opacity-90"
+              style={{ background: "var(--navy)" }}
+            >
+              {sendingVerification ? "Sending..." : "Resend Verification Email"}
+            </Button>
+          )}
           <Button
             type="button"
             onClick={checkApproval}

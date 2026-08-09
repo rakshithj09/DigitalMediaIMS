@@ -112,7 +112,7 @@ export async function POST(req: Request) {
       email,
       password,
       displayName: `${firstName} ${lastName}`,
-      emailVerified: true,
+      emailVerified: false,
     });
     await getFirebaseAdminAuth().setCustomUserClaims(user.uid, claims);
 
@@ -122,9 +122,9 @@ export async function POST(req: Request) {
           id: user.uid,
           uid: user.uid,
           email,
-          emailVerified: true,
-          confirmed_at: new Date().toISOString(),
-          email_confirmed_at: new Date().toISOString(),
+          emailVerified: false,
+          confirmed_at: null,
+          email_confirmed_at: null,
           user_metadata: claims,
         } as never);
       } else {
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
       throw writeError;
     }
 
-    return NextResponse.json({ ok: true, requiresEmailConfirmation: false });
+    return NextResponse.json({ ok: true, requiresEmailConfirmation: true });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }

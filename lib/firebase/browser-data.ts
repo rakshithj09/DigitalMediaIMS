@@ -15,6 +15,7 @@ import {
   getIdToken,
   getIdTokenResult,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
@@ -185,6 +186,7 @@ type FirebaseDataClient = {
     getSession(): AuthResponse<{ session: AuthSession | null }>;
     getIdToken(): Promise<string | null>;
     signInWithPassword(credentials: { email: string; password: string }): AuthResponse<Record<string, never> | null>;
+    sendEmailVerification(options?: { redirectTo?: string }): AuthResponse<Record<string, never> | null>;
     resetPasswordForEmail(email: string, options?: { redirectTo?: string }): AuthResponse<Record<string, never> | null>;
     updateUser(update: { password?: string }): AuthResponse<Record<string, never> | null>;
     confirmPasswordReset(code: string, password: string): AuthResponse<Record<string, never> | null>;
@@ -225,6 +227,15 @@ export function createFirebaseDataClient(): FirebaseDataClient {
       async signInWithPassword({ email, password }: { email: string; password: string }) {
         try {
           await signInWithEmailAndPassword(auth, email, password);
+          return { data: {}, error: null };
+        } catch (err) {
+          return { data: null, error: toErrorResult(err) };
+        }
+      },
+      async sendEmailVerification(options?: { redirectTo?: string }) {
+        try {
+          if (!auth.currentUser) throw new Error("You must be signed in to send a verification email.");
+          await sendEmailVerification(auth.currentUser, options?.redirectTo ? { url: options.redirectTo } : undefined);
           return { data: {}, error: null };
         } catch (err) {
           return { data: null, error: toErrorResult(err) };
