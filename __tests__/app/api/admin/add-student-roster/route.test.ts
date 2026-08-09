@@ -37,12 +37,17 @@ function mockUser(user: unknown) {
   } as never);
 }
 
+type FirestoreWhereChain = {
+  where: jest.MockedFunction<() => FirestoreWhereChain>;
+  limit: jest.MockedFunction<() => FirestoreWhereChain>;
+  get: jest.MockedFunction<() => Promise<{ docs: unknown[] }>>;
+};
+
 function makeWhereChain(existingDoc: unknown | null) {
-  const chain = {
-    where: jest.fn(() => chain),
-    limit: jest.fn(() => chain),
-    get: jest.fn(async () => ({ docs: existingDoc ? [existingDoc] : [] })),
-  };
+  const chain = {} as FirestoreWhereChain;
+  chain.where = jest.fn(() => chain);
+  chain.limit = jest.fn(() => chain);
+  chain.get = jest.fn(async () => ({ docs: existingDoc ? [existingDoc] : [] }));
   return chain;
 }
 
