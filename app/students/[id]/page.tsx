@@ -190,7 +190,7 @@ function StudentDetailContent() {
                     <tr>
                       <th>Equipment</th>
                       <th>Qty</th>
-                      <th>Serial</th>
+                      <th>Barcode</th>
                       <th>Checked Out</th>
                       <th>Due</th>
                       <th>Checked In</th>

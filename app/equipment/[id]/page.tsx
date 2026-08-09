@@ -131,7 +131,7 @@ function EquipmentDetailContent() {
             <DetailCard label="Category" value={equipment.category} />
             <DetailCard label="Available" value={`${available} / ${equipment.total_quantity}`} accent={available === 0 ? "danger" : "success"} />
             <DetailCard label="Active Checkouts" value={String(activeCheckouts.length)} />
-            <DetailCard label="Serial Tags" value={String(serials.length)} />
+            <DetailCard label="Barcodes" value={String(serials.length)} />
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 mb-6">
@@ -178,9 +178,9 @@ function EquipmentDetailContent() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Serial / Asset Tags</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>IGNITE Barcodes</p>
                   {serials.length === 0 ? (
-                    <p className="text-sm mt-1" style={{ color: "#374151" }}>No serial tags saved.</p>
+                    <p className="text-sm mt-1" style={{ color: "#374151" }}>No barcodes saved.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {serials.map((serial) => (
@@ -214,7 +214,7 @@ function EquipmentDetailContent() {
                     <tr>
                       <th>Student</th>
                       <th>Qty</th>
-                      <th>Serial</th>
+                      <th>Barcode</th>
                       <th>Period</th>
                       <th>Checked Out</th>
                       <th>Checked In</th>
