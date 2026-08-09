@@ -891,7 +891,7 @@ function EquipmentContent() {
                       </td>
                       <td>
                         {isTeacher ? (
-                          <div className="flex items-center gap-2 whitespace-nowrap">
+                          <div className="equipment-action-group">
                             <button
                               onClick={() => openEdit(group.items[0])}
                               className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
