@@ -181,13 +181,12 @@ function CheckoutContent() {
     const studentsQuery = createFirebaseDataClient()
       .from<Student>("students")
       .select("id, name, student_id, user_id, email, period, is_active, created_at")
-      .eq("is_active", true)
-      .order("name");
+      .eq("is_active", true);
 
-    if (isStudent && ownStudentId) {
-      studentsQuery.eq("id", ownStudentId);
+    if (isStudent && currentUser?.id) {
+      studentsQuery.eq("user_id", currentUser.id);
     } else {
-      studentsQuery.eq("period", checkoutPeriod);
+      studentsQuery.eq("period", checkoutPeriod).order("name");
     }
 
     const activeCheckoutsQuery = createFirebaseDataClient()
@@ -208,7 +207,12 @@ function CheckoutContent() {
     Promise.all([
       studentsQuery,
       createFirebaseDataClient().from<Equipment>("equipment").select("*").eq("is_active", true).order("name"),
-      createFirebaseDataClient().from<Pick<Checkout, "equipment_id" | "quantity" | "serial_number">>("checkouts").select("equipment_id, quantity, serial_number").is("checked_in_at", null),
+      isStudent
+        ? Promise.resolve({ data: [] as Pick<Checkout, "equipment_id" | "quantity" | "serial_number">[], error: null })
+        : createFirebaseDataClient()
+            .from<Pick<Checkout, "equipment_id" | "quantity" | "serial_number">>("checkouts")
+            .select("equipment_id, quantity, serial_number")
+            .is("checked_in_at", null),
       activeCheckoutsQuery,
     ]).then(([{ data: stuData, error: stuError }, { data: eqData, error: eqError }, { data: coSums, error: sumsError }, { data: coData, error: coError }]) => {
       if (cancelled) return;
@@ -261,7 +265,7 @@ function CheckoutContent() {
     });
 
     return () => { cancelled = true; };
-  }, [authResolved, checkoutPeriod, currentRole, ownStudentId, period, tick]);
+  }, [authResolved, checkoutPeriod, currentRole, currentUser?.id, ownStudentId, period, tick]);
 
   const selectedEquipment = equipment.find((e) => e.id === equipmentId);
   const maxQty = selectedEquipment?.available ?? 0;

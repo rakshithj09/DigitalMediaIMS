@@ -14,6 +14,7 @@
     "firebase:deploy:firestore": "firebase deploy --only firestore",
     "firebase:deploy:hosting": "firebase deploy --only hosting",
     "firebase:verify": "node scripts/verify-firestore-counts.mjs",
+    "backend:audit": "node scripts/verify-backend-coverage.mjs",
     "firebase:split-barcodes:dry-run": "node scripts/split-barcoded-equipment.mjs",
     "firebase:split-barcodes:apply": "node scripts/split-barcoded-equipment.mjs --apply",
     "test": "jest",

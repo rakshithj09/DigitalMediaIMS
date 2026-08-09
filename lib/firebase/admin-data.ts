@@ -55,6 +55,7 @@ function toAppUser(user: Awaited<ReturnType<ReturnType<typeof getFirebaseAdminAu
 
 class FirebaseAdminQuery implements PromiseLike<QueryResult<Row[]>> {
   private filters: Array<{ field: string; value: unknown }> = [];
+  private orders: Array<{ field: string; ascending: boolean }> = [];
   private rowLimit: number | null = null;
   private mutation:
     | { kind: "insert"; value: Row | Row[] }
@@ -85,9 +86,10 @@ class FirebaseAdminQuery implements PromiseLike<QueryResult<Row[]>> {
     return this;
   }
 
-  order(_field?: string, _options?: { ascending?: boolean }) {
-    void _field;
-    void _options;
+  order(field?: string, options?: { ascending?: boolean }) {
+    if (field) {
+      this.orders.push({ field, ascending: options?.ascending ?? true });
+    }
     return this;
   }
 
@@ -135,6 +137,9 @@ class FirebaseAdminQuery implements PromiseLike<QueryResult<Row[]>> {
     let ref: FirebaseFirestore.Query = db.collection(this.collectionName);
     for (const filter of this.filters) {
       ref = ref.where(filter.field, "==", filter.value);
+    }
+    for (const order of this.orders) {
+      ref = ref.orderBy(order.field, order.ascending ? "asc" : "desc");
     }
     if (this.rowLimit !== null) ref = ref.limit(this.rowLimit);
     return ref.get();

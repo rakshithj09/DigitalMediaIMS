@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdminDb } from "@/lib/firebase/admin-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
 
 type Body = {
   name: string;
@@ -9,7 +10,29 @@ type Body = {
   student_id?: string;
 };
 
+async function requireTeacher() {
+  const firebaseClient = await createFirebaseServerAuthClient();
+  const {
+    data: { user },
+  } = await firebaseClient.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in.", status: 401 };
+  }
+
+  if (user.user_metadata?.role !== "Teacher") {
+    return { error: "Only teachers can add students to the roster.", status: 403 };
+  }
+
+  return { user };
+}
+
 export async function POST(req: Request) {
+  const teacher = await requireTeacher();
+  if ("error" in teacher) {
+    return NextResponse.json({ error: teacher.error }, { status: teacher.status });
+  }
+
   try {
     const body = (await req.json()) as Body;
     const name = body?.name?.trim();

@@ -1,7 +1,30 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin-client";
+import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
+
+async function requireTeacher() {
+  const firebaseClient = await createFirebaseServerAuthClient();
+  const {
+    data: { user },
+  } = await firebaseClient.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in.", status: 401 };
+  }
+
+  if (user.user_metadata?.role !== "Teacher") {
+    return { error: "Only teachers can create student accounts.", status: 403 };
+  }
+
+  return { user };
+}
 
 export async function POST(req: Request) {
+  const teacher = await requireTeacher();
+  if ("error" in teacher) {
+    return NextResponse.json({ error: teacher.error }, { status: teacher.status });
+  }
+
   const body = await req.json().catch(() => ({}));
   const { first_name, last_name, student_id, email, password, period } = body ?? {};
 
@@ -16,8 +39,9 @@ export async function POST(req: Request) {
   try {
     const auth = getFirebaseAdminAuth();
     const db = getFirebaseAdminDb();
+    const normalizedEmail = String(email).trim().toLowerCase();
     const user = await auth.createUser({
-      email,
+      email: normalizedEmail,
       password,
       emailVerified: true,
       displayName: `${first_name} ${last_name}`,
@@ -36,7 +60,7 @@ export async function POST(req: Request) {
       name: `${first_name} ${last_name}`,
       student_id,
       period,
-      email,
+      email: normalizedEmail,
       user_id: user.uid,
       is_active: true,
       created_at: new Date().toISOString(),

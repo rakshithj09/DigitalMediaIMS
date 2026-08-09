@@ -39,6 +39,16 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "checked_in_at", "order": "ASCENDING" },
+        { "fieldPath": "period", "order": "ASCENDING" },
+        { "fieldPath": "student_id", "order": "ASCENDING" },
+        { "fieldPath": "checked_out_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "checkouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "checked_in_at", "order": "ASCENDING" },
         { "fieldPath": "due_at", "order": "ASCENDING" }
       ]
     },

@@ -22,35 +22,34 @@ service cloud.firestore {
 
     match /equipment/{equipmentId} {
       allow read: if signedIn() && (resource.data.is_active == true || isTeacher());
-      allow create, update, delete: if isTeacher();
+      allow create, update, delete: if false;
     }
 
     match /students/{studentId} {
       allow read: if isTeacher() || ownsStudentRecord();
-      allow create, update, delete: if isTeacher();
+      allow create, update, delete: if false;
     }
 
     match /checkouts/{checkoutId} {
       allow read: if isTeacher()
         || ownsCheckoutRecord()
         || (signedIn() && resource.data.checked_in_at == null);
-      allow create, update: if signedIn();
-      allow delete: if isTeacher();
+      allow create, update, delete: if false;
     }
 
     match /student_approval_requests/{userId} {
       allow read: if isTeacher() || (signedIn() && request.auth.uid == userId);
-      allow create: if signedIn() && request.auth.uid == userId;
-      allow update, delete: if isTeacher();
+      allow create, update, delete: if false;
     }
 
     match /approved_teachers/{email} {
-      allow read, write: if isTeacher();
+      allow read: if isTeacher();
+      allow write: if false;
     }
 
     match /profiles/{userId} {
       allow read: if isTeacher() || (signedIn() && request.auth.uid == userId);
-      allow create, update, delete: if isTeacher();
+      allow create, update, delete: if false;
     }
   }
 }

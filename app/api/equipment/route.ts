@@ -54,7 +54,7 @@ async function requireTeacher() {
     return { error: "You must be signed in.", status: 401 };
   }
 
-  if (user.user_metadata?.role === "Student") {
+  if (user.user_metadata?.role !== "Teacher") {
     return { error: "Only teachers can manage equipment.", status: 403 };
   }
 
