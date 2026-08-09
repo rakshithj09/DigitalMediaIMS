@@ -21,8 +21,9 @@ type Props = { user?: User | null };
 export default function EmailPasswordDemo({ user }: Props) {
   const searchParams = useSearchParams();
   const forcedMode = (searchParams?.get("mode") ?? "").toLowerCase() === "signup";
+  const initialEmail = searchParams?.get("email")?.trim().toLowerCase() ?? "";
   const [mode, setMode] = useState<"signIn" | "signUp">(forcedMode ? "signUp" : "signIn");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");

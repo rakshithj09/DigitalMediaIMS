@@ -24,6 +24,13 @@ export default function LoginPage() {
   const router   = useRouter();
   const firebaseClient = createFirebaseDataClient();
 
+  const redirectToSignup = (emailValue: string) => {
+    const trimmedEmail = emailValue.trim().toLowerCase();
+    const params = new URLSearchParams({ mode: "signUp" });
+    if (trimmedEmail) params.set("email", trimmedEmail);
+    router.replace(`/email-password?${params.toString()}`);
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const verified = params.get("verified");
@@ -68,6 +75,20 @@ export default function LoginPage() {
     try {
       const { error: authError } = await firebaseClient.auth.signInWithPassword({ email, password });
       if (authError) {
+        const emailToCheck = email.trim().toLowerCase();
+        if (emailToCheck.endsWith("@bentonvillek12.org")) {
+          const existsResp = await fetch("/api/auth/account-exists", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: emailToCheck }),
+          });
+          const existsData = await existsResp.json().catch(() => ({}));
+          if (existsResp.ok && existsData.exists === false) {
+            redirectToSignup(emailToCheck);
+            return;
+          }
+        }
+
         setError(formatAuthError(authError, "Unable to sign in. Please try again."));
         setLoading(false);
       }
@@ -237,7 +258,7 @@ export default function LoginPage() {
 
       <p className="mt-5 text-center text-sm text-slate-500">
         New here?{" "}
-        <Link href="/email-password?mode=signUp" className="font-semibold hover:underline" style={{ color: "var(--navy)" }}>
+        <Link href={`/email-password?mode=signUp${email.trim() ? `&email=${encodeURIComponent(email.trim().toLowerCase())}` : ""}`} className="font-semibold hover:underline" style={{ color: "var(--navy)" }}>
           Create an account
         </Link>
       </p>
