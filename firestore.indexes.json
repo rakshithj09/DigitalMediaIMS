@@ -10,6 +10,14 @@
       ]
     },
     {
+      "collectionGroup": "students",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "is_active", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "equipment",
       "queryScope": "COLLECTION",
       "fields": [
@@ -39,6 +47,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "student_id", "order": "ASCENDING" },
+        { "fieldPath": "checked_out_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "checkouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "student_id", "order": "ASCENDING" },
         { "fieldPath": "checked_in_at", "order": "ASCENDING" },
         { "fieldPath": "checked_out_at", "order": "DESCENDING" }
       ]
@@ -49,6 +65,22 @@
       "fields": [
         { "fieldPath": "equipment_id", "order": "ASCENDING" },
         { "fieldPath": "checked_in_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "checkouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "equipment_id", "order": "ASCENDING" },
+        { "fieldPath": "checked_out_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "student_approval_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "approved_at", "order": "ASCENDING" },
+        { "fieldPath": "requested_at", "order": "ASCENDING" }
       ]
     },
     {
