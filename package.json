@@ -12,6 +12,7 @@
     "firebase:deploy:hosting": "firebase deploy --only hosting",
     "firebase:migrate": "node scripts/migrate-supabase-to-firestore.mjs",
     "firebase:migrate:dry-run": "node scripts/migrate-supabase-to-firestore.mjs --dry-run",
+    "firebase:verify": "node scripts/verify-firestore-counts.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
