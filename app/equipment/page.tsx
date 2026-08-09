@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, FormEvent } from "react";
+import { Fragment, useEffect, useState, useCallback, FormEvent } from "react";
 import Link from "next/link";
 import type { AppUser as User } from "@/lib/firebase/types";
 import { Eye, EyeOff } from "lucide-react";
@@ -198,6 +198,7 @@ function EquipmentContent() {
   };
 
   const openRemove = (item: EquipmentWithAvail) => {
+    setEditingEquipment(null);
     setRemovingEquipment(item);
     setRemovePassword("");
     setShowRemovePassword(false);
@@ -228,6 +229,7 @@ function EquipmentContent() {
   };
 
   const openEdit = (item: EquipmentWithAvail) => {
+    setRemovingEquipment(null);
     setEditingEquipment(item);
     setEditForm({
       name: item.name,
@@ -333,6 +335,8 @@ function EquipmentContent() {
   const addCategoryHasSerials = categorySupportsSerialNumbers(form.category);
   const editCategoryHasSerials = categorySupportsSerialNumbers(editForm.category);
   const openAddForm = () => {
+    setEditingEquipment(null);
+    setRemovingEquipment(null);
     const selectedCategory = isEquipmentCategory(categoryFilter) ? categoryFilter : "";
     setForm((current) => ({
       ...current,
@@ -550,204 +554,6 @@ function EquipmentContent() {
         </div>
       )}
 
-      {/* Edit form */}
-      {editingEquipment && (
-        <div
-          className="rounded-2xl p-6 mb-6"
-          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
-        >
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
-              Edit Equipment
-            </h3>
-            <button
-              type="button"
-              onClick={() => setEditingEquipment(null)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-              style={{ color: "var(--muted)", background: "#f1f5f9" }}
-            >
-              Cancel
-            </button>
-          </div>
-          {editError && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
-              {editError}
-            </div>
-          )}
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-name" style={{ color: "#374151" }}>
-                  Name <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  id="edit-eq-name"
-                  type="text"
-                  required
-                  maxLength={100}
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                  className="form-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-cat" style={{ color: "#374151" }}>
-                  Category
-                </label>
-                <SelectMenu
-                  id="edit-eq-cat"
-                  value={editForm.category}
-                  onChange={(nextValue) => setEditForm((f) => ({
-                    ...f,
-                    category: nextValue as (typeof EQUIPMENT_CATEGORIES)[number],
-                    total_quantity: categorySupportsSerialNumbers(nextValue) ? "1" : f.total_quantity,
-                    serial_number: categorySupportsSerialNumbers(nextValue) ? f.serial_number : "",
-                  }))}
-                  options={EQUIPMENT_CATEGORIES.map((c) => ({ label: c, value: c }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-qty" style={{ color: "#374151" }}>
-                  Quantity <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  id="edit-eq-qty"
-                  type="number"
-                  required
-                  min={1}
-                  max={999}
-                  value={editCategoryHasSerials ? "1" : editForm.total_quantity}
-                  onChange={(e) => setEditForm((f) => ({ ...f, total_quantity: e.target.value }))}
-                  disabled={editCategoryHasSerials}
-                  className="form-input"
-                />
-                {editCategoryHasSerials && (
-                  <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
-                    Barcode-labeled gear is stored one item per row.
-                  </p>
-                )}
-              </div>
-              {editCategoryHasSerials && (
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-serial" style={{ color: "#374151" }}>
-                  IGNITE Barcode <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  id="edit-eq-serial"
-                  type="text"
-                  maxLength={1000}
-                  value={editForm.serial_number}
-                  onChange={(e) => {
-                    setEditForm((f) => ({ ...f, serial_number: e.target.value }));
-                    setEditBarcodeFeedback(null);
-                  }}
-                  placeholder="Scan barcode label"
-                  className="form-input"
-                />
-                {editBarcodeFeedback && (
-                  <p className="text-xs mt-1.5" style={{ color: "#047857" }}>
-                    {editBarcodeFeedback}
-                  </p>
-                )}
-                <div className="mt-3">
-                  <BarcodeScanner onDetected={applyScannedEditBarcode} />
-                </div>
-              </div>
-              )}
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-eq-notes" style={{ color: "#374151" }}>
-                  Condition Notes
-                </label>
-                <input
-                  id="edit-eq-notes"
-                  type="text"
-                  maxLength={200}
-                  value={editForm.condition_notes}
-                  onChange={(e) => setEditForm((f) => ({ ...f, condition_notes: e.target.value }))}
-                  className="form-input"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={editSaving}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: "var(--navy)" }}
-            >
-              {editSaving ? "Saving…" : "Save Changes"}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Remove confirmation */}
-      {removingEquipment && (
-        <div
-          className="rounded-2xl p-6 mb-6"
-          style={{ background: "linear-gradient(135deg, #fff5f5 0%, #fff8f8 100%)", border: "1.5px solid #fecaca", boxShadow: "0 1px 3px rgba(185,28,28,0.06), 0 6px 24px rgba(185,28,28,0.06)" }}
-        >
-          <div className="flex items-start justify-between gap-3 mb-5">
-            <div>
-              <h3 className="font-semibold text-base" style={{ color: "#b91c1c" }}>
-                Remove Equipment
-              </h3>
-              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-                This removes {removingEquipment.name} from active inventory. Checkout history stays saved.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setRemovingEquipment(null)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-              style={{ color: "var(--muted)", background: "#f1f5f9" }}
-            >
-              Cancel
-            </button>
-          </div>
-          {removeError && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
-              {removeError}
-            </div>
-          )}
-          <form onSubmit={handleDeactivate} className="space-y-4">
-            <div className="max-w-sm">
-              <label className="block text-sm font-medium mb-1.5" htmlFor="remove-equipment-password" style={{ color: "#374151" }}>
-                Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="remove-equipment-password"
-                  type={showRemovePassword ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={removePassword}
-                  onChange={(event) => setRemovePassword(event.target.value)}
-                  className="form-input"
-                  style={{ paddingRight: "2.75rem" }}
-                />
-                <button
-                  type="button"
-                  aria-label={showRemovePassword ? "Hide teacher password" : "Show teacher password"}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
-                  style={{ color: "#94a3b8" }}
-                  onClick={() => setShowRemovePassword((value) => !value)}
-                >
-                  {showRemovePassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={removeSaving}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: "#dc2626" }}
-            >
-              {removeSaving ? "Removing…" : "Remove Equipment"}
-            </button>
-          </form>
-        </div>
-      )}
-
       {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">
         <div className="relative">
@@ -841,7 +647,8 @@ function EquipmentContent() {
                   const groupLink = group.items[0];
 
                   return (
-                    <tr key={group.key}>
+                    <Fragment key={group.key}>
+                    <tr>
                       <td className="equipment-name-cell font-semibold" style={{ color: "var(--ignite-navy)" }}>
                         <div className="equipment-name-wrap">
                           {isTeacher ? (
@@ -918,6 +725,203 @@ function EquipmentContent() {
                         )}
                       </td>
                     </tr>
+                    {editingEquipment?.id === groupLink.id && (
+                      <tr className="inline-action-row">
+                        <td colSpan={6}>
+                          <div className="inline-action-panel">
+                            <div className="flex items-center justify-between gap-3 mb-4">
+                              <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
+                                Edit Equipment
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() => setEditingEquipment(null)}
+                                className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                                style={{ color: "var(--muted)", background: "#f1f5f9" }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                            {editError && (
+                              <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+                                {editError}
+                              </div>
+                            )}
+                            <form onSubmit={handleEdit} className="space-y-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-eq-name-${groupLink.id}`} style={{ color: "#374151" }}>
+                                    Name <span style={{ color: "#ef4444" }}>*</span>
+                                  </label>
+                                  <input
+                                    id={`edit-eq-name-${groupLink.id}`}
+                                    type="text"
+                                    required
+                                    maxLength={100}
+                                    value={editForm.name}
+                                    onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                                    className="form-input"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-eq-cat-${groupLink.id}`} style={{ color: "#374151" }}>
+                                    Category
+                                  </label>
+                                  <SelectMenu
+                                    id={`edit-eq-cat-${groupLink.id}`}
+                                    value={editForm.category}
+                                    onChange={(nextValue) => setEditForm((f) => ({
+                                      ...f,
+                                      category: nextValue as (typeof EQUIPMENT_CATEGORIES)[number],
+                                      total_quantity: categorySupportsSerialNumbers(nextValue) ? "1" : f.total_quantity,
+                                      serial_number: categorySupportsSerialNumbers(nextValue) ? f.serial_number : "",
+                                    }))}
+                                    options={EQUIPMENT_CATEGORIES.map((c) => ({ label: c, value: c }))}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-eq-qty-${groupLink.id}`} style={{ color: "#374151" }}>
+                                    Quantity <span style={{ color: "#ef4444" }}>*</span>
+                                  </label>
+                                  <input
+                                    id={`edit-eq-qty-${groupLink.id}`}
+                                    type="number"
+                                    required
+                                    min={1}
+                                    max={999}
+                                    value={editCategoryHasSerials ? "1" : editForm.total_quantity}
+                                    onChange={(e) => setEditForm((f) => ({ ...f, total_quantity: e.target.value }))}
+                                    disabled={editCategoryHasSerials}
+                                    className="form-input"
+                                  />
+                                  {editCategoryHasSerials && (
+                                    <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
+                                      Barcode-labeled gear is stored one item per row.
+                                    </p>
+                                  )}
+                                </div>
+                                {editCategoryHasSerials && (
+                                  <div className="sm:col-span-2">
+                                    <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-eq-serial-${groupLink.id}`} style={{ color: "#374151" }}>
+                                      IGNITE Barcode <span style={{ color: "#ef4444" }}>*</span>
+                                    </label>
+                                    <input
+                                      id={`edit-eq-serial-${groupLink.id}`}
+                                      type="text"
+                                      maxLength={1000}
+                                      value={editForm.serial_number}
+                                      onChange={(e) => {
+                                        setEditForm((f) => ({ ...f, serial_number: e.target.value }));
+                                        setEditBarcodeFeedback(null);
+                                      }}
+                                      placeholder="Scan barcode label"
+                                      className="form-input"
+                                    />
+                                    {editBarcodeFeedback && (
+                                      <p className="text-xs mt-1.5" style={{ color: "#047857" }}>
+                                        {editBarcodeFeedback}
+                                      </p>
+                                    )}
+                                    <div className="mt-3">
+                                      <BarcodeScanner onDetected={applyScannedEditBarcode} />
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="sm:col-span-2">
+                                  <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-eq-notes-${groupLink.id}`} style={{ color: "#374151" }}>
+                                    Condition Notes
+                                  </label>
+                                  <input
+                                    id={`edit-eq-notes-${groupLink.id}`}
+                                    type="text"
+                                    maxLength={200}
+                                    value={editForm.condition_notes}
+                                    onChange={(e) => setEditForm((f) => ({ ...f, condition_notes: e.target.value }))}
+                                    className="form-input"
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                type="submit"
+                                disabled={editSaving}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                                style={{ background: "var(--navy)" }}
+                              >
+                                {editSaving ? "Saving…" : "Save Changes"}
+                              </button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {removingEquipment?.id === groupLink.id && (
+                      <tr className="inline-action-row">
+                        <td colSpan={6}>
+                          <div className="inline-action-panel inline-action-panel-danger">
+                            <div className="flex items-start justify-between gap-3 mb-4">
+                              <div>
+                                <h3 className="font-semibold text-base" style={{ color: "#b91c1c" }}>
+                                  Remove Equipment
+                                </h3>
+                                <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                                  This removes {removingEquipment.name} from active inventory. Checkout history stays saved.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setRemovingEquipment(null)}
+                                className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                                style={{ color: "var(--muted)", background: "#f1f5f9" }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                            {removeError && (
+                              <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+                                {removeError}
+                              </div>
+                            )}
+                            <form onSubmit={handleDeactivate} className="space-y-4">
+                              <div className="max-w-sm">
+                                <label className="block text-sm font-medium mb-1.5" htmlFor={`remove-equipment-password-${groupLink.id}`} style={{ color: "#374151" }}>
+                                  Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    id={`remove-equipment-password-${groupLink.id}`}
+                                    type={showRemovePassword ? "text" : "password"}
+                                    required
+                                    autoComplete="current-password"
+                                    value={removePassword}
+                                    onChange={(event) => setRemovePassword(event.target.value)}
+                                    className="form-input"
+                                    style={{ paddingRight: "2.75rem" }}
+                                  />
+                                  <button
+                                    type="button"
+                                    aria-label={showRemovePassword ? "Hide teacher password" : "Show teacher password"}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
+                                    style={{ color: "#94a3b8" }}
+                                    onClick={() => setShowRemovePassword((value) => !value)}
+                                  >
+                                    {showRemovePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                </div>
+                              </div>
+                              <button
+                                type="submit"
+                                disabled={removeSaving}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                                style={{ background: "#dc2626" }}
+                              >
+                                {removeSaving ? "Removing…" : "Remove Equipment"}
+                              </button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

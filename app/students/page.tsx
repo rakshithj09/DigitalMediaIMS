@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, FormEvent } from "react";
+import { Fragment, useEffect, useState, useCallback, FormEvent } from "react";
 import type { AppUser as User } from "@/lib/firebase/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -147,6 +147,7 @@ function StudentsContent() {
   };
 
   const openDelete = (student: Student) => {
+    setEditingStudent(null);
     setDeletingStudent(student);
     setDeletePassword("");
     setShowDeletePassword(false);
@@ -180,6 +181,7 @@ function StudentsContent() {
   };
 
   const openEdit = (student: Student) => {
+    setDeletingStudent(null);
     setEditingStudent(student);
     setEditForm({
       name: student.name,
@@ -245,7 +247,12 @@ function StudentsContent() {
         {currentUser?.user_metadata?.role !== "Student" && (
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => { setShowAdd((v) => !v); setSaveError(null); }}
+            onClick={() => {
+              setEditingStudent(null);
+              setDeletingStudent(null);
+              setShowAdd((v) => !v);
+              setSaveError(null);
+            }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
               style={{ background: "var(--navy)" }}
             >
@@ -404,169 +411,6 @@ function StudentsContent() {
         </div>
       )}
 
-      {/* Edit form */}
-      {editingStudent && (
-        <div
-          className="bg-white rounded-2xl p-6 mb-6"
-          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
-        >
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
-              Edit Student
-            </h3>
-            <button
-              type="button"
-              onClick={() => setEditingStudent(null)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-              style={{ color: "var(--muted)", background: "#f1f5f9" }}
-            >
-              Cancel
-            </button>
-          </div>
-          {editError && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
-              {editError}
-            </div>
-          )}
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-name" style={{ color: "#374151" }}>
-                  Full name <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  id="edit-name"
-                  type="text"
-                  required
-                  maxLength={120}
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                  className="form-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-sid" style={{ color: "#374151" }}>
-                  Student ID <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  id="edit-sid"
-                  type="text"
-                  required
-                  maxLength={20}
-                  value={editForm.student_id}
-                  onChange={(e) => setEditForm((f) => ({ ...f, student_id: e.target.value }))}
-                  className="form-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-period" style={{ color: "#374151" }}>
-                  Period
-                </label>
-                <SelectMenu
-                  id="edit-period"
-                  value={editForm.period}
-                  onChange={(nextValue) => setEditForm((f) => ({ ...f, period: nextValue as Period }))}
-                  options={[
-                    { label: "AM", value: "AM" },
-                    { label: "PM", value: "PM" },
-                  ]}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium mb-1.5" htmlFor="edit-email" style={{ color: "#374151" }}>
-                  Email <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  id="edit-email"
-                  type="email"
-                  required
-                  maxLength={200}
-                  value={editForm.email}
-                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
-                  className="form-input"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={editSaving}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: "var(--navy)" }}
-            >
-              {editSaving ? "Saving…" : "Save Changes"}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Delete confirmation */}
-      {deletingStudent && (
-        <div
-          className="bg-white rounded-2xl p-6 mb-6"
-          style={{ border: "1px solid #fecaca", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
-        >
-          <div className="flex items-start justify-between gap-3 mb-5">
-            <div>
-              <h3 className="font-semibold text-base" style={{ color: "#b91c1c" }}>
-                Delete Student Account
-              </h3>
-              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-                This removes {deletingStudent.name} from the active roster and deletes their sign-in account. Checkout history stays saved.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDeletingStudent(null)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-              style={{ color: "var(--muted)", background: "#f1f5f9" }}
-            >
-              Cancel
-            </button>
-          </div>
-          {deleteError && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
-              {deleteError}
-            </div>
-          )}
-          <form onSubmit={handleDelete} className="space-y-4">
-            <div className="max-w-sm">
-              <label className="block text-sm font-medium mb-1.5" htmlFor="delete-password" style={{ color: "#374151" }}>
-                Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="delete-password"
-                  type={showDeletePassword ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={deletePassword}
-                  onChange={(event) => setDeletePassword(event.target.value)}
-                  className="form-input"
-                  style={{ paddingRight: "2.75rem" }}
-                />
-                <button
-                  type="button"
-                  aria-label={showDeletePassword ? "Hide teacher password" : "Show teacher password"}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
-                  style={{ color: "#94a3b8" }}
-                  onClick={() => setShowDeletePassword((value) => !value)}
-                >
-                  {showDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={deleteSaving}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: "#dc2626" }}
-            >
-              {deleteSaving ? "Deleting…" : "Delete Student and Auth Account"}
-            </button>
-          </form>
-        </div>
-      )}
-
       {/* Search */}
       <div className="mb-4">
         <div className="relative max-w-sm">
@@ -634,7 +478,8 @@ function StudentsContent() {
               </thead>
               <tbody>
                 {filtered.map((s) => (
-                  <tr key={s.id}>
+                  <Fragment key={s.id}>
+                  <tr>
                     <td>
                       <Link
                         href={`/students/${s.id}`}
@@ -684,6 +529,168 @@ function StudentsContent() {
                       )}
                     </td>
                   </tr>
+                  {editingStudent?.id === s.id && (
+                    <tr className="inline-action-row">
+                      <td colSpan={5}>
+                        <div className="inline-action-panel">
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
+                              Edit Student
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={() => setEditingStudent(null)}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          {editError && (
+                            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+                              {editError}
+                            </div>
+                          )}
+                          <form onSubmit={handleEdit} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-name-${s.id}`} style={{ color: "#374151" }}>
+                                  Full name <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
+                                <input
+                                  id={`edit-name-${s.id}`}
+                                  type="text"
+                                  required
+                                  maxLength={120}
+                                  value={editForm.name}
+                                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                                  className="form-input"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-sid-${s.id}`} style={{ color: "#374151" }}>
+                                  Student ID <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
+                                <input
+                                  id={`edit-sid-${s.id}`}
+                                  type="text"
+                                  required
+                                  maxLength={20}
+                                  value={editForm.student_id}
+                                  onChange={(e) => setEditForm((f) => ({ ...f, student_id: e.target.value }))}
+                                  className="form-input"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-period-${s.id}`} style={{ color: "#374151" }}>
+                                  Period
+                                </label>
+                                <SelectMenu
+                                  id={`edit-period-${s.id}`}
+                                  value={editForm.period}
+                                  onChange={(nextValue) => setEditForm((f) => ({ ...f, period: nextValue as Period }))}
+                                  options={[
+                                    { label: "AM", value: "AM" },
+                                    { label: "PM", value: "PM" },
+                                  ]}
+                                />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium mb-1.5" htmlFor={`edit-email-${s.id}`} style={{ color: "#374151" }}>
+                                  Email <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
+                                <input
+                                  id={`edit-email-${s.id}`}
+                                  type="email"
+                                  required
+                                  maxLength={200}
+                                  value={editForm.email}
+                                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                                  className="form-input"
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="submit"
+                              disabled={editSaving}
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                              style={{ background: "var(--navy)" }}
+                            >
+                              {editSaving ? "Saving…" : "Save Changes"}
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {deletingStudent?.id === s.id && (
+                    <tr className="inline-action-row">
+                      <td colSpan={5}>
+                        <div className="inline-action-panel inline-action-panel-danger">
+                          <div className="flex items-start justify-between gap-3 mb-4">
+                            <div>
+                              <h3 className="font-semibold text-base" style={{ color: "#b91c1c" }}>
+                                Delete Student Account
+                              </h3>
+                              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                                This removes {deletingStudent.name} from the active roster and deletes their sign-in account. Checkout history stays saved.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingStudent(null)}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          {deleteError && (
+                            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+                              {deleteError}
+                            </div>
+                          )}
+                          <form onSubmit={handleDelete} className="space-y-4">
+                            <div className="max-w-sm">
+                              <label className="block text-sm font-medium mb-1.5" htmlFor={`delete-password-${s.id}`} style={{ color: "#374151" }}>
+                                Enter your teacher password <span style={{ color: "#ef4444" }}>*</span>
+                              </label>
+                              <div className="relative">
+                                <input
+                                  id={`delete-password-${s.id}`}
+                                  type={showDeletePassword ? "text" : "password"}
+                                  required
+                                  autoComplete="current-password"
+                                  value={deletePassword}
+                                  onChange={(event) => setDeletePassword(event.target.value)}
+                                  className="form-input"
+                                  style={{ paddingRight: "2.75rem" }}
+                                />
+                                <button
+                                  type="button"
+                                  aria-label={showDeletePassword ? "Hide teacher password" : "Show teacher password"}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2"
+                                  style={{ color: "#94a3b8" }}
+                                  onClick={() => setShowDeletePassword((value) => !value)}
+                                >
+                                  {showDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                              </div>
+                            </div>
+                            <button
+                              type="submit"
+                              disabled={deleteSaving}
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                              style={{ background: "#dc2626" }}
+                            >
+                              {deleteSaving ? "Deleting…" : "Delete Student and Auth Account"}
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

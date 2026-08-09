@@ -300,6 +300,27 @@ body {
 }
 .data-table tbody tr:last-child td:first-child { border-bottom-left-radius: 0.95rem; }
 .data-table tbody tr:last-child td:last-child { border-bottom-right-radius: 0.95rem; }
+.data-table tbody tr.inline-action-row td {
+  padding: 0;
+  background: #f8fbff;
+  border-bottom: 1px solid #dbe7f1;
+}
+.data-table tbody tr.inline-action-row:hover td {
+  background: #f8fbff;
+}
+.inline-action-panel {
+  margin: 0.85rem;
+  padding: 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: linear-gradient(135deg, #ffffff 0%, #fafcff 100%);
+  box-shadow: 0 1px 3px rgba(15,36,55,0.07), 0 6px 18px rgba(15,36,55,0.05);
+}
+.inline-action-panel-danger {
+  border-color: #fecaca;
+  background: linear-gradient(135deg, #fff5f5 0%, #fffafa 100%);
+  box-shadow: 0 1px 3px rgba(185,28,28,0.06), 0 6px 18px rgba(185,28,28,0.05);
+}
 
 .equipment-table {
   table-layout: fixed;
