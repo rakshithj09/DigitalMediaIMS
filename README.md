@@ -75,8 +75,6 @@ Required GitHub Actions secrets:
 
 ```txt
 FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA
-FIREBASE_CLIENT_EMAIL
-FIREBASE_PRIVATE_KEY
 NEXT_PUBLIC_FIREBASE_API_KEY
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -86,7 +84,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 ```
 
-`FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA` should contain the full Firebase service account JSON.
+`FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA` should contain the full Firebase service account JSON. Do not write `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, or `FIREBASE_PRIVATE_KEY` into the deploy `.env`; Firebase Functions rejects env keys with the reserved `FIREBASE_` prefix. The hosted backend uses Firebase's default runtime credentials.
 
 ## Important Auth Note
 

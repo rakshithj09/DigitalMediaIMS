@@ -11,7 +11,12 @@ function requiredEnv(name: string) {
 }
 
 export function getFirebaseAdminApp() {
-  const projectId = process.env.FIREBASE_PROJECT_ID?.trim() ?? process.env.GCLOUD_PROJECT?.trim();
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID?.trim()
+    ?? process.env.GCLOUD_PROJECT?.trim()
+    ?? process.env.GCP_PROJECT?.trim()
+    ?? process.env.GOOGLE_CLOUD_PROJECT?.trim()
+    ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.trim();
   const credential = clientEmail && privateKey
