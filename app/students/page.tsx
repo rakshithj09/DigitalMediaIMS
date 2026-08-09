@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState, useCallback, FormEvent } from "react";
 import type { AppUser as User } from "@/lib/firebase/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleAlert, Eye, EyeOff, LoaderCircle, Plus, Search, UserRoundMinus, X } from "lucide-react";
+import { CircleAlert, Eye, EyeOff, LoaderCircle, Plus, Search, UsersRound, X } from "lucide-react";
 import AppShell from "@/app/components/AppShell";
 import PeriodBadge from "@/app/components/PeriodBadge";
 import SelectMenu from "@/components/ui/select-menu";
@@ -440,7 +440,7 @@ function StudentsContent() {
         ) : filtered.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
-              <UserRoundMinus size={22} color="#94a3b8" strokeWidth={1.75} />
+              <UsersRound size={22} color="#94a3b8" strokeWidth={1.75} />
             </div>
             <p className="font-medium text-sm" style={{ color: "#374151" }}>No students found</p>
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
