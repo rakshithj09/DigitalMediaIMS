@@ -66,7 +66,8 @@ jobs:
       - name: Create preview channel ID
         id: preview-channel
         run: |
-          channel="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g' | cut -c1-30)"
+          branch_hash="$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-12)"
+          channel="preview-${branch_hash}"
           if [ -z "$channel" ]; then
             channel="branch-${GITHUB_RUN_ID}"
           fi
