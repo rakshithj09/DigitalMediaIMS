@@ -1,0 +1,145 @@
+name: Deploy Firebase Hosting Preview
+
+on:
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: firebase-hosting-preview-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    name: Deploy branch preview
+    if: github.event.deleted == false
+    runs-on: ubuntu-latest
+
+    env:
+      FIREBASE_CLI_EXPERIMENTS: webframeworks
+      NEXT_PUBLIC_SITE_URL: https://igndigitalmedia.web.app
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
+      FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test -- --ci --forceExit
+
+      - name: Check deploy environment
+        run: |
+          missing=0
+          for name in \
+            NEXT_PUBLIC_FIREBASE_API_KEY \
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID \
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET \
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID \
+            NEXT_PUBLIC_FIREBASE_APP_ID \
+            FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA
+          do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions secret or env value for $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Create preview channel ID
+        id: preview-channel
+        run: |
+          branch_hash="$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-12)"
+          channel="preview-${branch_hash}"
+          legacy_channel="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g' | cut -c1-30)"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "legacy_channel=$legacy_channel" >> "$GITHUB_OUTPUT"
+          echo "Preview channel: $channel"
+
+      - name: Create Firebase env file
+        run: |
+          {
+            echo "NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL"
+            echo "NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY"
+            echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"
+            echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID"
+            echo "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"
+            echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"
+            echo "NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID"
+            echo "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=$NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID"
+          } > .env
+
+      - name: Deploy to Firebase Hosting preview
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
+          projectId: igndigitalmedia
+          channelId: ${{ steps.preview-channel.outputs.channel }}
+          expires: 30d
+
+      - name: Delete legacy branch-name preview channel
+        if: steps.preview-channel.outputs.legacy_channel != '' && steps.preview-channel.outputs.legacy_channel != steps.preview-channel.outputs.channel
+        env:
+          LEGACY_CHANNEL_ID: ${{ steps.preview-channel.outputs.legacy_channel }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" > "$RUNNER_TEMP/firebase-service-account.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx firebase-tools@latest hosting:channel:delete "$LEGACY_CHANNEL_ID" --project igndigitalmedia --force || true
+
+  delete-preview:
+    name: Delete branch preview
+    if: github.event.deleted == true
+    runs-on: ubuntu-latest
+
+    env:
+      FIREBASE_CLI_EXPERIMENTS: webframeworks
+      FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
+
+    steps:
+      - name: Check delete environment
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" ]; then
+            echo "::error::Missing GitHub Actions secret FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA"
+            exit 1
+          fi
+
+      - name: Create preview channel IDs
+        id: preview-channel
+        run: |
+          branch_hash="$(printf '%s' "${GITHUB_REF_NAME}" | sha256sum | cut -c1-12)"
+          channel="preview-${branch_hash}"
+          legacy_channel="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g' | cut -c1-30)"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "legacy_channel=$legacy_channel" >> "$GITHUB_OUTPUT"
+          echo "Preview channel to delete: $channel"
+          echo "Legacy channel to delete: $legacy_channel"
+
+      - name: Delete Firebase Hosting preview channels
+        env:
+          CHANNEL_ID: ${{ steps.preview-channel.outputs.channel }}
+          LEGACY_CHANNEL_ID: ${{ steps.preview-channel.outputs.legacy_channel }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" > "$RUNNER_TEMP/firebase-service-account.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx firebase-tools@latest hosting:channel:delete "$CHANNEL_ID" --project igndigitalmedia --force || true
+          if [ -n "$LEGACY_CHANNEL_ID" ] && [ "$LEGACY_CHANNEL_ID" != "$CHANNEL_ID" ]; then
+            npx firebase-tools@latest hosting:channel:delete "$LEGACY_CHANNEL_ID" --project igndigitalmedia --force || true
+          fi
