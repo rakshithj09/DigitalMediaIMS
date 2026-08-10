@@ -63,6 +63,16 @@ jobs:
           done
           exit "$missing"
 
+      - name: Create preview channel ID
+        id: preview-channel
+        run: |
+          channel="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g' | cut -c1-30)"
+          if [ -z "$channel" ]; then
+            channel="branch-${GITHUB_RUN_ID}"
+          fi
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "Preview channel: $channel"
+
       - name: Create Firebase env file
         run: |
           {
@@ -81,4 +91,5 @@ jobs:
         with:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
           projectId: igndigitalmedia
+          channelId: ${{ steps.preview-channel.outputs.channel }}
           expires: 30d
