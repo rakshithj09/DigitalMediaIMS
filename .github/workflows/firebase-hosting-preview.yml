@@ -88,12 +88,12 @@ jobs:
           } > .env
 
       - name: Deploy to Firebase Hosting preview
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA }}
-          projectId: igndigitalmedia
-          channelId: ${{ steps.preview-channel.outputs.channel }}
-          expires: 30d
+        env:
+          CHANNEL_ID: ${{ steps.preview-channel.outputs.channel }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" > "$RUNNER_TEMP/firebase-service-account.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx firebase-tools@latest hosting:channel:deploy "$CHANNEL_ID" --expires 30d --project igndigitalmedia
 
       - name: Delete legacy branch-name preview channel
         if: steps.preview-channel.outputs.legacy_channel != '' && steps.preview-channel.outputs.legacy_channel != steps.preview-channel.outputs.channel
