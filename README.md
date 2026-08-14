@@ -89,3 +89,11 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 ## Important Auth Note
 
 The database rows were moved to Firestore, but existing user passwords from the old auth provider cannot be copied into Firebase Auth. Users need Firebase Auth accounts. Teachers can create/approve accounts through the app once signed in with a Firebase teacher account.
+
+## School App Access Review
+
+The app currently uses Firebase Auth email/password authentication for `@bentonvillek12.org` accounts. It does not use Google Sign-In, does not request Google Workspace OAuth scopes, and does not access Gmail, Drive, Calendar, Classroom, Contacts, or Google Admin data.
+
+Data used by the app is limited to school email, name, role, student ID, class period, email verification status, teacher approval status, and equipment checkout records created inside the app. Student users may be under 18 if the school approves student access; student accounts require email verification and teacher approval before full use.
+
+The public privacy/data-access page is available at `/privacy`.

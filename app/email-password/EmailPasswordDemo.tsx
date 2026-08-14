@@ -368,6 +368,10 @@ export default function EmailPasswordDemo({ user }: Props) {
 
       <p className="mt-5 text-center text-xs text-slate-400">
         Requires a <code className="rounded bg-slate-100 px-1 text-slate-500">@bentonvillek12.org</code> email
+        {" · "}
+        <Link href="/privacy" className="font-semibold hover:underline" style={{ color: "var(--navy)" }}>
+          Privacy
+        </Link>
       </p>
     </LoginSignupFrame>
   );
