@@ -112,18 +112,17 @@ function HistoryContent() {
     <div>
       {/* Page header */}
       <div className="mb-7">
-        <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+        <h2 className="page-title text-2xl">
           History
         </h2>
-        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+        <p className="page-subtitle text-sm mt-1">
           Full checkout and check in log
         </p>
       </div>
 
       {/* Filters bar */}
       <div
-        className="rounded-2xl p-4 mb-5 flex flex-wrap items-center gap-3"
-        style={{ background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 4px 16px rgba(15,36,55,0.05)" }}
+        className="material-panel rounded-2xl p-4 mb-5 flex flex-wrap items-center gap-3"
       >
         <div className="relative">
           <Search
@@ -181,8 +180,7 @@ function HistoryContent() {
         {hasFilters && (
           <button
             onClick={() => { setStudentFilter(""); setPeriodFilter("All"); setDateFrom(""); setDateTo(""); }}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-            style={{ color: "var(--ignite-navy)", background: "#f1f5f9" }}
+            className="quiet-button text-xs px-3 py-1.5"
           >
             <X size={12} strokeWidth={2.5} />
             Clear
@@ -196,21 +194,20 @@ function HistoryContent() {
 
       {/* Table */}
       <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
+        className="material-panel-strong rounded-2xl overflow-hidden"
       >
         {loading ? (
-          <div className="px-6 py-16 text-center">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
+          <div className="empty-state">
+            <div className="empty-state-icon !h-8 !w-8">
               <LoaderCircle className="animate-spin" size={16} color="#94a3b8" strokeWidth={2.5} />
             </div>
             <p className="text-sm" style={{ color: "var(--muted)" }}>Loading history…</p>
           </div>
         ) : error ? (
-          <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
+          <div className="empty-state text-sm" style={{ color: "#dc2626" }}>{error}</div>
         ) : filtered.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
+          <div className="empty-state">
+            <div className="empty-state-icon">
               <Clock size={22} color="#94a3b8" strokeWidth={1.75} />
             </div>
             <p className="font-medium text-sm" style={{ color: "#374151" }}>No records found</p>

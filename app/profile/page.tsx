@@ -145,7 +145,7 @@ function ProfileContent() {
 
   if (!authResolved || currentUser?.user_metadata?.role === "Student") {
     return (
-      <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid #e9eef5" }}>
+      <div className="material-panel-strong rounded-2xl p-6">
         <h2 className="text-xl font-semibold" style={{ color: "var(--ignite-navy)" }}>Profile</h2>
         <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>Redirecting…</p>
       </div>
@@ -155,28 +155,27 @@ function ProfileContent() {
   return (
     <div>
       <div className="mb-7">
-        <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+        <h2 className="page-title text-2xl">
           Profile
         </h2>
-        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+        <p className="page-subtitle text-sm mt-1">
           Approve teacher accounts and review pending student signups
         </p>
       </div>
 
       <div
-        className="bg-white rounded-2xl p-6 mb-6"
-        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        className="material-panel-strong rounded-2xl p-6 mb-6"
       >
         <h3 className="font-semibold text-base mb-4" style={{ color: "var(--ignite-navy)" }}>
           Approve Teacher
         </h3>
         {teacherApprovalError && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+          <div className="status-alert status-alert-danger mb-4">
             {teacherApprovalError}
           </div>
         )}
         {teacherApprovalMessage && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}>
+          <div className="status-alert status-alert-success mb-4">
             {teacherApprovalMessage}
           </div>
         )}
@@ -214,8 +213,7 @@ function ProfileContent() {
           <button
             type="submit"
             disabled={teacherApprovalSaving}
-            className="inline-flex items-center justify-center justify-self-start sm:justify-self-end px-4 py-2 rounded-lg text-sm font-semibold text-white whitespace-nowrap disabled:opacity-50"
-            style={{ background: "var(--navy)" }}
+            className="action-button justify-self-start sm:justify-self-end px-4 py-2 text-sm whitespace-nowrap disabled:opacity-50"
           >
             {teacherApprovalSaving ? "Approving..." : "Approve Teacher"}
           </button>
@@ -223,8 +221,7 @@ function ProfileContent() {
       </div>
 
       <div
-        className="bg-white rounded-2xl p-6"
-        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        className="material-panel-strong rounded-2xl p-6"
       >
         <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
           <div>
@@ -235,25 +232,24 @@ function ProfileContent() {
           <button
             type="button"
             onClick={loadPendingStudents}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "#e8f0fe", color: "var(--navy)" }}
+            className="secondary-button px-3 py-2 text-sm"
           >
             Refresh
           </button>
         </div>
 
         {studentApprovalError && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+          <div className="status-alert status-alert-danger mb-4">
             {studentApprovalError}
           </div>
         )}
         {studentApprovalMessage && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}>
+          <div className="status-alert status-alert-success mb-4">
             {studentApprovalMessage}
           </div>
         )}
         {pendingStudentsError && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+          <div className="status-alert status-alert-danger mb-4">
             {pendingStudentsError}
           </div>
         )}
@@ -314,8 +310,7 @@ function ProfileContent() {
                             type="button"
                             disabled={!emailVerified || approvingStudentId === student.userId}
                             onClick={() => handleStudentApproval(student.userId)}
-                            className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                            style={{ background: "var(--navy)" }}
+                            className="action-button px-3 py-2 text-sm disabled:opacity-50"
                           >
                             {approvingStudentId === student.userId ? "Approving..." : "Approve"}
                           </button>

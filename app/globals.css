@@ -10,22 +10,234 @@
   /* Aliases used across content pages */
   --ignite-navy: #005a78;
   --muted:       #64748b;
+  --surface:     rgba(255, 255, 255, 0.82);
+  --surface-solid: #ffffff;
+  --surface-soft:  #f8fbff;
+  --surface-line:  rgba(203, 213, 225, 0.72);
+  --focus-ring:    rgba(0, 90, 120, 0.18);
+  --shadow-soft:   0 1px 2px rgba(15, 36, 55, 0.05), 0 10px 28px rgba(15, 36, 55, 0.07);
+  --shadow-lift:   0 2px 6px rgba(15, 36, 55, 0.07), 0 18px 42px rgba(15, 36, 55, 0.10);
 }
 
 /* ── Base ─────────────────────────────────────────── */
 body {
-  background: var(--brand-bg);
+  background:
+    radial-gradient(circle at 16% -10%, rgba(255, 210, 31, 0.16), transparent 30rem),
+    linear-gradient(180deg, #edf3fa 0%, var(--brand-bg) 42%, #f6f8fb 100%);
   color: #0f172a;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+::selection {
+  background: rgba(255, 210, 31, 0.42);
+  color: var(--navy-deep);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+button:active,
+a:active {
+  transform: scale(0.985);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ── Shared application primitives ─────────────────── */
+.app-chrome {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.52)),
+    linear-gradient(135deg, rgba(0, 90, 120, 0.08), rgba(255, 210, 31, 0.08));
+}
+
+.material-bar {
+  background: rgba(0, 90, 120, 0.82);
+  border-bottom: 1px solid rgba(255, 210, 31, 0.44);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 8px 30px rgba(8, 36, 58, 0.18);
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+.material-sidebar {
+  background:
+    linear-gradient(180deg, rgba(0, 90, 120, 0.92) 0%, rgba(0, 79, 107, 0.86) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.06) inset, 10px 0 28px rgba(8, 36, 58, 0.08);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.material-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 251, 255, 0.84) 100%);
+  border: 1px solid var(--surface-line);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.material-panel-strong {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  box-shadow: var(--shadow-lift);
+}
+
+.panel-header {
+  border-bottom: 1px solid rgba(226, 232, 240, 0.86);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(248, 251, 255, 0.52));
+}
+
+.page-title {
+  color: var(--ignite-navy);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+
+.page-subtitle {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.action-button,
+.secondary-button,
+.quiet-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.65rem;
+  font-weight: 700;
+  transition: transform 0.12s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+}
+
+.action-button {
+  background: linear-gradient(180deg, var(--navy-hover), var(--navy));
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 90, 120, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.action-button:hover:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(0, 90, 120, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.secondary-button {
+  background: rgba(0, 90, 120, 0.08);
+  color: var(--navy);
+  border: 1px solid rgba(0, 90, 120, 0.14);
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: rgba(0, 90, 120, 0.12);
+}
+
+.quiet-button {
+  background: rgba(248, 250, 252, 0.86);
+  color: var(--navy);
+  border: 1px solid rgba(203, 213, 225, 0.74);
+}
+
+.quiet-button:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, 0.70);
+}
+
+.status-alert {
+  border-radius: 0.85rem;
+  border: 1px solid;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.status-alert-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.status-alert-success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.status-alert-warning {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #c2410c;
+}
+
+.empty-state {
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+.empty-state-icon {
+  display: flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+  border-radius: 0.9rem;
+  background: rgba(248, 250, 252, 0.92);
+  color: #94a3b8;
+}
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+
+.material-popover {
+  background:
+    radial-gradient(circle at top right, rgba(255, 210, 31, 0.14), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 251, 255, 0.90) 100%);
+  border: 1px solid rgba(203, 213, 225, 0.88);
+  box-shadow: 0 16px 44px rgba(8, 36, 58, 0.14), 0 2px 6px rgba(15, 36, 55, 0.08);
+  backdrop-filter: blur(18px) saturate(150%);
+  animation: materialize 140ms ease-out;
+  transform-origin: top center;
+}
+
+@keyframes materialize {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ── App header (used in AppShell only) ───────────── */
 .brand-header {
-  background: var(--navy);
+  background: rgba(0, 90, 120, 0.86);
   color: white;
-  border-bottom: 2px solid var(--mint);
-  box-shadow: 0 2px 24px rgba(0, 0, 0, 0.22);
+  border-bottom: 1px solid rgba(255, 210, 31, 0.44);
+  box-shadow: 0 8px 30px rgba(8, 36, 58, 0.18);
+  backdrop-filter: blur(22px) saturate(150%);
 }
 
 /* ── Small helper used in AppShell ───────────────── */
@@ -40,18 +252,19 @@ body {
 .form-input {
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: 0.65rem;
   border: 1.5px solid #e2e8f0;
   font-size: 0.875rem;
   color: #0f172a;
-  background: white;
+  background: rgba(255, 255, 255, 0.92);
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   box-shadow: 0 1px 2px rgba(15, 36, 55, 0.04);
 }
 .form-input:focus {
   border-color: var(--navy);
   box-shadow: 0 0 0 3px rgba(0, 90, 120, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: white;
 }
 .form-input::placeholder { color: #94a3b8; }
 .form-input:is(select) {
@@ -270,7 +483,8 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.11em;
   color: #526275;
-  background: linear-gradient(180deg, #f9fbfd 0%, #eef4f8 100%);
+  background: rgba(248, 251, 255, 0.94);
+  backdrop-filter: blur(14px) saturate(140%);
   border-bottom: 1px solid #d9e4ee;
   position: sticky;
   top: 0;
@@ -279,7 +493,7 @@ body {
 .data-table thead th:first-child { border-top-left-radius: 0.95rem; }
 .data-table thead th:last-child { border-top-right-radius: 0.95rem; }
 .data-table tbody tr {
-  transition: transform 0.12s ease, background 0.14s ease, box-shadow 0.14s ease;
+  transition: background 0.14s ease, box-shadow 0.14s ease;
 }
 .data-table tbody tr:nth-child(even) td {
   background: rgba(248, 250, 252, 0.72);
@@ -288,7 +502,7 @@ body {
   background: rgba(255, 255, 255, 0.9);
 }
 .data-table tbody tr:hover td {
-  background: #eef7ff;
+  background: rgba(232, 240, 254, 0.72);
 }
 .data-table td {
   padding: 1rem 1.25rem;
@@ -510,6 +724,52 @@ body {
 .data-table td button:hover,
 .data-table td a:hover {
   transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  button:active,
+  a:active {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .material-bar,
+  .material-sidebar,
+  .material-panel,
+  .material-popover {
+    background: #ffffff;
+    backdrop-filter: none;
+  }
+
+  .material-bar,
+  .material-sidebar {
+    background: var(--navy);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .material-panel,
+  .material-panel-strong,
+  .material-popover,
+  .form-input {
+    border-color: #64748b;
+  }
+
+  .badge,
+  .period-badge,
+  .badge-period {
+    border-color: currentColor;
+  }
 }
 
 .history-item-cell {

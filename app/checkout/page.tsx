@@ -437,10 +437,10 @@ function CheckoutContent() {
     <div>
       {/* Page header */}
       <div className="mb-7">
-        <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+        <h2 className="page-title text-2xl">
           Checkout
         </h2>
-        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+        <p className="page-subtitle text-sm mt-1">
           Check equipment in or out for{" "}
           <PeriodBadge>{checkoutPeriod} period</PeriodBadge>
         </p>
@@ -449,8 +449,7 @@ function CheckoutContent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── Checkout form ─────────────────────────────── */}
         <div
-          className="rounded-2xl p-6"
-          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
+          className="material-panel-strong rounded-2xl p-6"
         >
           <div className="flex items-center gap-2.5 mb-5">
             <div
@@ -466,8 +465,7 @@ function CheckoutContent() {
 
           {submitSuccess && (
             <div
-              className="mb-5 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
-              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a" }}
+              className="status-alert status-alert-success mb-5 flex items-start gap-2.5"
             >
               <CheckCircle2 className="mt-0.5 shrink-0" size={15} strokeWidth={2} />
               Checkout recorded successfully!
@@ -476,8 +474,7 @@ function CheckoutContent() {
           {submitError && (
             <div
               role="alert"
-              className="mb-5 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
-              style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}
+              className="status-alert status-alert-danger mb-5 flex items-start gap-2.5"
             >
               <CircleAlert className="mt-0.5 shrink-0" size={15} strokeWidth={2} />
               {submitError}
@@ -491,8 +488,7 @@ function CheckoutContent() {
             </div>
           ) : currentRole === "Student" && !ownStudentId ? (
             <div
-              className="px-4 py-3 rounded-xl text-sm"
-              style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#c2410c" }}
+              className="status-alert status-alert-warning"
             >
               Your email is verified, but your teacher still needs to approve your student account before you join the class roster.
             </div>
@@ -550,8 +546,7 @@ function CheckoutContent() {
                   <button
                     type="button"
                     onClick={() => applyScannedBarcode(barcodeInput)}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white"
-                    style={{ background: "var(--navy)" }}
+                    className="action-button px-4 py-2 text-sm"
                   >
                     Match Barcode
                   </button>
@@ -571,8 +566,7 @@ function CheckoutContent() {
 
               {selectedEquipment && requiresBarcodeScan && (
                 <div
-                  className="rounded-xl px-4 py-3 text-sm"
-                  style={{ background: "#f8fafc", border: "1px solid #dbeafe" }}
+                  className="material-panel rounded-xl px-4 py-3 text-sm"
                 >
                   <p className="font-semibold" style={{ color: "var(--ignite-navy)" }}>
                     Selected barcode item
@@ -707,8 +701,8 @@ function CheckoutContent() {
               <button
                 type="submit"
                 disabled={submitting || maxQty === 0}
-                className="w-full inline-flex items-center justify-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-                style={{ background: "var(--navy)", boxShadow: "0 2px 10px rgba(0,90,120,0.22)", fontSize: "0.9375rem" }}
+                className="action-button w-full py-2.5 mt-1 text-sm disabled:opacity-50"
+                style={{ fontSize: "0.9375rem" }}
               >
                 {submitting ? (
                   <>
@@ -723,8 +717,7 @@ function CheckoutContent() {
 
         {/* ── Check in list ──────────────────────────────── */}
         <div
-          className="rounded-2xl p-6"
-          style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}
+          className="material-panel-strong rounded-2xl p-6"
         >
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
@@ -749,16 +742,13 @@ function CheckoutContent() {
           </div>
 
           {activeCheckouts === null ? (
-            <div className="py-8 text-center">
+            <div className="empty-state !py-8">
               <LoaderCircle className="animate-spin mx-auto" size={20} color="#94a3b8" strokeWidth={2.5} />
               <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>Loading…</p>
             </div>
           ) : visibleActiveCheckouts.length === 0 ? (
-            <div className="py-10 text-center">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
-                style={{ background: "#f8fafc" }}
-              >
+            <div className="empty-state !py-10">
+              <div className="empty-state-icon">
                 <Check size={22} color="#94a3b8" strokeWidth={1.75} />
               </div>
               <p className="font-medium text-sm" style={{ color: "#374151" }}>All clear</p>
@@ -781,8 +771,7 @@ function CheckoutContent() {
                 return (
                   <div
                     key={c.id}
-                    className="rounded-xl p-3.5"
-                    style={{ border: "1px solid #e9eef5", background: "#fafbfd" }}
+                    className="material-panel rounded-xl p-3.5"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -822,7 +811,7 @@ function CheckoutContent() {
                       <button
                         onClick={() => handleCheckIn(c.id)}
                         disabled={checkingIn === c.id}
-                        className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                        className="action-button shrink-0 px-3 py-1.5 text-xs disabled:opacity-60"
                         style={{
                           background: checkingIn === c.id ? "#d1fae5" : "#059669",
                           color: checkingIn === c.id ? "#059669" : "white",

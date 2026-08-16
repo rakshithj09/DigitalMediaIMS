@@ -99,7 +99,7 @@ export default function DatePicker({
     <div className={`relative ${className}`.trim()} ref={pickerRef}>
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-3.5 py-2.5 text-left text-sm text-slate-900 shadow-sm transition hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#005a78]/20"
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/90 px-3.5 py-2.5 text-left text-sm text-slate-900 shadow-sm transition-[border-color,box-shadow,background,transform] hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#005a78]/20"
         onClick={() => {
           if (!open) {
             const nextFocusDate = selectedDate ?? minSelectableDate ?? today;
@@ -116,7 +116,7 @@ export default function DatePicker({
 
       {open && (
         <div
-          className="absolute left-0 top-[calc(100%+0.65rem)] z-30 w-[min(20rem,calc(100vw-3rem))] rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_right,rgba(255,210,31,0.16),transparent_32%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-[0_16px_44px_rgba(8,36,58,0.16),0_2px_6px_rgba(15,36,55,0.08)]"
+          className="material-popover absolute left-0 top-[calc(100%+0.65rem)] z-30 w-[min(20rem,calc(100vw-3rem))] rounded-2xl p-4"
           role="dialog"
           aria-label="Choose date"
         >

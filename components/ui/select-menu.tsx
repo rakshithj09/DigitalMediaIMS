@@ -98,7 +98,7 @@ export default function SelectMenu({
           }
         }}
         className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm transition-shadow focus-visible:border-[#005a78] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#005a78]/10 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-left text-sm text-slate-900 shadow-sm transition-[border-color,box-shadow,background,transform] hover:border-slate-300 focus-visible:border-[#005a78] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#005a78]/10 disabled:cursor-not-allowed disabled:opacity-50",
           triggerClassName,
         )}
       >
@@ -112,7 +112,7 @@ export default function SelectMenu({
         <div
           role="listbox"
           className={cn(
-            "absolute left-0 top-[calc(100%+0.45rem)] z-30 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-1.5 shadow-[0_14px_34px_rgba(8,36,58,0.14),0_2px_6px_rgba(15,36,55,0.08)]",
+            "material-popover absolute left-0 top-[calc(100%+0.45rem)] z-30 max-h-72 w-full overflow-auto rounded-xl p-1.5",
             menuClassName,
           )}
         >
@@ -124,7 +124,7 @@ export default function SelectMenu({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[#005a78] focus:ring-[3px] focus:ring-[#005a78]/10"
+                className="w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[#005a78] focus:ring-[3px] focus:ring-[#005a78]/10"
               />
             </div>
           )}
@@ -146,7 +146,7 @@ export default function SelectMenu({
                   closeMenu();
                 }}
                 className={cn(
-                  "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition",
+                  "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-[background,color,transform]",
                   option.disabled
                     ? "cursor-not-allowed text-slate-300"
                     : isSelected

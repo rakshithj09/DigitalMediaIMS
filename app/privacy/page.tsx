@@ -20,13 +20,13 @@ const notAccessedItems = [
 
 export default function PrivacyPage() {
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-900">
+    <main className="app-chrome min-h-screen px-6 py-10 text-slate-900">
       <div className="mx-auto max-w-3xl">
         <Link href="/login" className="text-sm font-semibold text-[#005a78] hover:underline">
           Back to login
         </Link>
 
-        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="material-panel-strong mt-6 rounded-2xl p-6">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#005a78]">
             Privacy and data access
           </p>

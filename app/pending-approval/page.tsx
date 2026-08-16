@@ -107,10 +107,10 @@ export default function PendingApprovalPage() {
           <TriangleAlert size={22} strokeWidth={2} />
         </div>
 
-        <h1 className="text-2xl font-bold leading-none" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+        <h1 className="page-title text-2xl leading-none">
           Waiting For Teacher Approval
         </h1>
-        <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+        <p className="page-subtitle mt-3 text-sm">
           {emailVerified === false
             ? "Check your school email and verify your account. Your teacher will be able to approve you after that."
             : "Your request has been sent. A teacher still needs to approve your account before you can join the class roster."}
@@ -119,14 +119,14 @@ export default function PendingApprovalPage() {
         {error && (
           <div
             role="alert"
-            className="mt-5 rounded-lg border border-red-400/30 bg-red-950/50 px-4 py-3 text-sm text-red-200 text-left"
+            className="status-alert status-alert-danger mt-5 text-left"
           >
             {error}
           </div>
         )}
         {message && (
           <div
-            className="mt-5 rounded-lg border border-emerald-400/30 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200 text-left"
+            className="status-alert status-alert-success mt-5 text-left"
           >
             {message}
           </div>
@@ -138,8 +138,7 @@ export default function PendingApprovalPage() {
               type="button"
               onClick={sendVerificationEmail}
               disabled={sendingVerification}
-              className="h-10 w-full rounded-lg text-white hover:opacity-90"
-              style={{ background: "var(--navy)" }}
+              className="action-button h-10 w-full text-white"
             >
               {sendingVerification ? "Sending..." : "Resend Verification Email"}
             </Button>
@@ -148,8 +147,7 @@ export default function PendingApprovalPage() {
             type="button"
             onClick={checkApproval}
             disabled={loading || checking}
-            className="h-10 w-full rounded-lg text-white hover:opacity-90"
-            style={{ background: "var(--navy)" }}
+            className="action-button h-10 w-full text-white"
           >
             {checking ? "Checking..." : "Check Approval Status"}
           </Button>
@@ -160,7 +158,7 @@ export default function PendingApprovalPage() {
               await firebaseClient.auth.signOut();
               router.replace("/login");
             }}
-            className="h-10 w-full rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            className="quiet-button h-10 w-full text-slate-700"
           >
             Sign Out
           </Button>

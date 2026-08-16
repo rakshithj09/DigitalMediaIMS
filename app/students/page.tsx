@@ -93,7 +93,7 @@ function StudentsContent() {
 
   if (!authResolved || currentUser?.user_metadata?.role === "Student") {
     return (
-      <div className="bg-white rounded-2xl p-6" style={{ border: "1px solid #e9eef5" }}>
+      <div className="material-panel-strong rounded-2xl p-6">
         <h2 className="text-xl font-semibold" style={{ color: "var(--ignite-navy)" }}>Students</h2>
         <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>Redirecting to checkout…</p>
       </div>
@@ -236,10 +236,10 @@ function StudentsContent() {
       {/* Page header */}
       <div className="mb-7 flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+          <h2 className="page-title text-2xl">
             Students
           </h2>
-          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+          <p className="page-subtitle text-sm mt-1">
             <PeriodBadge>{period} period</PeriodBadge>{" "}
             roster — {(students ?? []).length} student{(students ?? []).length !== 1 ? "s" : ""}
           </p>
@@ -253,8 +253,7 @@ function StudentsContent() {
               setShowAdd((v) => !v);
               setSaveError(null);
             }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity"
-              style={{ background: "var(--navy)" }}
+              className="action-button px-4 py-2 text-sm"
             >
               {showAdd ? (
                 <>
@@ -275,16 +274,14 @@ function StudentsContent() {
       {/* Add form */}
       {showAdd && (
         <div
-          className="bg-white rounded-2xl p-6 mb-6"
-          style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+          className="material-panel-strong rounded-2xl p-6 mb-6"
         >
           <h3 className="font-semibold text-base mb-5" style={{ color: "var(--ignite-navy)" }}>
             Add Student
           </h3>
           {saveError && (
             <div
-              className="mb-4 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
-              style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}
+              className="status-alert status-alert-danger mb-4 flex items-start gap-2.5"
             >
               <CircleAlert className="mt-0.5 shrink-0" size={14} strokeWidth={2} />
               {saveError}
@@ -388,8 +385,7 @@ function StudentsContent() {
 
             <div className="pt-1">
               <button type="submit" disabled={saving}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-                style={{ background: "var(--navy)" }}>
+                className="action-button px-4 py-2 text-sm disabled:opacity-50">
                 {saving ? (
                   <>
                     <LoaderCircle className="animate-spin" size={13} strokeWidth={2.5} />
@@ -403,7 +399,7 @@ function StudentsContent() {
       )}
 
       {/* Search */}
-      <div className="mb-4">
+      <div className="material-panel rounded-2xl p-3 mb-4">
         <div className="relative max-w-sm">
           <Search
             className="absolute pointer-events-none"
@@ -425,21 +421,20 @@ function StudentsContent() {
 
       {/* Table */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid #e9eef5", boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
+        className="material-panel-strong rounded-2xl overflow-hidden"
       >
         {loading ? (
-          <div className="px-6 py-16 text-center">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
+          <div className="empty-state">
+            <div className="empty-state-icon !h-8 !w-8">
               <LoaderCircle className="animate-spin" size={16} color="#94a3b8" strokeWidth={2.5} />
             </div>
             <p className="text-sm" style={{ color: "var(--muted)" }}>Loading students…</p>
           </div>
         ) : error ? (
-          <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
+          <div className="empty-state text-sm" style={{ color: "#dc2626" }}>{error}</div>
         ) : filtered.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
+          <div className="empty-state">
+            <div className="empty-state-icon">
               <UsersRound size={22} color="#94a3b8" strokeWidth={1.75} />
             </div>
             <p className="font-medium text-sm" style={{ color: "#374151" }}>No students found</p>
@@ -523,14 +518,13 @@ function StudentsContent() {
                             <button
                               type="button"
                               onClick={() => setEditingStudent(null)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+                              className="quiet-button text-xs px-3 py-1.5"
                             >
                               Cancel
                             </button>
                           </div>
                           {editError && (
-                            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+                            <div className="status-alert status-alert-danger mb-4">
                               {editError}
                             </div>
                           )}
@@ -596,8 +590,7 @@ function StudentsContent() {
                             <button
                               type="submit"
                               disabled={editSaving}
-                              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                              style={{ background: "var(--navy)" }}
+                              className="action-button px-4 py-2 text-sm disabled:opacity-50"
                             >
                               {editSaving ? "Saving…" : "Save Changes"}
                             </button>
@@ -622,14 +615,13 @@ function StudentsContent() {
                             <button
                               type="button"
                               onClick={() => setDeletingStudent(null)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                              style={{ color: "var(--muted)", background: "#f1f5f9" }}
+                              className="quiet-button text-xs px-3 py-1.5"
                             >
                               Cancel
                             </button>
                           </div>
                           {deleteError && (
-                            <div className="mb-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+                            <div className="status-alert status-alert-danger mb-4">
                               {deleteError}
                             </div>
                           )}
@@ -663,7 +655,7 @@ function StudentsContent() {
                             <button
                               type="submit"
                               disabled={deleteSaving}
-                              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                              className="action-button px-4 py-2 text-sm disabled:opacity-50"
                               style={{ background: "#dc2626" }}
                             >
                               {deleteSaving ? "Deleting…" : "Delete Student and Auth Account"}

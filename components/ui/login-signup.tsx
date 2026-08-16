@@ -13,7 +13,7 @@ type LoginSignupFrameProps = {
 };
 
 export const authInputClassName =
-  "auth-input h-10 rounded-lg border-slate-200 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-[#005a78] focus-visible:ring-[#005a78]/10";
+  "auth-input h-10 rounded-lg border-slate-200 bg-white/90 px-3 text-slate-900 placeholder:text-slate-400 focus-visible:border-[#005a78] focus-visible:ring-[#005a78]/10";
 
 export const authSelectClassName =
   "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-shadow focus:border-[#005a78] focus:ring-[3px] focus:ring-[#005a78]/10 disabled:cursor-not-allowed disabled:opacity-50";
@@ -22,13 +22,12 @@ export function LoginSignupFrame({ children, className, cardClassName }: LoginSi
   return (
     <section
       className={cn(
-        "fixed inset-0 overflow-y-auto text-slate-900",
+        "app-chrome fixed inset-0 overflow-y-auto text-slate-900",
         className,
       )}
-      style={{ background: "var(--brand-bg)" }}
     >
       <style>{`
-        .card-animate{opacity:0;transform:translateY(20px);animation:fadeUp .8s cubic-bezier(.22,.61,.36,1) .4s forwards}
+        .card-animate{opacity:0;transform:translateY(10px) scale(.992);animation:fadeUp .28s cubic-bezier(.2,.8,.2,1) .08s forwards}
         .auth-input:-webkit-autofill,
         .auth-input:-webkit-autofill:hover,
         .auth-input:-webkit-autofill:focus,
@@ -41,7 +40,7 @@ export function LoginSignupFrame({ children, className, cardClassName }: LoginSi
         @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
       `}</style>
 
-      <header className="brand-header sticky left-0 right-0 top-0 z-20 flex min-h-14 items-center px-3 py-2 sm:px-5">
+      <header className="brand-header material-bar sticky left-0 right-0 top-0 z-20 flex min-h-14 items-center px-3 py-2 sm:px-5">
         <Link href="/" className="flex items-center gap-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white">
             <Image
@@ -63,10 +62,9 @@ export function LoginSignupFrame({ children, className, cardClassName }: LoginSi
       <div className="relative z-10 grid min-h-full w-full place-items-center px-4 py-24">
         <div
           className={cn(
-            "card-animate w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm",
+            "card-animate material-panel-strong w-full max-w-sm rounded-2xl p-8",
             cardClassName,
           )}
-          style={{ boxShadow: "0 1px 3px rgba(15,36,55,0.06), 0 4px 14px rgba(15,36,55,0.04)" }}
         >
           {children}
         </div>

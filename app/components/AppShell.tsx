@@ -79,14 +79,14 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
   const activePeriod = role === "Student" && userPeriod ? userPeriod : period;
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col" style={{ background: "var(--brand-bg)" }}>
+    <div className="app-chrome h-screen overflow-hidden flex flex-col">
 
       {/* ── Header ────────────────────────────────────── */}
-      <header className="brand-header min-h-14 px-3 sm:px-5 py-2 flex items-center justify-between gap-3 z-20 sticky top-0">
+      <header className="brand-header material-bar min-h-14 px-3 sm:px-5 py-2 flex items-center justify-between gap-3 z-20 sticky top-0">
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "white" }}>
+            style={{ background: "rgba(255,255,255,0.94)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 8px rgba(8,36,58,0.16)" }}>
             <Image src="/ignite-logo.png" alt="Ignite logo" width={26} height={26} className="object-contain" priority />
           </div>
           <div className="hidden sm:block min-w-0">
@@ -105,12 +105,12 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
           ) : (
             <div role="group" aria-label="Period selector"
               className="flex rounded-lg overflow-hidden"
-              style={{ background: "rgba(255,255,255,0.12)" }}>
+              style={{ background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.12)" }}>
               {(["AM", "PM"] as const).map(p => (
                 <button key={p} onClick={() => setPeriod(p)} aria-pressed={period === p}
                   className="px-2.5 sm:px-4 py-1.5 text-xs font-bold transition-all"
                   style={period === p
-                    ? { background: "var(--mint)", color: "var(--navy)" }
+                    ? { background: "var(--mint)", color: "var(--navy)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)" }
                     : { color: "rgba(255,255,255,0.6)" }}>
                   {p}
                 </button>
@@ -127,7 +127,7 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
           </div>
 
           <button onClick={onLogout}
-            className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors"
+            className="quiet-button text-xs px-2.5 sm:px-3 py-1.5"
             style={{ border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)", background: "rgba(255,255,255,0.07)" }}
             onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.14)")}
             onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}>
@@ -139,8 +139,7 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* ── Sidebar ───────────────────────────────────── */}
-        <nav className="hidden md:flex w-56 h-full shrink-0 flex-col py-4 overflow-y-auto"
-          style={{ background: "linear-gradient(180deg, #004f6b 0%, #005a78 100%)" }} aria-label="Main navigation">
+        <nav className="material-sidebar hidden md:flex w-56 h-full shrink-0 flex-col py-4 overflow-y-auto" aria-label="Main navigation">
 
           <p className="px-5 pb-3 text-kicker font-semibold uppercase tracking-widest"
             style={{ color: "rgba(255,255,255,0.3)" }}>
@@ -154,7 +153,7 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
                 <Link key={href} href={href}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
                   style={active
-                    ? { background: "rgba(255,210,31,0.14)", color: "#fff", boxShadow: "inset 3px 0 0 var(--mint)" }
+                    ? { background: "rgba(255,210,31,0.16)", color: "#fff", boxShadow: "inset 3px 0 0 var(--mint), 0 1px 0 rgba(255,255,255,0.06)" }
                     : { color: "rgba(255,255,255,0.62)" }}
                   onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)"; }}
                   onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = ""; }}>
@@ -180,8 +179,8 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
       </div>
 
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-30 grid border-t bg-white"
-        style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))`, borderColor: "#e2e8f0" }}
+        className="md:hidden fixed bottom-0 inset-x-0 z-30 grid border-t"
+        style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))`, borderColor: "rgba(203,213,225,0.82)", background: "rgba(255,255,255,0.88)", backdropFilter: "blur(18px) saturate(145%)", boxShadow: "0 -10px 28px rgba(8,36,58,0.08)" }}
         aria-label="Mobile navigation"
       >
         {links.map(({ href, label }) => {

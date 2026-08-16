@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ background: "var(--brand-bg)" }}>
+    <div className="app-chrome min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8 gap-3">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "white", border: "1px solid #e2e8f0" }}>
@@ -75,17 +75,17 @@ export default function ResetPasswordPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+        <div className="material-panel-strong rounded-2xl p-8">
           <h2 className="text-lg font-semibold mb-6" style={{ color: "var(--navy)" }}>Choose a new password</h2>
 
           {error && (
-            <div role="alert" className="mb-5 px-4 py-3 rounded-xl text-sm" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c" }}>
+            <div role="alert" className="status-alert status-alert-danger mb-5">
               {error}
             </div>
           )}
 
           {message && (
-            <div className="mb-5 px-4 py-3 rounded-xl text-sm" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }}>
+            <div className="status-alert status-alert-success mb-5">
               {message}
             </div>
           )}
@@ -148,8 +148,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={!ready || loading}
-              className="w-full py-2.5 rounded-lg text-sm font-semibold text-white mt-1 transition-opacity disabled:opacity-50"
-              style={{ background: "var(--navy)" }}
+              className="action-button w-full py-2.5 text-sm mt-1 disabled:opacity-50"
             >
               {loading ? "Updating…" : "Update Password"}
             </button>

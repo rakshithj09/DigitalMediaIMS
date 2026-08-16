@@ -130,24 +130,24 @@ function MyInfoContent() {
   return (
     <div>
       <div className="mb-7">
-        <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+        <h2 className="page-title text-2xl">
           My Info
         </h2>
-        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+        <p className="page-subtitle text-sm mt-1">
           Your student roster information and checkout history.
         </p>
       </div>
 
       {loading ? (
-        <div className="rounded-2xl px-6 py-16 text-center" style={{ background: "white", border: "1px solid rgba(226,232,240,0.9)" }}>
+        <div className="material-panel-strong empty-state rounded-2xl">
           <p className="text-sm" style={{ color: "var(--muted)" }}>Loading your information...</p>
         </div>
       ) : error ? (
-        <div className="rounded-2xl px-6 py-12 text-center text-sm" style={{ background: "white", border: "1px solid #fecaca", color: "#dc2626" }}>
+        <div className="material-panel-strong empty-state rounded-2xl text-sm" style={{ borderColor: "#fecaca", color: "#dc2626" }}>
           {error}
         </div>
       ) : !student ? (
-        <div className="rounded-2xl px-6 py-12 text-center" style={{ background: "white", border: "1px solid rgba(226,232,240,0.9)" }}>
+        <div className="material-panel-strong empty-state rounded-2xl">
           <p className="font-medium text-sm" style={{ color: "#374151" }}>Your student record is not available.</p>
         </div>
       ) : (
@@ -160,8 +160,8 @@ function MyInfoContent() {
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 mb-6">
-            <section className="rounded-2xl overflow-hidden" style={{ background: "white", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.06)" }}>
-              <div className="px-6 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
+            <section className="material-panel-strong rounded-2xl overflow-hidden">
+              <div className="panel-header px-6 py-4">
                 <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>Currently Out</h3>
               </div>
               {activeCheckouts.length === 0 ? (
@@ -196,7 +196,7 @@ function MyInfoContent() {
               )}
             </section>
 
-            <section className="rounded-2xl p-6" style={{ background: "white", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.06)" }}>
+            <section className="material-panel-strong rounded-2xl p-6">
               <h3 className="font-semibold text-base mb-4" style={{ color: "var(--ignite-navy)" }}>Student Info</h3>
               <div className="space-y-4">
                 <InfoRow label="Name" value={student.name} />
@@ -208,8 +208,8 @@ function MyInfoContent() {
             </section>
           </div>
 
-          <section className="rounded-2xl overflow-hidden" style={{ background: "white", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.06)" }}>
-            <div className="px-6 py-4" style={{ borderBottom: "1px solid #f1f5f9" }}>
+          <section className="material-panel-strong rounded-2xl overflow-hidden">
+            <div className="panel-header px-6 py-4">
               <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>Checkout History</h3>
             </div>
             {historyCount === 0 ? (
@@ -275,7 +275,7 @@ function DetailCard({
   const valueColor = accent === "warning" ? "#ca8a04" : accent === "success" ? "#16a34a" : "var(--ignite-navy)";
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: "white", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.06)" }}>
+    <div className="stat-card material-panel">
       <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>{label}</p>
       <p className="text-2xl font-bold mt-2" style={{ color: valueColor, letterSpacing: "-0.02em" }}>{value}</p>
     </div>

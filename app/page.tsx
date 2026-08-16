@@ -148,18 +148,17 @@ function DashboardContent() {
     return (
       <div>
         <div className="mb-7 flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
-              My Equipment
-            </h2>
-            <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              Your active checkouts for <PeriodBadge>{period} period</PeriodBadge>
-            </p>
-          </div>
+        <div>
+          <h2 className="page-title text-2xl">
+            My Equipment
+          </h2>
+          <p className="page-subtitle text-sm mt-1">
+            Your active checkouts for <PeriodBadge>{period} period</PeriodBadge>
+          </p>
+        </div>
           <Link
             href="/checkout"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
-            style={{ background: "var(--navy)", boxShadow: "0 2px 8px rgba(0,90,120,0.22)" }}
+            className="action-button px-4 py-2 text-sm"
           >
             <ArrowRight size={14} strokeWidth={2.5} />
             Check Out Item
@@ -192,8 +191,8 @@ function DashboardContent() {
         </div>
 
         <div>
-          <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1.5px solid #f1f5f9", background: "linear-gradient(to bottom, #fafcff, #f8fafc)" }}>
+          <div className="material-panel-strong rounded-2xl overflow-hidden">
+            <div className="panel-header px-6 py-4 flex items-center justify-between">
               <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>What You Have Out</h3>
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#dbeafe", color: "#005a78", border: "1px solid rgba(59,130,246,0.18)" }}>
                 {list.length} active
@@ -201,12 +200,12 @@ function DashboardContent() {
             </div>
 
             {loading ? (
-              <div className="px-6 py-16 text-center text-sm" style={{ color: "var(--muted)" }}>Loading your checkouts…</div>
+              <div className="empty-state text-sm" style={{ color: "var(--muted)" }}>Loading your checkouts…</div>
             ) : error ? (
-              <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
+              <div className="empty-state text-sm" style={{ color: "#dc2626" }}>{error}</div>
             ) : list.length === 0 ? (
-              <div className="px-6 py-16 text-center">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "#f8fafc" }}>
+              <div className="empty-state">
+                <div className="empty-state-icon">
                   <Check size={22} color="#94a3b8" strokeWidth={1.75} />
                 </div>
                 <p className="font-medium text-sm" style={{ color: "#374151" }}>No equipment checked out</p>
@@ -246,7 +245,7 @@ function DashboardContent() {
                       <button
                         onClick={() => handleCheckIn(c.id)}
                         disabled={checkingIn === c.id}
-                        className="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg"
+                        className="action-button shrink-0 px-3 py-2 text-xs disabled:opacity-60"
                         style={{ background: checkingIn === c.id ? "#d1fae5" : "#059669", color: checkingIn === c.id ? "#059669" : "white" }}
                       >
                         {checkingIn === c.id ? "Checking In…" : "Check In"}
@@ -267,10 +266,10 @@ function DashboardContent() {
       {/* Page header */}
       <div className="mb-7 flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+          <h2 className="page-title text-2xl">
             Dashboard
           </h2>
-          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+          <p className="page-subtitle text-sm mt-1">
             Active checkouts for{" "}
             <PeriodBadge>{period} period</PeriodBadge>
           </p>
@@ -278,8 +277,7 @@ function DashboardContent() {
         <button
           type="button"
           onClick={refresh}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold"
-          style={{ background: "#015a78", color: "#ffffff" }}
+          className="action-button px-3 py-2 text-sm"
         >
           Refresh
         </button>
@@ -306,8 +304,8 @@ function DashboardContent() {
       </div>
 
       {/* Active checkouts table */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #ffffff 0%, #fafcff 100%)", border: "1px solid rgba(226,232,240,0.9)", boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.06)" }}>
-        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1.5px solid #f1f5f9", background: "linear-gradient(to bottom, #fafcff, #f8fafc)" }}>
+      <div className="material-panel-strong rounded-2xl overflow-hidden">
+        <div className="panel-header px-6 py-4 flex items-center justify-between">
           <h3 className="font-semibold text-base" style={{ color: "var(--ignite-navy)" }}>
             Active Checkouts
           </h3>
@@ -320,20 +318,17 @@ function DashboardContent() {
         </div>
 
         {loading ? (
-          <div className="px-6 py-16 text-center">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
+          <div className="empty-state">
+            <div className="empty-state-icon !h-8 !w-8">
               <LoaderCircle className="animate-spin" size={16} color="#94a3b8" strokeWidth={2.5} />
             </div>
             <p className="text-sm" style={{ color: "var(--muted)" }}>Loading checkouts…</p>
           </div>
         ) : error ? (
-          <div className="px-6 py-12 text-center text-sm" style={{ color: "#dc2626" }}>{error}</div>
+          <div className="empty-state text-sm" style={{ color: "#dc2626" }}>{error}</div>
         ) : list.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
-              style={{ background: "#f8fafc" }}
-            >
+          <div className="empty-state">
+            <div className="empty-state-icon">
               <Activity size={22} color="#94a3b8" strokeWidth={1.75} />
             </div>
             <p className="font-medium text-sm" style={{ color: "#374151" }}>All clear</p>
@@ -424,7 +419,7 @@ function DashboardContent() {
                         <button
                           onClick={() => handleCheckIn(c.id)}
                           disabled={checkingIn === c.id}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                          className="action-button px-3 py-1.5 text-xs disabled:opacity-60"
                           style={{
                             background: checkingIn === c.id ? "#d1fae5" : "#059669",
                             color: checkingIn === c.id ? "#059669" : "white",
@@ -462,12 +457,7 @@ function StatCard({
 }) {
   return (
     <div
-      className="rounded-2xl p-5 relative overflow-hidden"
-      style={{
-        background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)",
-        border: "1px solid rgba(226,232,240,0.9)",
-        boxShadow: "0 1px 3px rgba(15,36,55,0.07), 0 6px 24px rgba(15,36,55,0.07)",
-      }}
+      className="stat-card material-panel"
     >
       <div
         className="absolute top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center shrink-0"

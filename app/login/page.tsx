@@ -127,10 +127,10 @@ export default function LoginPage() {
   return (
     <LoginSignupFrame>
       <div className="mb-6 space-y-1">
-        <h1 className="text-2xl font-bold leading-none" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+        <h1 className="page-title text-2xl leading-none">
           {showReset ? "Reset password" : "Welcome back"}
         </h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="page-subtitle text-sm">
           {showReset ? "Send a reset link to your school email" : "Sign in to Digital Media's Equipment Tracker"}
         </p>
       </div>
@@ -138,14 +138,14 @@ export default function LoginPage() {
       {error && (
         <div
           role="alert"
-          className="mb-5 rounded-lg border border-red-400/30 bg-red-950/50 px-4 py-3 text-sm text-red-200"
+          className="status-alert status-alert-danger mb-5"
         >
           {error}
         </div>
       )}
 
       {message && (
-        <div className="mb-5 rounded-lg border border-emerald-400/30 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200">
+        <div className="status-alert status-alert-success mb-5">
           {message}
         </div>
       )}
@@ -174,16 +174,14 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={resetLoading}
-            className="mt-1 h-10 w-full rounded-lg text-white hover:opacity-90"
-            style={{ background: "var(--navy)" }}
+            className="action-button mt-1 h-10 w-full text-white"
           >
             {resetLoading ? "Sending..." : "Send Reset Email"}
           </Button>
           <button
             type="button"
             onClick={() => { setShowReset(false); setError(null); setMessage(null); }}
-            className="text-sm font-semibold hover:underline"
-            style={{ color: "var(--navy)" }}
+            className="quiet-button text-sm px-3 py-2"
           >
             Back to sign in
           </button>
@@ -248,8 +246,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="mt-1 h-10 w-full rounded-lg text-white hover:opacity-90"
-            style={{ background: "var(--navy)" }}
+            className="action-button mt-1 h-10 w-full text-white"
           >
             {loading ? "Signing in..." : "Sign in"}
           </Button>

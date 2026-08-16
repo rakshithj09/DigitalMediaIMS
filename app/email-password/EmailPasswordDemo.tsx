@@ -123,8 +123,7 @@ export default function EmailPasswordDemo({ user }: Props) {
             </Button>
             <Button
               asChild
-              className="rounded-lg text-white hover:opacity-90"
-              style={{ background: "var(--navy)" }}
+              className="action-button rounded-lg text-white"
             >
               <Link href="/">Dashboard</Link>
             </Button>
@@ -140,10 +139,10 @@ export default function EmailPasswordDemo({ user }: Props) {
   return (
     <LoginSignupFrame cardClassName={isSignUp ? "max-w-md" : undefined}>
       <div className="mb-6 space-y-1">
-        <h1 className="text-2xl font-bold leading-none" style={{ color: "var(--ignite-navy)", letterSpacing: "-0.02em" }}>
+        <h1 className="page-title text-2xl leading-none">
           {isSignUp ? "Create an account" : "Welcome back"}
         </h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="page-subtitle text-sm">
           {isSignUp ? "Use your school details to request access" : "Sign in with your school account"}
         </p>
       </div>
@@ -151,7 +150,7 @@ export default function EmailPasswordDemo({ user }: Props) {
       {error && (
         <div
           role="alert"
-          className="mb-5 rounded-lg border border-red-400/30 bg-red-950/50 px-4 py-3 text-sm text-red-200"
+          className="status-alert status-alert-danger mb-5"
         >
           <span>{error}</span>
           {accountExistsError && (
@@ -163,7 +162,7 @@ export default function EmailPasswordDemo({ user }: Props) {
       )}
 
       {message && (
-        <div className="mb-5 rounded-lg border border-emerald-400/30 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200">
+        <div className="status-alert status-alert-success mb-5">
           {message}
         </div>
       )}
@@ -341,8 +340,7 @@ export default function EmailPasswordDemo({ user }: Props) {
         <Button
           type="submit"
           disabled={loading}
-          className="mt-1 h-10 w-full rounded-lg text-white hover:opacity-90"
-          style={{ background: "var(--navy)" }}
+          className="action-button mt-1 h-10 w-full text-white"
         >
           {loading
             ? (isSignUp ? "Creating account..." : "Signing in...")
