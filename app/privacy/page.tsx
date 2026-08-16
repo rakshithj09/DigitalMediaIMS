@@ -25,6 +25,10 @@ export default function PrivacyPage() {
         <Link href="/login" className="text-sm font-semibold text-[#005a78] hover:underline">
           Back to login
         </Link>
+        <span className="mx-2 text-sm text-slate-400">/</span>
+        <Link href="/terms" className="text-sm font-semibold text-[#005a78] hover:underline">
+          Terms
+        </Link>
 
         <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#005a78]">
@@ -69,6 +73,14 @@ export default function PrivacyPage() {
           <p className="mt-3 text-slate-700">
             Source code access is controlled by the project owner. The source can be provided to
             school technology staff for review before approval or broader student use.
+          </p>
+
+          <p className="mt-8 text-sm text-slate-600">
+            Review the{" "}
+            <Link href="/terms" className="font-semibold text-[#005a78] hover:underline">
+              terms of service
+            </Link>
+            .
           </p>
         </section>
       </div>

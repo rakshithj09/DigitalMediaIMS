@@ -92,7 +92,7 @@ export default function LoginPage() {
         setError(formatAuthError(authError, "Unable to sign in. Please try again."));
         setLoading(false);
       }
-      else router.replace("/");
+      else router.replace("/dashboard");
     } catch {
       setError("Unable to reach the server. Please try again.");
       setLoading(false);
@@ -268,6 +268,10 @@ export default function LoginPage() {
         {" · "}
         <Link href="/privacy" className="font-semibold hover:underline" style={{ color: "var(--navy)" }}>
           Privacy
+        </Link>
+        {" · "}
+        <Link href="/terms" className="font-semibold hover:underline" style={{ color: "var(--navy)" }}>
+          Terms
         </Link>
       </p>
     </LoginSignupFrame>
