@@ -65,6 +65,7 @@ export async function POST(req: Request) {
     .from("approved_teachers")
     .upsert(
       {
+        id: email,
         email,
         invited_by: auth.user.id,
         used_at: null,

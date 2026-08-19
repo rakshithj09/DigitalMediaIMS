@@ -27,11 +27,23 @@ async function authUserExists(email: string) {
 
 async function getTeacherApproval(email: string) {
   const doc = await getFirebaseAdminDb().collection("approved_teachers").doc(email).get();
-  return doc.exists ? doc.data() as { email: string; used_at?: string | null } : null;
+  if (doc.exists) {
+    return { id: doc.id, ...doc.data() } as { id: string; email: string; used_at?: string | null };
+  }
+
+  const snap = await getFirebaseAdminDb()
+    .collection("approved_teachers")
+    .where("email", "==", email)
+    .limit(1)
+    .get();
+  const fallbackDoc = snap.docs[0];
+  return fallbackDoc
+    ? { id: fallbackDoc.id, ...fallbackDoc.data() } as { id: string; email: string; used_at?: string | null }
+    : null;
 }
 
-async function markTeacherApprovalUsed(email: string, userId: string) {
-  await getFirebaseAdminDb().collection("approved_teachers").doc(email).set({
+async function markTeacherApprovalUsed(approvalId: string, email: string, userId: string) {
+  await getFirebaseAdminDb().collection("approved_teachers").doc(approvalId).set({
     email,
     approved_user_id: userId,
     used_at: new Date().toISOString(),
@@ -88,14 +100,15 @@ export async function POST(req: Request) {
       );
     }
 
+    let teacherApproval: { id: string; email: string; used_at?: string | null } | null = null;
     if (role === "Teacher") {
-      const approval = await getTeacherApproval(email);
-      if (!approval) {
+      teacherApproval = await getTeacherApproval(email);
+      if (!teacherApproval) {
         return NextResponse.json({
           error: "This teacher email has not been approved yet. Ask an existing teacher to approve it first.",
         }, { status: 403 });
       }
-      if (approval.used_at) {
+      if (teacherApproval.used_at) {
         return NextResponse.json({ error: "This teacher approval has already been used." }, { status: 403 });
       }
     }
@@ -128,7 +141,10 @@ export async function POST(req: Request) {
           user_metadata: claims,
         } as never);
       } else {
-        await markTeacherApprovalUsed(email, user.uid);
+        if (!teacherApproval) {
+          throw new Error("Teacher approval was not loaded.");
+        }
+        await markTeacherApprovalUsed(teacherApproval.id, email, user.uid);
         await syncTeacherProfile(user.uid, email, firstName, lastName);
       }
     } catch (writeError) {
