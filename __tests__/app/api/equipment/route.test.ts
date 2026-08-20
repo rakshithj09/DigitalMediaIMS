@@ -52,6 +52,7 @@ const mockTransactionGet = jest.fn();
 const mockTransactionSet = jest.fn();
 const mockTransactionDelete = jest.fn();
 let mockQueryRows: Array<Record<string, unknown>> = [];
+let mockQueryResults: Array<Array<Record<string, unknown>>> = [];
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -76,6 +77,7 @@ function mockNoAuth() {
 }
 
 function mockAdminDataClient() {
+  const nextQueryRows = () => mockQueryResults.shift() ?? mockQueryRows;
   const builder = {
     select: mockSelect.mockReturnThis(),
     eq: mockEq.mockReturnThis(),
@@ -83,7 +85,7 @@ function mockAdminDataClient() {
     update: mockUpdate.mockReturnThis(),
     insert: mockInsert,
     maybeSingle: mockMaybeSingle,
-    then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: mockQueryRows, error: null }).then(resolve),
+    then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: nextQueryRows(), error: null }).then(resolve),
   };
 
   mockFrom.mockReturnValue(builder);
@@ -116,6 +118,7 @@ describe("POST /api/equipment", () => {
     mockAdminDataClient();
     mockAdminDb();
     mockQueryRows = [];
+    mockQueryResults = [];
     mockInsert.mockResolvedValue({ error: null });
     mockVerifyPassword.mockResolvedValue(null);
   });
@@ -190,6 +193,29 @@ describe("POST /api/equipment", () => {
     expect(mockLimit).toHaveBeenCalledWith(2);
   });
 
+  it("rejects duplicate active barcode creates when existing row has only legacy serial number", async () => {
+    mockTeacherAuth();
+    mockQueryResults = [
+      [],
+      [{ id: "eq-existing", serial_number: "IGNITE-CAMERA-001", barcode_key: null }],
+    ];
+
+    const res = await POST(
+      makeRequest({
+        name: "Camera B",
+        category: "Camera",
+        totalQuantity: 1,
+        serialNumber: "IGNITE-CAMERA-001",
+      })
+    );
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-001");
+    expect(mockEq).toHaveBeenCalledWith("serial_number", "IGNITE-CAMERA-001");
+  });
+
   it("does not block creates when only inactive records share the barcode", async () => {
     mockTeacherAuth();
     mockQueryRows = [];
@@ -249,6 +275,7 @@ describe("PATCH /api/equipment", () => {
     mockAdminDataClient();
     mockAdminDb();
     mockQueryRows = [];
+    mockQueryResults = [];
     mockMaybeSingle.mockResolvedValue({
       data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
       error: null,
@@ -392,6 +419,26 @@ describe("PATCH /api/equipment", () => {
     expect(mockRunTransaction).not.toHaveBeenCalled();
     expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-002");
     expect(mockLimit).toHaveBeenCalledWith(2);
+  });
+
+  it("rejects duplicate active barcode updates when existing row has only legacy serial number", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "eq-1", total_quantity: 1, serial_number: "IGNITE-CAMERA-001", category: "Camera" },
+      error: null,
+    });
+    mockQueryResults = [
+      [],
+      [{ id: "eq-2", serial_number: "IGNITE-CAMERA-002", barcode_key: null }],
+    ];
+
+    const res = await PATCH(makeRequest({ id: "eq-1", serialNumber: "IGNITE-CAMERA-002" }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-002");
+    expect(mockEq).toHaveBeenCalledWith("serial_number", "IGNITE-CAMERA-002");
   });
 
   it("allows updating barcode equipment while keeping its current barcode", async () => {

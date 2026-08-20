@@ -99,7 +99,22 @@ async function findActiveEquipmentWithBarcode(
 
   const duplicate = (data ?? []).find((item) => item.id !== excludeId);
 
-  return duplicate ? { duplicate } : null;
+  if (duplicate) return { duplicate };
+
+  const { data: legacyData, error: legacyError } = await admin
+    .from("equipment")
+    .select("id, name, serial_number, barcode_key")
+    .eq("is_active", true)
+    .eq("serial_number", normalizedBarcode)
+    .limit(2);
+
+  if (legacyError) {
+    return { error: legacyError.message };
+  }
+
+  const legacyDuplicate = (legacyData ?? []).find((item) => item.id !== excludeId);
+
+  return legacyDuplicate ? { duplicate: legacyDuplicate } : null;
 }
 
 async function requireTeacher() {
