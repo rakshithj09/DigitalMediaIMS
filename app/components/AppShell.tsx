@@ -20,7 +20,7 @@ import { PeriodProvider, usePeriod } from "@/app/lib/period-context";
 
 /* ── Nav icons ──────────────────────────────────────── */
 const ICONS: Record<string, ReactNode> = {
-  "/": <LayoutDashboard size={16} strokeWidth={1.9} />,
+  "/dashboard": <LayoutDashboard size={16} strokeWidth={1.9} />,
   "/students": <UsersRound size={16} strokeWidth={1.9} />,
   "/equipment": <BriefcaseBusiness size={16} strokeWidth={1.9} />,
   "/checkout": <ArrowRight size={16} strokeWidth={1.9} />,
@@ -30,7 +30,7 @@ const ICONS: Record<string, ReactNode> = {
 };
 
 const NAV = [
-  { href: "/",          label: "Dashboard" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/students",  label: "Students"  },
   { href: "/equipment", label: "Equipment" },
   { href: "/checkout",  label: "Checkout"  },
@@ -38,12 +38,12 @@ const NAV = [
   { href: "/profile",   label: "Profile"   },
 ];
 const STUDENT_NAV = [
-  { href: "/",          label: "Dashboard" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/equipment", label: "Equipment" },
   { href: "/checkout",  label: "Checkout"  },
   { href: "/my-info",   label: "My Info"   },
 ] as const;
-const STUDENT_HREFS = new Set(["/", "/equipment", "/checkout", "/my-info"]);
+const STUDENT_HREFS = new Set(["/dashboard", "/equipment", "/checkout", "/my-info"]);
 
 /* ── Shell ──────────────────────────────────────────── */
 function Shell({ user, children, onLogout, studentApproved }: { user: User; children: ReactNode; onLogout: () => void; studentApproved: boolean }) {
@@ -149,7 +149,7 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
 
           <div className="flex flex-col gap-0.5 px-3 flex-1">
             {links.map(({ href, label }) => {
-              const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+              const active = pathname === href || pathname.startsWith(`${href}/`);
               return (
                 <Link key={href} href={href}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
@@ -185,7 +185,7 @@ function Shell({ user, children, onLogout, studentApproved }: { user: User; chil
         aria-label="Mobile navigation"
       >
         {links.map(({ href, label }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}
