@@ -101,20 +101,25 @@ async function findActiveEquipmentWithBarcode(
 
   if (duplicate) return { duplicate };
 
-  const { data: legacyData, error: legacyError } = await admin
-    .from("equipment")
-    .select("id, name, serial_number, barcode_key")
-    .eq("is_active", true)
-    .eq("serial_number", normalizedBarcode)
-    .limit(2);
+  const legacySerialCandidates = Array.from(new Set([normalizedBarcode, barcodeKey].filter(Boolean)));
 
-  if (legacyError) {
-    return { error: legacyError.message };
+  for (const serialCandidate of legacySerialCandidates) {
+    const { data: legacyData, error: legacyError } = await admin
+      .from("equipment")
+      .select("id, name, serial_number, barcode_key")
+      .eq("is_active", true)
+      .eq("serial_number", serialCandidate)
+      .limit(2);
+
+    if (legacyError) {
+      return { error: legacyError.message };
+    }
+
+    const legacyDuplicate = (legacyData ?? []).find((item) => item.id !== excludeId);
+    if (legacyDuplicate) return { duplicate: legacyDuplicate };
   }
 
-  const legacyDuplicate = (legacyData ?? []).find((item) => item.id !== excludeId);
-
-  return legacyDuplicate ? { duplicate: legacyDuplicate } : null;
+  return null;
 }
 
 async function requireTeacher() {

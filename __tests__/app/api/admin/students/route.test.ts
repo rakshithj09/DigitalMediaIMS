@@ -66,6 +66,7 @@ const mockTransactionSet = jest.fn();
 const mockTransactionDelete = jest.fn();
 let mockCurrentStudent: Record<string, unknown> | null = null;
 let mockActiveStudentDocs: unknown[] = [];
+let mockActiveStudentQueryResults: unknown[][] = [];
 let mockReservationDocs: Record<string, { exists: boolean; data: () => Record<string, unknown> | null }> = {};
 
 function makeRequest(body: unknown): Request {
@@ -131,7 +132,11 @@ function mockAdminDb() {
   };
   mockStudentWhere.mockImplementation(() => whereChain);
   mockStudentLimit.mockImplementation(() => whereChain);
-  mockStudentGet.mockImplementation(async () => ({ docs: mockActiveStudentDocs }));
+  mockStudentGet.mockImplementation(async () => ({
+    docs: mockActiveStudentQueryResults.length > 0
+      ? mockActiveStudentQueryResults.shift()
+      : mockActiveStudentDocs,
+  }));
   mockReservationDocGet.mockImplementation(async function getReservation(this: { id?: string }) {
     return mockReservationDocs[this.id ?? ""] ?? { exists: false, data: () => null };
   });
@@ -165,6 +170,7 @@ describe("admin students route", () => {
     jest.clearAllMocks();
     queryResults.length = 0;
     mockReservationDocs = {};
+    mockActiveStudentQueryResults = [];
     mockAdminDataClient();
     mockAdminDb();
     mockVerifyPassword.mockResolvedValue(null);
@@ -187,6 +193,21 @@ describe("admin students route", () => {
     expect(mockStudentLimit).toHaveBeenCalledWith(2);
   });
 
+  it("rejects student edits that duplicate a legacy active Student ID without key fields", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+    mockActiveStudentQueryResults = [
+      [],
+      [{ id: "student-2", data: () => ({ student_id: "12345" }) }],
+    ];
+
+    const res = await PATCH(makeRequest({ id: "student-1", studentId: "12345" }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockStudentWhere).toHaveBeenCalledWith("student_id", "==", "12345");
+  });
+
   it("rejects student edits that duplicate another active email", async () => {
     mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
     mockReservationDocs = {
@@ -204,6 +225,26 @@ describe("admin students route", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/email/i);
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("rejects student edits that duplicate a legacy active email without key fields", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+    mockActiveStudentQueryResults = [
+      [],
+      [],
+      [],
+      [{ id: "student-2", data: () => ({ email: "other@bentonvillek12.org" }) }],
+    ];
+
+    const res = await PATCH(makeRequest({
+      id: "student-1",
+      email: "other@bentonvillek12.org",
+    }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/email/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockStudentWhere).toHaveBeenCalledWith("email", "==", "other@bentonvillek12.org");
   });
 
   it("allows student edits when the matching active identifier belongs to the same row", async () => {

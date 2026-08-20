@@ -216,6 +216,30 @@ describe("POST /api/equipment", () => {
     expect(mockEq).toHaveBeenCalledWith("serial_number", "IGNITE-CAMERA-001");
   });
 
+  it("rejects duplicate active barcode creates when legacy serial casing differs", async () => {
+    mockTeacherAuth();
+    mockQueryResults = [
+      [],
+      [],
+      [{ id: "eq-existing", serial_number: "ignite-camera-001", barcode_key: null }],
+    ];
+
+    const res = await POST(
+      makeRequest({
+        name: "Camera B",
+        category: "Camera",
+        totalQuantity: 1,
+        serialNumber: "IGNITE-CAMERA-001",
+      })
+    );
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockEq).toHaveBeenCalledWith("serial_number", "IGNITE-CAMERA-001");
+    expect(mockEq).toHaveBeenCalledWith("serial_number", "ignite-camera-001");
+  });
+
   it("does not block creates when only inactive records share the barcode", async () => {
     mockTeacherAuth();
     mockQueryRows = [];
@@ -439,6 +463,27 @@ describe("PATCH /api/equipment", () => {
     expect(mockRunTransaction).not.toHaveBeenCalled();
     expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-002");
     expect(mockEq).toHaveBeenCalledWith("serial_number", "IGNITE-CAMERA-002");
+  });
+
+  it("rejects duplicate active barcode updates when legacy serial casing differs", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "eq-1", total_quantity: 1, serial_number: "IGNITE-CAMERA-001", category: "Camera" },
+      error: null,
+    });
+    mockQueryResults = [
+      [],
+      [],
+      [{ id: "eq-2", serial_number: "ignite-camera-002", barcode_key: null }],
+    ];
+
+    const res = await PATCH(makeRequest({ id: "eq-1", serialNumber: "IGNITE-CAMERA-002" }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockEq).toHaveBeenCalledWith("serial_number", "IGNITE-CAMERA-002");
+    expect(mockEq).toHaveBeenCalledWith("serial_number", "ignite-camera-002");
   });
 
   it("allows updating barcode equipment while keeping its current barcode", async () => {

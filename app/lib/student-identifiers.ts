@@ -79,6 +79,8 @@ export async function findActiveStudentIdentifierConflict(
   if (!state.isActive) return null;
 
   const { studentIdKey, emailKey } = studentIdentifierKeys(state);
+  const studentId = typeof state.studentId === "string" ? state.studentId.trim() : "";
+  const email = typeof state.email === "string" ? state.email.trim().toLowerCase() : "";
 
   const reservationChecks = [
     studentIdKey ? { kind: "student_id" as const, key: studentIdKey } : null,
@@ -115,12 +117,32 @@ export async function findActiveStudentIdentifierConflict(
             .get(),
         }
       : null,
+    studentId
+      ? {
+          kind: "student_id" as const,
+          query: db.collection("students")
+            .where("is_active", "==", true)
+            .where("student_id", "==", studentId)
+            .limit(2)
+            .get(),
+        }
+      : null,
     emailKey
       ? {
           kind: "student_email" as const,
           query: db.collection("students")
             .where("is_active", "==", true)
             .where("email_key", "==", emailKey)
+            .limit(2)
+            .get(),
+        }
+      : null,
+    email
+      ? {
+          kind: "student_email" as const,
+          query: db.collection("students")
+            .where("is_active", "==", true)
+            .where("email", "==", email)
             .limit(2)
             .get(),
         }

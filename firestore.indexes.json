@@ -30,7 +30,23 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "is_active", "order": "ASCENDING" },
+        { "fieldPath": "student_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "students",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_active", "order": "ASCENDING" },
         { "fieldPath": "email_key", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "students",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_active", "order": "ASCENDING" },
+        { "fieldPath": "email", "order": "ASCENDING" }
       ]
     },
     {
@@ -47,6 +63,14 @@
       "fields": [
         { "fieldPath": "is_active", "order": "ASCENDING" },
         { "fieldPath": "barcode_key", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "equipment",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_active", "order": "ASCENDING" },
+        { "fieldPath": "serial_number", "order": "ASCENDING" }
       ]
     },
     {
