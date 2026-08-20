@@ -3,6 +3,7 @@ import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
 import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
 import { ensureVerifiedStudentRosterRow } from "@/lib/auth/student-roster";
 import { getStudentApprovalRequestByUserId } from "@/lib/auth/student-approvals";
+import { IdentifierReservationConflict } from "@/app/lib/identifier-keys";
 
 type ApproveBody = {
   userId?: string;
@@ -102,7 +103,8 @@ export async function POST(req: Request) {
   try {
     await ensureVerifiedStudentRosterRow(authUser.user);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    const status = error instanceof IdentifierReservationConflict ? 409 : 500;
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status });
   }
 
   const { data: student, error: studentLookupError } = await admin

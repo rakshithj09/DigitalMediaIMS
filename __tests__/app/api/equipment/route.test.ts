@@ -6,6 +6,10 @@ jest.mock("@/lib/firebase/admin-data", () => ({
   getFirebaseAdminDataClient: jest.fn(),
 }));
 
+jest.mock("@/lib/firebase/admin-client", () => ({
+  getFirebaseAdminDb: jest.fn(),
+}));
+
 jest.mock("@/lib/firebase/server-password", () => ({
   verifyFirebasePassword: jest.fn(),
 }));
@@ -21,6 +25,7 @@ jest.mock("next/server", () => ({
 
 import { PATCH, POST } from "@/app/api/equipment/route";
 import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
 import { verifyFirebasePassword } from "@/lib/firebase/server-password";
 
@@ -30,6 +35,7 @@ const mockCreateClient = createFirebaseServerAuthClient as jest.MockedFunction<
 const mockGetDataClient = getFirebaseAdminDataClient as jest.MockedFunction<
   typeof getFirebaseAdminDataClient
 >;
+const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAdminDb>;
 const mockVerifyPassword = verifyFirebasePassword as jest.MockedFunction<
   typeof verifyFirebasePassword
 >;
@@ -40,6 +46,10 @@ const mockMaybeSingle = jest.fn();
 const mockEq = jest.fn();
 const mockSelect = jest.fn();
 const mockFrom = jest.fn();
+const mockRunTransaction = jest.fn();
+const mockTransactionGet = jest.fn();
+const mockTransactionSet = jest.fn();
+const mockTransactionDelete = jest.fn();
 let mockQueryRows: Array<Record<string, unknown>> = [];
 
 function makeRequest(body: unknown): Request {
@@ -78,10 +88,31 @@ function mockAdminDataClient() {
   mockGetDataClient.mockReturnValue({ from: mockFrom } as never);
 }
 
+function mockAdminDb() {
+  mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
+  mockTransactionSet.mockImplementation(() => undefined);
+  mockTransactionDelete.mockImplementation(() => undefined);
+  mockRunTransaction.mockImplementation(async (callback) => callback({
+    get: mockTransactionGet,
+    set: mockTransactionSet,
+    delete: mockTransactionDelete,
+  }));
+  mockGetDb.mockReturnValue({
+    collection: jest.fn((name: string) => ({
+      doc: jest.fn((id?: string) => ({
+        id: id ?? "eq-new",
+        path: `${name}/${id ?? "eq-new"}`,
+      })),
+    })),
+    runTransaction: mockRunTransaction,
+  } as never);
+}
+
 describe("POST /api/equipment", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAdminDataClient();
+    mockAdminDb();
     mockQueryRows = [];
     mockInsert.mockResolvedValue({ error: null });
     mockVerifyPassword.mockResolvedValue(null);
@@ -151,7 +182,7 @@ describe("POST /api/equipment", () => {
 
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/already assigned/i);
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 
   it("does not block creates when only inactive records share the barcode", async () => {
@@ -168,8 +199,11 @@ describe("POST /api/equipment", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "eq-new",
+    }), expect.objectContaining({
       serial_number: "IGNITE-CAMERA-001",
+      barcode_key: "ignite-camera-001",
     }));
   });
 
@@ -180,17 +214,19 @@ describe("POST /api/equipment", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(mockFrom).toHaveBeenCalledWith("equipment");
-    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "eq-new",
+    }), expect.objectContaining({
       name: "Tripod",
       total_quantity: 5,
+      barcode_key: null,
       is_active: true,
     }));
   });
 
-  it("returns 400 when the insert fails", async () => {
+  it("returns 400 when the transaction fails", async () => {
     mockTeacherAuth();
-    mockInsert.mockResolvedValue({ error: { message: "Constraint violation" } });
+    mockRunTransaction.mockRejectedValue(new Error("Constraint violation"));
 
     const res = await POST(
       makeRequest({ name: "Tripod", category: "Miscellaneous", totalQuantity: 1 })
@@ -204,6 +240,7 @@ describe("PATCH /api/equipment", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAdminDataClient();
+    mockAdminDb();
     mockQueryRows = [];
     mockMaybeSingle.mockResolvedValue({
       data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
@@ -252,9 +289,37 @@ describe("PATCH /api/equipment", () => {
     expect(mockVerifyPassword).toHaveBeenCalledWith("teacher@example.com", "secret");
   });
 
+  it("releases barcode reservations when deactivating barcode equipment", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        id: "eq-1",
+        total_quantity: 1,
+        serial_number: "IGNITE-CAMERA-001",
+        barcode_key: "ignite-camera-001",
+        category: "Camera",
+        is_active: true,
+      },
+      error: null,
+    });
+    mockTransactionGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ owner_id: "eq-1", owner_collection: "equipment" }),
+    });
+
+    const res = await PATCH(makeRequest({
+      id: "eq-1",
+      isActive: false,
+      teacherPassword: "secret",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockTransactionDelete).toHaveBeenCalled();
+  });
+
   it("returns 403 when deactivation password verification fails", async () => {
     mockTeacherAuth();
-    mockVerifyPassword.mockResolvedValue("Invalid password.");
+    mockVerifyPassword.mockResolvedValue("Password was incorrect.");
 
     const res = await PATCH(makeRequest({
       id: "eq-1",
@@ -269,8 +334,12 @@ describe("PATCH /api/equipment", () => {
     const res = await PATCH(makeRequest({ id: "eq-1", name: "Updated Tripod" }));
 
     expect(res.status).toBe(200);
-    expect(mockUpdate).toHaveBeenCalledWith({ name: "Updated Tripod" });
-    expect(mockEq).toHaveBeenCalledWith("id", "eq-1");
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "eq-1",
+    }), {
+      name: "Updated Tripod",
+      barcode_key: null,
+    }, { merge: true });
   });
 
   it("allows non-barcoded equipment quantities above one", async () => {
@@ -278,7 +347,12 @@ describe("PATCH /api/equipment", () => {
     const res = await PATCH(makeRequest({ id: "eq-1", totalQuantity: 6 }));
 
     expect(res.status).toBe(200);
-    expect(mockUpdate).toHaveBeenCalledWith({ total_quantity: 6 });
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "eq-1",
+    }), {
+      total_quantity: 6,
+      barcode_key: null,
+    }, { merge: true });
   });
 
   it("rejects barcode-tracked equipment updates with quantity above one", async () => {
@@ -308,7 +382,7 @@ describe("PATCH /api/equipment", () => {
 
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/already assigned/i);
-    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 
   it("allows updating barcode equipment while keeping its current barcode", async () => {
@@ -328,9 +402,60 @@ describe("PATCH /api/equipment", () => {
     }));
 
     expect(res.status).toBe(200);
-    expect(mockUpdate).toHaveBeenCalledWith({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "eq-1",
+    }), {
       name: "Updated Camera",
       serial_number: "IGNITE-CAMERA-001",
+      barcode_key: "ignite-camera-001",
+    }, { merge: true });
+  });
+
+  it("rejects equipment reactivation when its retained barcode conflicts", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        id: "eq-1",
+        total_quantity: 1,
+        serial_number: "IGNITE-CAMERA-001",
+        barcode_key: "ignite-camera-001",
+        category: "Camera",
+        is_active: false,
+      },
+      error: null,
     });
+    mockQueryRows = [
+      { id: "eq-2", serial_number: "ignite-camera-001", barcode_key: "ignite-camera-001" },
+    ];
+
+    const res = await PATCH(makeRequest({ id: "eq-1", isActive: true }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the barcode reservation belongs to another item", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        id: "eq-1",
+        total_quantity: 1,
+        serial_number: "IGNITE-CAMERA-001",
+        barcode_key: "ignite-camera-001",
+        category: "Camera",
+        is_active: false,
+      },
+      error: null,
+    });
+    mockTransactionGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ owner_id: "eq-2", owner_collection: "equipment" }),
+    });
+
+    const res = await PATCH(makeRequest({ id: "eq-1", isActive: true }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
   });
 });

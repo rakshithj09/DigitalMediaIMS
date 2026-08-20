@@ -29,6 +29,10 @@ const mockSetNew = jest.fn();
 const mockWhere = jest.fn();
 const mockLimit = jest.fn();
 const mockGet = jest.fn();
+const mockRunTransaction = jest.fn();
+const mockTransactionGet = jest.fn();
+const mockTransactionSet = jest.fn();
+const mockTransactionDelete = jest.fn();
 let mockQueryDocs: unknown[][] = [];
 
 function makeRequest(body: unknown): Request {
@@ -55,15 +59,25 @@ function mockFirestore(queryDocs: unknown[][] = []) {
   mockWhere.mockImplementation(() => chain);
   mockLimit.mockImplementation(() => chain);
   mockGet.mockImplementation(async () => ({ docs: mockQueryDocs.shift() ?? [] }));
+  mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
+  mockTransactionSet.mockImplementation(() => undefined);
+  mockTransactionDelete.mockImplementation(() => undefined);
+  mockRunTransaction.mockImplementation(async (callback) => callback({
+    get: mockTransactionGet,
+    set: mockTransactionSet,
+    delete: mockTransactionDelete,
+  }));
   const collection = {
     where: mockWhere,
-    doc: jest.fn(() => ({
-      id: "new-student",
+    doc: jest.fn((id?: string) => ({
+      id: id ?? "new-student",
+      path: `students/${id ?? "new-student"}`,
       set: mockSetNew,
     })),
   };
   mockGetDb.mockReturnValue({
     collection: jest.fn(() => collection),
+    runTransaction: mockRunTransaction,
   } as never);
 }
 
@@ -106,25 +120,39 @@ describe("POST /api/admin/add-student-roster", () => {
     const res = await POST(makeRequest(validBody));
 
     expect(res.status).toBe(200);
-    expect(mockSetNew).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "new-student",
+    }), expect.objectContaining({
       id: "new-student",
       name: "Jane Student",
       period: "PM",
       email: "jane@bentonvillek12.org",
+      email_key: "jane@bentonvillek12.org",
+      student_id_key: "12345",
       user_id: "student-auth-1",
       is_active: true,
-    }));
+    }), { merge: false });
   });
 
   it("updates an existing roster row for the same auth user", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    const existingDoc = { id: "existing-student", ref: { set: mockSetExisting } };
-    mockFirestore([[existingDoc], [existingDoc], []]);
+    const existingDoc = {
+      id: "existing-student",
+      ref: { id: "existing-student", path: "students/existing-student", set: mockSetExisting },
+      data: () => ({
+        student_id: "12345",
+        email: "jane@bentonvillek12.org",
+        is_active: true,
+      }),
+    };
+    mockFirestore([[existingDoc], [existingDoc]]);
 
     const res = await POST(makeRequest(validBody));
 
     expect(res.status).toBe(200);
-    expect(mockSetExisting).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "existing-student",
+    }), expect.objectContaining({
       name: "Jane Student",
       period: "PM",
       email: "jane@bentonvillek12.org",
@@ -134,7 +162,7 @@ describe("POST /api/admin/add-student-roster", () => {
 
   it("rejects duplicate active Student IDs on another roster row", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    mockFirestore([[], [{ id: "other-student" }]]);
+    mockFirestore([[], [{ id: "other-student", data: () => ({ student_id_key: "12345" }) }]]);
 
     const res = await POST(makeRequest(validBody));
 
@@ -145,7 +173,7 @@ describe("POST /api/admin/add-student-roster", () => {
 
   it("rejects duplicate active student emails on another roster row", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    mockFirestore([[], [], [{ id: "other-student" }]]);
+    mockFirestore([[], [{ id: "other-student", data: () => ({ email_key: "jane@bentonvillek12.org" }) }]]);
 
     const res = await POST(makeRequest(validBody));
 
@@ -156,13 +184,27 @@ describe("POST /api/admin/add-student-roster", () => {
 
   it("allows updating the same auth user's roster row with its current identifiers", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    const existingDoc = { id: "existing-student", ref: { set: mockSetExisting } };
-    mockFirestore([[existingDoc], [existingDoc], [existingDoc]]);
+    const existingDoc = {
+      id: "existing-student",
+      ref: { id: "existing-student", path: "students/existing-student", set: mockSetExisting },
+      data: () => ({
+        student_id: "12345",
+        email: "jane@bentonvillek12.org",
+        is_active: true,
+      }),
+    };
+    mockFirestore([[existingDoc], [existingDoc]]);
 
     const res = await POST(makeRequest(validBody));
 
     expect(res.status).toBe(200);
-    expect(mockSetExisting).toHaveBeenCalled();
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "existing-student",
+    }), expect.objectContaining({
+      id: "existing-student",
+      student_id_key: "12345",
+      email_key: "jane@bentonvillek12.org",
+    }), { merge: true });
     expect(mockSetNew).not.toHaveBeenCalled();
   });
 
@@ -177,5 +219,18 @@ describe("POST /api/admin/add-student-roster", () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error).toMatch(/bentonvillek12/i);
     expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty normalized Student IDs", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+
+    const res = await POST(makeRequest({
+      ...validBody,
+      student_id: "   ",
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 import { createStudentApprovalRequest } from "@/lib/auth/student-approvals";
+import {
+  findActiveStudentIdentifierConflict,
+  getStudentIdKey,
+  validateActiveStudentIdentifiers,
+} from "@/app/lib/student-identifiers";
 
 type Body = {
   email?: string;
@@ -88,6 +93,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Student ID is required for student accounts." }, { status: 400 });
   }
 
+  if (role === "Student" && !getStudentIdKey(studentId)) {
+    return NextResponse.json({ error: "Student ID is required for student accounts." }, { status: 400 });
+  }
+
   if (studentId.length > 20) {
     return NextResponse.json({ error: "Student ID must be 20 characters or fewer." }, { status: 400 });
   }
@@ -98,6 +107,24 @@ export async function POST(req: Request) {
         { error: "An account with this email already exists. Please sign in instead." },
         { status: 409 },
       );
+    }
+
+    if (role === "Student") {
+      const finalState = {
+        id: "__pending_student_signup__",
+        studentId,
+        email,
+        isActive: true,
+      };
+      const validationError = validateActiveStudentIdentifiers(finalState);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
+
+      const conflict = await findActiveStudentIdentifierConflict(getFirebaseAdminDb(), finalState);
+      if (conflict) {
+        return NextResponse.json({ error: conflict }, { status: 409 });
+      }
     }
 
     let teacherApproval: { id: string; email: string; used_at?: string | null } | null = null;

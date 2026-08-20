@@ -27,12 +27,16 @@ const mockGetAuth = getFirebaseAdminAuth as jest.MockedFunction<typeof getFireba
 const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAdminDb>;
 
 const mockCreateUser = jest.fn();
+const mockDeleteUser = jest.fn();
 const mockSetCustomClaims = jest.fn();
 const mockSetStudent = jest.fn();
 const mockStudentWhere = jest.fn();
 const mockStudentLimit = jest.fn();
 const mockStudentGet = jest.fn();
-let mockStudentConflictDocs: unknown[][] = [];
+const mockRunTransaction = jest.fn();
+const mockTransactionGet = jest.fn();
+const mockTransactionSet = jest.fn();
+let mockActiveStudentDocs: unknown[] = [];
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -46,11 +50,13 @@ function mockUser(user: unknown) {
 
 function mockFirebaseAdmin() {
   mockCreateUser.mockResolvedValue({ uid: "student-auth-1" });
+  mockDeleteUser.mockResolvedValue(undefined);
   mockSetCustomClaims.mockResolvedValue(undefined);
   mockSetStudent.mockResolvedValue(undefined);
-  mockStudentConflictDocs = [];
+  mockActiveStudentDocs = [];
   mockGetAuth.mockReturnValue({
     createUser: mockCreateUser,
+    deleteUser: mockDeleteUser,
     setCustomUserClaims: mockSetCustomClaims,
   } as never);
   const studentsQuery: {
@@ -60,18 +66,28 @@ function mockFirebaseAdmin() {
   } = {
     where: mockStudentWhere,
     limit: mockStudentLimit,
-    get: mockStudentGet.mockImplementation(async () => ({ docs: mockStudentConflictDocs.shift() ?? [] })),
+    get: mockStudentGet.mockImplementation(async () => ({ docs: mockActiveStudentDocs })),
   };
   mockStudentWhere.mockImplementation(() => studentsQuery);
   mockStudentLimit.mockImplementation(() => studentsQuery);
-  mockGetDb.mockReturnValue({
-    collection: jest.fn(() => ({
-      where: studentsQuery.where,
-      doc: jest.fn(() => ({
-        id: "student-doc-1",
-        set: mockSetStudent,
-      })),
+  mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
+  mockTransactionSet.mockImplementation(() => undefined);
+  mockRunTransaction.mockImplementation(async (callback) => callback({
+    get: mockTransactionGet,
+    set: mockTransactionSet,
+    delete: jest.fn(),
+  }));
+  const collection = jest.fn((name: string) => ({
+    where: studentsQuery.where,
+    doc: jest.fn((id?: string) => ({
+      id: id ?? "student-doc-1",
+      path: `${name}/${id ?? "student-doc-1"}`,
+      set: mockSetStudent,
     })),
+  }));
+  mockGetDb.mockReturnValue({
+    collection,
+    runTransaction: mockRunTransaction,
   } as never);
 }
 
@@ -125,9 +141,13 @@ describe("POST /api/admin/create-student", () => {
       period: "AM",
       student_id: "12345",
     }));
-    expect(mockSetStudent).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "student-doc-1",
+    }), expect.objectContaining({
       id: "student-doc-1",
       email: "jane@bentonvillek12.org",
+      email_key: "jane@bentonvillek12.org",
+      student_id_key: "12345",
       user_id: "student-auth-1",
       is_active: true,
     }));
@@ -148,7 +168,9 @@ describe("POST /api/admin/create-student", () => {
 
   it("rejects duplicate active Student IDs before creating an auth user", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    mockStudentConflictDocs = [[{ id: "existing-student" }]];
+    mockActiveStudentDocs = [
+      { id: "existing-student", data: () => ({ student_id_key: "12345" }) },
+    ];
 
     const res = await POST(makeRequest(validBody));
 
@@ -159,7 +181,9 @@ describe("POST /api/admin/create-student", () => {
 
   it("rejects duplicate active student emails before creating an auth user", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    mockStudentConflictDocs = [[], [{ id: "existing-student" }]];
+    mockActiveStudentDocs = [
+      { id: "existing-student", data: () => ({ email_key: "jane@bentonvillek12.org" }) },
+    ];
 
     const res = await POST(makeRequest(validBody));
 

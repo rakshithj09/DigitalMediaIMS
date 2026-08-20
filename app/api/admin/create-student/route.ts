@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
-
-type StudentConflictCheck = {
-  studentId: string;
-  email: string;
-};
+import {
+  IdentifierReservationConflict,
+  syncIdentifierReservations,
+} from "@/app/lib/identifier-keys";
+import {
+  findActiveStudentIdentifierConflict,
+  getStudentEmailKey,
+  getStudentIdKey,
+  studentReservations,
+  validateActiveStudentIdentifiers,
+} from "@/app/lib/student-identifiers";
 
 async function requireTeacher() {
   const firebaseClient = await createFirebaseServerAuthClient();
@@ -22,37 +28,6 @@ async function requireTeacher() {
   }
 
   return { user };
-}
-
-async function findActiveStudentConflict(
-  db: ReturnType<typeof getFirebaseAdminDb>,
-  { studentId, email }: StudentConflictCheck
-) {
-  const checks: Array<{ field: "student_id" | "email"; value: string; message: string }> = [
-    {
-      field: "student_id",
-      value: studentId,
-      message: "That Student ID is already assigned to another active student.",
-    },
-    {
-      field: "email",
-      value: email,
-      message: "That student email is already assigned to another active student.",
-    },
-  ];
-
-  for (const check of checks) {
-    const snap = await db
-      .collection("students")
-      .where(check.field, "==", check.value)
-      .where("is_active", "==", true)
-      .limit(1)
-      .get();
-
-    if (snap.docs.length > 0) return check.message;
-  }
-
-  return null;
 }
 
 export async function POST(req: Request) {
@@ -75,6 +50,10 @@ export async function POST(req: Request) {
   const normalizedEmail = String(email).trim().toLowerCase();
   const normalizedStudentId = String(student_id).trim();
 
+  if (!getStudentIdKey(normalizedStudentId)) {
+    return NextResponse.json({ error: "Student ID is required." }, { status: 400 });
+  }
+
   if (!normalizedEmail.endsWith("@bentonvillek12.org")) {
     return NextResponse.json({ error: "Student email must be a @bentonvillek12.org address." }, { status: 400 });
   }
@@ -82,10 +61,19 @@ export async function POST(req: Request) {
   try {
     const auth = getFirebaseAdminAuth();
     const db = getFirebaseAdminDb();
-    const conflict = await findActiveStudentConflict(db, {
+    const ref = db.collection("students").doc();
+    const finalState = {
+      id: ref.id,
       studentId: normalizedStudentId,
       email: normalizedEmail,
-    });
+      isActive: true,
+    };
+    const validationError = validateActiveStudentIdentifiers(finalState);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    const conflict = await findActiveStudentIdentifierConflict(db, finalState);
     if (conflict) {
       return NextResponse.json({ error: conflict }, { status: 409 });
     }
@@ -104,21 +92,32 @@ export async function POST(req: Request) {
       student_id: normalizedStudentId,
     });
 
-    const ref = db.collection("students").doc();
+    const now = new Date().toISOString();
     const student = {
       id: ref.id,
       name: `${first_name} ${last_name}`,
       student_id: normalizedStudentId,
+      student_id_key: getStudentIdKey(normalizedStudentId),
       period,
       email: normalizedEmail,
+      email_key: getStudentEmailKey(normalizedEmail),
       user_id: user.uid,
       is_active: true,
-      created_at: new Date().toISOString(),
+      created_at: now,
     };
-    await ref.set(student);
+    try {
+      await db.runTransaction(async (transaction) => {
+        await syncIdentifierReservations(transaction, db, [], studentReservations(finalState), now);
+        transaction.set(ref, student);
+      });
+    } catch (writeError) {
+      await auth.deleteUser(user.uid);
+      throw writeError;
+    }
 
     return NextResponse.json({ user, student });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
+    const status = err instanceof IdentifierReservationConflict ? 409 : 500;
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status });
   }
 }

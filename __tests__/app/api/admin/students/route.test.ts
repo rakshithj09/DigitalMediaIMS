@@ -6,6 +6,10 @@ jest.mock("@/lib/firebase/admin-data", () => ({
   getFirebaseAdminDataClient: jest.fn(),
 }));
 
+jest.mock("@/lib/firebase/admin-client", () => ({
+  getFirebaseAdminDb: jest.fn(),
+}));
+
 jest.mock("@/lib/firebase/server-password", () => ({
   verifyFirebasePassword: jest.fn(),
 }));
@@ -21,6 +25,7 @@ jest.mock("next/server", () => ({
 
 import { DELETE, PATCH } from "@/app/api/admin/students/route";
 import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
 import { verifyFirebasePassword } from "@/lib/firebase/server-password";
 
@@ -30,6 +35,7 @@ const mockCreateClient = createFirebaseServerAuthClient as jest.MockedFunction<
 const mockGetDataClient = getFirebaseAdminDataClient as jest.MockedFunction<
   typeof getFirebaseAdminDataClient
 >;
+const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAdminDb>;
 const mockVerifyPassword = verifyFirebasePassword as jest.MockedFunction<
   typeof verifyFirebasePassword
 >;
@@ -49,6 +55,15 @@ const mockSingle = jest.fn();
 const mockLimit = jest.fn();
 const mockAuthUpdate = jest.fn();
 const mockAuthDelete = jest.fn();
+const mockStudentDocGet = jest.fn();
+const mockStudentWhere = jest.fn();
+const mockStudentGet = jest.fn();
+const mockRunTransaction = jest.fn();
+const mockTransactionGet = jest.fn();
+const mockTransactionSet = jest.fn();
+const mockTransactionDelete = jest.fn();
+let mockCurrentStudent: Record<string, unknown> | null = null;
+let mockActiveStudentDocs: unknown[] = [];
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -89,11 +104,57 @@ function mockAdminDataClient() {
   } as never);
 }
 
+function mockAdminDb() {
+  mockCurrentStudent = {
+    id: "student-1",
+    name: "Jane Student",
+    student_id: "12345",
+    student_id_key: "12345",
+    email: "jane@bentonvillek12.org",
+    email_key: "jane@bentonvillek12.org",
+    period: "AM",
+    is_active: true,
+    user_id: null,
+  };
+  mockActiveStudentDocs = [];
+  mockStudentDocGet.mockImplementation(async () => ({
+    exists: Boolean(mockCurrentStudent),
+    data: () => mockCurrentStudent,
+  }));
+  const whereChain = {
+    where: mockStudentWhere,
+    get: mockStudentGet,
+  };
+  mockStudentWhere.mockImplementation(() => whereChain);
+  mockStudentGet.mockImplementation(async () => ({ docs: mockActiveStudentDocs }));
+  mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
+  mockTransactionSet.mockImplementation(() => undefined);
+  mockTransactionDelete.mockImplementation(() => undefined);
+  mockRunTransaction.mockImplementation(async (callback) => callback({
+    get: mockTransactionGet,
+    set: mockTransactionSet,
+    delete: mockTransactionDelete,
+  }));
+
+  mockGetDb.mockReturnValue({
+    collection: jest.fn((name: string) => ({
+      doc: jest.fn((id?: string) => ({
+        id: id ?? "student-1",
+        path: `${name}/${id ?? "student-1"}`,
+        get: mockStudentDocGet,
+      })),
+      where: mockStudentWhere,
+    })),
+    runTransaction: mockRunTransaction,
+  } as never);
+}
+
 describe("admin students route", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     queryResults.length = 0;
     mockAdminDataClient();
+    mockAdminDb();
     mockVerifyPassword.mockResolvedValue(null);
     mockAuthUpdate.mockResolvedValue({ error: null });
     mockAuthDelete.mockResolvedValue({ error: null });
@@ -101,7 +162,9 @@ describe("admin students route", () => {
 
   it("rejects student edits that duplicate another active Student ID", async () => {
     mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
-    queryResults.push({ data: [{ id: "student-2" }], error: null });
+    mockActiveStudentDocs = [
+      { id: "student-2", data: () => ({ student_id_key: "12345" }) },
+    ];
 
     const res = await PATCH(makeRequest({ id: "student-1", studentId: "12345" }));
 
@@ -112,7 +175,9 @@ describe("admin students route", () => {
 
   it("rejects student edits that duplicate another active email", async () => {
     mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
-    queryResults.push({ data: [{ id: "student-2" }], error: null });
+    mockActiveStudentDocs = [
+      { id: "student-2", data: () => ({ email_key: "other@bentonvillek12.org" }) },
+    ];
 
     const res = await PATCH(makeRequest({
       id: "student-1",
@@ -126,25 +191,84 @@ describe("admin students route", () => {
 
   it("allows student edits when the matching active identifier belongs to the same row", async () => {
     mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
-    queryResults.push(
-      { data: [{ id: "student-1" }], error: null },
-      {
-        data: {
-          id: "student-1",
-          name: "Jane Student",
-          student_id: "12345",
-          email: "jane@bentonvillek12.org",
-          period: "AM",
-          user_id: null,
-        },
-        error: null,
-      },
-    );
+    mockActiveStudentDocs = [
+      { id: "student-1", data: () => ({ student_id_key: "12345" }) },
+    ];
 
     const res = await PATCH(makeRequest({ id: "student-1", studentId: "12345" }));
 
     expect(res.status).toBe(200);
-    expect(mockUpdate).toHaveBeenCalledWith({ student_id: "12345" });
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "student-1",
+    }), expect.objectContaining({
+      student_id: "12345",
+      student_id_key: "12345",
+    }), { merge: true });
+  });
+
+  it("rejects reactivating a student when retained identifiers conflict", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+    mockCurrentStudent = {
+      id: "student-1",
+      name: "Jane Student",
+      student_id: "12345",
+      email: "jane@bentonvillek12.org",
+      period: "AM",
+      is_active: false,
+    };
+    mockActiveStudentDocs = [
+      { id: "student-2", data: () => ({ student_id_key: "12345" }) },
+    ];
+
+    const res = await PATCH(makeRequest({ id: "student-1", isActive: true }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when a student identifier reservation belongs to another row", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+    mockCurrentStudent = {
+      id: "student-1",
+      name: "Jane Student",
+      student_id: "12345",
+      email: "jane@bentonvillek12.org",
+      period: "AM",
+      is_active: false,
+    };
+    mockTransactionGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ owner_id: "student-2", owner_collection: "students" }),
+    });
+
+    const res = await PATCH(makeRequest({ id: "student-1", isActive: true }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+  });
+
+  it("releases student identifier reservations when deactivating a student", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+    mockTransactionGet.mockResolvedValue({
+      exists: true,
+      data: () => ({ owner_id: "student-1", owner_collection: "students" }),
+    });
+
+    const res = await PATCH(makeRequest({ id: "student-1", isActive: false }));
+
+    expect(res.status).toBe(200);
+    expect(mockTransactionDelete).toHaveBeenCalled();
+  });
+
+  it("rejects empty normalized Student IDs", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+
+    const res = await PATCH(makeRequest({ id: "student-1", studentId: "   " }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 
   it("rejects deleting a student with active checkouts", async () => {

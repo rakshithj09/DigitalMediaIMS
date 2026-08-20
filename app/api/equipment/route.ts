@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
 import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 import { verifyFirebasePassword } from "@/lib/firebase/server-password";
 import { EQUIPMENT_CATEGORIES } from "@/app/lib/types";
 import { categorySupportsSerialNumbers, parseSerialNumbers } from "@/app/lib/serials";
+import {
+  IdentifierReservationConflict,
+  IdentifierReservation,
+  normalizeBarcodeKey,
+  syncIdentifierReservations,
+} from "@/app/lib/identifier-keys";
 
 type CreateBody = {
   name?: string;
@@ -22,6 +29,14 @@ type UpdateBody = {
   totalQuantity?: number;
   serialNumber?: string | null;
   conditionNotes?: string | null;
+};
+
+type EquipmentReservationInput = {
+  id: string;
+  category: string;
+  serialNumber: string | null | undefined;
+  isActive: boolean;
+  barcodeKey?: string | null;
 };
 
 function validateSerialNumbers(
@@ -44,6 +59,24 @@ function validateSerialNumbers(
   return null;
 }
 
+function getBarcodeKey(serialNumber: string | null | undefined) {
+  return normalizeBarcodeKey(parseSerialNumbers(serialNumber)[0] ?? null);
+}
+
+function equipmentReservations(input: EquipmentReservationInput): IdentifierReservation[] {
+  const barcodeKey = input.barcodeKey ?? getBarcodeKey(input.serialNumber);
+  if (!input.isActive || !categorySupportsSerialNumbers(input.category) || !barcodeKey) {
+    return [];
+  }
+
+  return [{
+    kind: "equipment_barcode",
+    key: barcodeKey,
+    ownerCollection: "equipment",
+    ownerId: input.id,
+  }];
+}
+
 async function findActiveEquipmentWithBarcode(
   admin: ReturnType<typeof getFirebaseAdminDataClient>,
   barcode: string | null | undefined,
@@ -51,10 +84,11 @@ async function findActiveEquipmentWithBarcode(
 ) {
   const normalizedBarcode = parseSerialNumbers(barcode)[0];
   if (!normalizedBarcode) return null;
+  const barcodeKey = normalizeBarcodeKey(normalizedBarcode);
 
   const { data, error } = await admin
     .from("equipment")
-    .select("id, name, serial_number")
+    .select("id, name, serial_number, barcode_key")
     .eq("is_active", true);
 
   if (error) {
@@ -63,9 +97,12 @@ async function findActiveEquipmentWithBarcode(
 
   const duplicate = (data ?? []).find((item) => {
     if (item.id === excludeId) return false;
+    if (typeof item.barcode_key === "string" && item.barcode_key === barcodeKey) {
+      return true;
+    }
     return parseSerialNumbers(
       typeof item.serial_number === "string" ? item.serial_number : null
-    ).some((serial) => serial.toLowerCase() === normalizedBarcode.toLowerCase());
+    ).some((serial) => normalizeBarcodeKey(serial) === barcodeKey);
   });
 
   return duplicate ? { duplicate } : null;
@@ -138,17 +175,45 @@ export async function POST(req: Request) {
     }
   }
 
-  const { error } = await admin.from("equipment").insert({
+  const db = getFirebaseAdminDb();
+  const ref = db.collection("equipment").doc();
+  const now = new Date().toISOString();
+  const serialNumber = body.serialNumber?.trim() || null;
+  const barcodeKey = categorySupportsSerialNumbers(category) ? getBarcodeKey(serialNumber) : null;
+  const equipment = {
+    id: ref.id,
     name,
     category,
     total_quantity: totalQuantity,
-    serial_number: body.serialNumber?.trim() || null,
+    serial_number: serialNumber,
+    barcode_key: barcodeKey,
     condition_notes: body.conditionNotes?.trim() || null,
     is_active: true,
-  });
+    created_at: now,
+  };
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  try {
+    await db.runTransaction(async (transaction) => {
+      await syncIdentifierReservations(
+        transaction,
+        db,
+        [],
+        equipmentReservations({
+          id: ref.id,
+          category,
+          serialNumber,
+          isActive: true,
+          barcodeKey,
+        }),
+        now
+      );
+      transaction.set(ref, equipment);
+    });
+  } catch (error) {
+    if (error instanceof IdentifierReservationConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });
@@ -166,11 +231,12 @@ export async function PATCH(req: Request) {
   if (!body.id) {
     return NextResponse.json({ error: "Equipment id is required." }, { status: 400 });
   }
+  const equipmentId = body.id;
 
   const { data: currentEquipment, error: currentError } = await admin
     .from("equipment")
-    .select("total_quantity, serial_number, category")
-    .eq("id", body.id)
+    .select("id, total_quantity, serial_number, barcode_key, category, is_active")
+    .eq("id", equipmentId)
     .maybeSingle();
 
   if (currentError) {
@@ -221,28 +287,34 @@ export async function PATCH(req: Request) {
     update.serial_number = body.serialNumber?.trim() || null;
   }
 
-  if (body.totalQuantity !== undefined || body.serialNumber !== undefined || body.category !== undefined) {
-    const nextCategory = String(update.category ?? currentEquipment.category);
-    const nextQuantity = Number(update.total_quantity ?? currentEquipment.total_quantity);
-    const nextSerialNumber =
-      body.serialNumber === undefined
-        ? (typeof currentEquipment.serial_number === "string" ? currentEquipment.serial_number : null)
-        : body.serialNumber;
+  const nextCategory = String(update.category ?? currentEquipment.category);
+  const nextQuantity = Number(update.total_quantity ?? currentEquipment.total_quantity);
+  const nextSerialNumber =
+    body.serialNumber === undefined
+      ? (typeof currentEquipment.serial_number === "string" ? currentEquipment.serial_number : null)
+      : body.serialNumber;
+  const nextIsActive =
+    typeof update.is_active === "boolean" ? update.is_active : currentEquipment.is_active !== false;
+  const nextBarcodeKey = categorySupportsSerialNumbers(nextCategory) ? getBarcodeKey(nextSerialNumber) : null;
+  const previousBarcodeKey =
+    typeof currentEquipment.barcode_key === "string"
+      ? currentEquipment.barcode_key
+      : getBarcodeKey(typeof currentEquipment.serial_number === "string" ? currentEquipment.serial_number : null);
+
+  if (nextIsActive && categorySupportsSerialNumbers(nextCategory)) {
     const serialError = validateSerialNumbers(nextSerialNumber, nextCategory, nextQuantity);
     if (serialError) {
       return NextResponse.json({ error: serialError }, { status: 400 });
     }
 
-    if (categorySupportsSerialNumbers(nextCategory)) {
-      const duplicateBarcode = await findActiveEquipmentWithBarcode(admin, nextSerialNumber, body.id);
-      if (duplicateBarcode?.error) {
-        return NextResponse.json({ error: duplicateBarcode.error }, { status: 400 });
-      }
-      if (duplicateBarcode?.duplicate) {
-        return NextResponse.json({
-          error: "That barcode is already assigned to another active equipment item.",
-        }, { status: 409 });
-      }
+      const duplicateBarcode = await findActiveEquipmentWithBarcode(admin, nextSerialNumber, equipmentId);
+    if (duplicateBarcode?.error) {
+      return NextResponse.json({ error: duplicateBarcode.error }, { status: 400 });
+    }
+    if (duplicateBarcode?.duplicate) {
+      return NextResponse.json({
+        error: "That barcode is already assigned to another active equipment item.",
+      }, { status: 409 });
     }
   }
 
@@ -253,14 +325,40 @@ export async function PATCH(req: Request) {
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "No equipment changes were provided." }, { status: 400 });
   }
+  update.barcode_key = nextBarcodeKey;
 
-  const { error } = await admin
-    .from("equipment")
-    .update(update)
-    .eq("id", body.id);
+  const db = getFirebaseAdminDb();
+  const ref = db.collection("equipment").doc(equipmentId);
+  const now = new Date().toISOString();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  try {
+    await db.runTransaction(async (transaction) => {
+      await syncIdentifierReservations(
+        transaction,
+        db,
+        equipmentReservations({
+          id: equipmentId,
+          category: String(currentEquipment.category),
+          serialNumber: typeof currentEquipment.serial_number === "string" ? currentEquipment.serial_number : null,
+          isActive: currentEquipment.is_active !== false,
+          barcodeKey: previousBarcodeKey,
+        }),
+        equipmentReservations({
+          id: equipmentId,
+          category: nextCategory,
+          serialNumber: nextSerialNumber,
+          isActive: nextIsActive,
+          barcodeKey: nextBarcodeKey,
+        }),
+        now
+      );
+      transaction.set(ref, update, { merge: true });
+    });
+  } catch (error) {
+    if (error instanceof IdentifierReservationConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });
