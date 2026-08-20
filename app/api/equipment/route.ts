@@ -44,6 +44,33 @@ function validateSerialNumbers(
   return null;
 }
 
+async function findActiveEquipmentWithBarcode(
+  admin: ReturnType<typeof getFirebaseAdminDataClient>,
+  barcode: string | null | undefined,
+  excludeId?: string
+) {
+  const normalizedBarcode = parseSerialNumbers(barcode)[0];
+  if (!normalizedBarcode) return null;
+
+  const { data, error } = await admin
+    .from("equipment")
+    .select("id, name, serial_number")
+    .eq("is_active", true);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const duplicate = (data ?? []).find((item) => {
+    if (item.id === excludeId) return false;
+    return parseSerialNumbers(
+      typeof item.serial_number === "string" ? item.serial_number : null
+    ).some((serial) => serial.toLowerCase() === normalizedBarcode.toLowerCase());
+  });
+
+  return duplicate ? { duplicate } : null;
+}
+
 async function requireTeacher() {
   const firebaseClient = await createFirebaseServerAuthClient();
   const {
@@ -97,6 +124,18 @@ export async function POST(req: Request) {
   const serialError = validateSerialNumbers(body.serialNumber, category, totalQuantity);
   if (serialError) {
     return NextResponse.json({ error: serialError }, { status: 400 });
+  }
+
+  if (categorySupportsSerialNumbers(category)) {
+    const duplicateBarcode = await findActiveEquipmentWithBarcode(admin, body.serialNumber);
+    if (duplicateBarcode?.error) {
+      return NextResponse.json({ error: duplicateBarcode.error }, { status: 400 });
+    }
+    if (duplicateBarcode?.duplicate) {
+      return NextResponse.json({
+        error: "That barcode is already assigned to another active equipment item.",
+      }, { status: 409 });
+    }
   }
 
   const { error } = await admin.from("equipment").insert({
@@ -192,6 +231,18 @@ export async function PATCH(req: Request) {
     const serialError = validateSerialNumbers(nextSerialNumber, nextCategory, nextQuantity);
     if (serialError) {
       return NextResponse.json({ error: serialError }, { status: 400 });
+    }
+
+    if (categorySupportsSerialNumbers(nextCategory)) {
+      const duplicateBarcode = await findActiveEquipmentWithBarcode(admin, nextSerialNumber, body.id);
+      if (duplicateBarcode?.error) {
+        return NextResponse.json({ error: duplicateBarcode.error }, { status: 400 });
+      }
+      if (duplicateBarcode?.duplicate) {
+        return NextResponse.json({
+          error: "That barcode is already assigned to another active equipment item.",
+        }, { status: 409 });
+      }
     }
   }
 

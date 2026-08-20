@@ -40,6 +40,7 @@ const mockMaybeSingle = jest.fn();
 const mockEq = jest.fn();
 const mockSelect = jest.fn();
 const mockFrom = jest.fn();
+let mockQueryRows: Array<Record<string, unknown>> = [];
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -70,7 +71,7 @@ function mockAdminDataClient() {
     update: mockUpdate.mockReturnThis(),
     insert: mockInsert,
     maybeSingle: mockMaybeSingle,
-    then: (resolve: (value: unknown) => unknown) => Promise.resolve({ error: null }).then(resolve),
+    then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: mockQueryRows, error: null }).then(resolve),
   };
 
   mockFrom.mockReturnValue(builder);
@@ -81,6 +82,7 @@ describe("POST /api/equipment", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAdminDataClient();
+    mockQueryRows = [];
     mockInsert.mockResolvedValue({ error: null });
     mockVerifyPassword.mockResolvedValue(null);
   });
@@ -134,6 +136,43 @@ describe("POST /api/equipment", () => {
     expect((await res.json()).error).toMatch(/one physical item/i);
   });
 
+  it("rejects duplicate active barcode creates case-insensitively", async () => {
+    mockTeacherAuth();
+    mockQueryRows = [{ id: "eq-existing", serial_number: "ignite-camera-001" }];
+
+    const res = await POST(
+      makeRequest({
+        name: "Camera B",
+        category: "Camera",
+        totalQuantity: 1,
+        serialNumber: "IGNITE-CAMERA-001",
+      })
+    );
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("does not block creates when only inactive records share the barcode", async () => {
+    mockTeacherAuth();
+    mockQueryRows = [];
+
+    const res = await POST(
+      makeRequest({
+        name: "Camera B",
+        category: "Camera",
+        totalQuantity: 1,
+        serialNumber: "IGNITE-CAMERA-001",
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
+      serial_number: "IGNITE-CAMERA-001",
+    }));
+  });
+
   it("inserts valid equipment", async () => {
     mockTeacherAuth();
     const res = await POST(
@@ -165,6 +204,7 @@ describe("PATCH /api/equipment", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAdminDataClient();
+    mockQueryRows = [];
     mockMaybeSingle.mockResolvedValue({
       data: { id: "eq-1", total_quantity: 5, serial_number: null, category: "Miscellaneous" },
       error: null,
@@ -252,5 +292,45 @@ describe("PATCH /api/equipment", () => {
 
     expect(res.status).toBe(400);
     expect((await res.json()).error).toMatch(/one physical item/i);
+  });
+
+  it("rejects duplicate active barcode updates on another item", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "eq-1", total_quantity: 1, serial_number: "IGNITE-CAMERA-001", category: "Camera" },
+      error: null,
+    });
+    mockQueryRows = [
+      { id: "eq-2", serial_number: "ignite-camera-002" },
+    ];
+
+    const res = await PATCH(makeRequest({ id: "eq-1", serialNumber: "IGNITE-CAMERA-002" }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already assigned/i);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("allows updating barcode equipment while keeping its current barcode", async () => {
+    mockTeacherAuth();
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "eq-1", total_quantity: 1, serial_number: "IGNITE-CAMERA-001", category: "Camera" },
+      error: null,
+    });
+    mockQueryRows = [
+      { id: "eq-1", serial_number: "ignite-camera-001" },
+    ];
+
+    const res = await PATCH(makeRequest({
+      id: "eq-1",
+      name: "Updated Camera",
+      serialNumber: "IGNITE-CAMERA-001",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockUpdate).toHaveBeenCalledWith({
+      name: "Updated Camera",
+      serial_number: "IGNITE-CAMERA-001",
+    });
   });
 });

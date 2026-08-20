@@ -26,6 +26,10 @@ const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAd
 
 const mockSetExisting = jest.fn();
 const mockSetNew = jest.fn();
+const mockWhere = jest.fn();
+const mockLimit = jest.fn();
+const mockGet = jest.fn();
+let mockQueryDocs: unknown[][] = [];
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -37,25 +41,22 @@ function mockUser(user: unknown) {
   } as never);
 }
 
-type FirestoreWhereChain = {
-  where: jest.MockedFunction<() => FirestoreWhereChain>;
-  limit: jest.MockedFunction<() => FirestoreWhereChain>;
-  get: jest.MockedFunction<() => Promise<{ docs: unknown[] }>>;
-};
-
-function makeWhereChain(existingDoc: unknown | null) {
-  const chain = {} as FirestoreWhereChain;
-  chain.where = jest.fn(() => chain);
-  chain.limit = jest.fn(() => chain);
-  chain.get = jest.fn(async () => ({ docs: existingDoc ? [existingDoc] : [] }));
-  return chain;
-}
-
-function mockFirestore(existing = false) {
-  const existingDoc = existing ? { id: "existing-student", ref: { set: mockSetExisting } } : null;
-  const chain = makeWhereChain(existingDoc);
+function mockFirestore(queryDocs: unknown[][] = []) {
+  mockQueryDocs = [...queryDocs];
+  const chain: {
+    where: jest.Mock;
+    limit: jest.Mock;
+    get: jest.Mock;
+  } = {
+    where: mockWhere,
+    limit: mockLimit,
+    get: mockGet,
+  };
+  mockWhere.mockImplementation(() => chain);
+  mockLimit.mockImplementation(() => chain);
+  mockGet.mockImplementation(async () => ({ docs: mockQueryDocs.shift() ?? [] }));
   const collection = {
-    where: chain.where,
+    where: mockWhere,
     doc: jest.fn(() => ({
       id: "new-student",
       set: mockSetNew,
@@ -117,7 +118,8 @@ describe("POST /api/admin/add-student-roster", () => {
 
   it("updates an existing roster row for the same auth user", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    mockFirestore(true);
+    const existingDoc = { id: "existing-student", ref: { set: mockSetExisting } };
+    mockFirestore([[existingDoc], [existingDoc], []]);
 
     const res = await POST(makeRequest(validBody));
 
@@ -127,6 +129,53 @@ describe("POST /api/admin/add-student-roster", () => {
       period: "PM",
       email: "jane@bentonvillek12.org",
     }), { merge: true });
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active Student IDs on another roster row", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockFirestore([[], [{ id: "other-student" }]]);
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active student emails on another roster row", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockFirestore([[], [], [{ id: "other-student" }]]);
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/email/i);
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("allows updating the same auth user's roster row with its current identifiers", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    const existingDoc = { id: "existing-student", ref: { set: mockSetExisting } };
+    mockFirestore([[existingDoc], [existingDoc], [existingDoc]]);
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(200);
+    expect(mockSetExisting).toHaveBeenCalled();
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-school student emails", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+
+    const res = await POST(makeRequest({
+      ...validBody,
+      email: "jane@example.com",
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/bentonvillek12/i);
     expect(mockSetNew).not.toHaveBeenCalled();
   });
 });

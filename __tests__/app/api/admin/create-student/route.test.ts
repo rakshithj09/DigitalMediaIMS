@@ -29,6 +29,10 @@ const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAd
 const mockCreateUser = jest.fn();
 const mockSetCustomClaims = jest.fn();
 const mockSetStudent = jest.fn();
+const mockStudentWhere = jest.fn();
+const mockStudentLimit = jest.fn();
+const mockStudentGet = jest.fn();
+let mockStudentConflictDocs: unknown[][] = [];
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -44,12 +48,25 @@ function mockFirebaseAdmin() {
   mockCreateUser.mockResolvedValue({ uid: "student-auth-1" });
   mockSetCustomClaims.mockResolvedValue(undefined);
   mockSetStudent.mockResolvedValue(undefined);
+  mockStudentConflictDocs = [];
   mockGetAuth.mockReturnValue({
     createUser: mockCreateUser,
     setCustomUserClaims: mockSetCustomClaims,
   } as never);
+  const studentsQuery: {
+    where: jest.Mock;
+    limit: jest.Mock;
+    get: jest.Mock;
+  } = {
+    where: mockStudentWhere,
+    limit: mockStudentLimit,
+    get: mockStudentGet.mockImplementation(async () => ({ docs: mockStudentConflictDocs.shift() ?? [] })),
+  };
+  mockStudentWhere.mockImplementation(() => studentsQuery);
+  mockStudentLimit.mockImplementation(() => studentsQuery);
   mockGetDb.mockReturnValue({
     collection: jest.fn(() => ({
+      where: studentsQuery.where,
       doc: jest.fn(() => ({
         id: "student-doc-1",
         set: mockSetStudent,
@@ -114,5 +131,40 @@ describe("POST /api/admin/create-student", () => {
       user_id: "student-auth-1",
       is_active: true,
     }));
+  });
+
+  it("rejects non-school student emails before creating an auth user", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+
+    const res = await POST(makeRequest({
+      ...validBody,
+      email: "jane@example.com",
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/bentonvillek12/i);
+    expect(mockCreateUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active Student IDs before creating an auth user", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockStudentConflictDocs = [[{ id: "existing-student" }]];
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockCreateUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active student emails before creating an auth user", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockStudentConflictDocs = [[], [{ id: "existing-student" }]];
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/email/i);
+    expect(mockCreateUser).not.toHaveBeenCalled();
   });
 });

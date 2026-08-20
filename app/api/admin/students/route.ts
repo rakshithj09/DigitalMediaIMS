@@ -44,6 +44,41 @@ async function verifyTeacherPassword(email: string | undefined, password: string
   return verifyFirebasePassword(email, password);
 }
 
+async function findActiveStudentConflict(
+  admin: ReturnType<typeof getFirebaseAdminDataClient>,
+  values: { studentId?: string | null; email?: string | null; excludeId?: string }
+) {
+  const checks: Array<{ field: "student_id" | "email"; value: string; message: string }> = [];
+  if (values.studentId) {
+    checks.push({
+      field: "student_id",
+      value: values.studentId,
+      message: "That Student ID is already assigned to another active student.",
+    });
+  }
+  if (values.email) {
+    checks.push({
+      field: "email",
+      value: values.email,
+      message: "That student email is already assigned to another active student.",
+    });
+  }
+
+  for (const check of checks) {
+    const { data, error } = await admin
+      .from("students")
+      .select("id")
+      .eq(check.field, check.value)
+      .eq("is_active", true);
+
+    if (error) return { error: error.message };
+    const conflict = (data ?? []).find((student) => student.id !== values.excludeId);
+    if (conflict) return { message: check.message };
+  }
+
+  return null;
+}
+
 export async function PATCH(req: Request) {
   const auth = await requireTeacher();
   if ("error" in auth) {
@@ -98,6 +133,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "No student changes were provided." }, { status: 400 });
   }
 
+  const conflict = await findActiveStudentConflict(admin, {
+    studentId: typeof update.student_id === "string" ? update.student_id : null,
+    email: typeof update.email === "string" ? update.email : null,
+    excludeId: body.id,
+  });
+  if (conflict?.error) {
+    return NextResponse.json({ error: conflict.error }, { status: 400 });
+  }
+  if (conflict?.message) {
+    return NextResponse.json({ error: conflict.message }, { status: 409 });
+  }
+
   const { data: student, error } = await admin
     .from("students")
     .update(update)
@@ -150,6 +197,23 @@ export async function DELETE(req: Request) {
   const passwordError = await verifyTeacherPassword(auth.user.email ?? undefined, body.teacherPassword);
   if (passwordError) {
     return NextResponse.json({ error: passwordError }, { status: 403 });
+  }
+
+  const { data: activeCheckouts, error: checkoutLookupError } = await admin
+    .from("checkouts")
+    .select("id")
+    .eq("student_id", body.id)
+    .eq("checked_in_at", null)
+    .limit(1);
+
+  if (checkoutLookupError) {
+    return NextResponse.json({ error: checkoutLookupError.message }, { status: 400 });
+  }
+
+  if ((activeCheckouts ?? []).length > 0) {
+    return NextResponse.json({
+      error: "This student still has active checkouts. Check in all equipment before deleting the student.",
+    }, { status: 409 });
   }
 
   const { data: student, error: lookupError } = await admin
