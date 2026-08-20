@@ -44,6 +44,7 @@ const mockInsert = jest.fn();
 const mockUpdate = jest.fn();
 const mockMaybeSingle = jest.fn();
 const mockEq = jest.fn();
+const mockLimit = jest.fn();
 const mockSelect = jest.fn();
 const mockFrom = jest.fn();
 const mockRunTransaction = jest.fn();
@@ -78,6 +79,7 @@ function mockAdminDataClient() {
   const builder = {
     select: mockSelect.mockReturnThis(),
     eq: mockEq.mockReturnThis(),
+    limit: mockLimit.mockReturnThis(),
     update: mockUpdate.mockReturnThis(),
     insert: mockInsert,
     maybeSingle: mockMaybeSingle,
@@ -183,6 +185,9 @@ describe("POST /api/equipment", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/already assigned/i);
     expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-001");
+    expect(mockEq).toHaveBeenCalledWith("is_active", true);
+    expect(mockLimit).toHaveBeenCalledWith(2);
   });
 
   it("does not block creates when only inactive records share the barcode", async () => {
@@ -205,6 +210,8 @@ describe("POST /api/equipment", () => {
       serial_number: "IGNITE-CAMERA-001",
       barcode_key: "ignite-camera-001",
     }));
+    expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-001");
+    expect(mockLimit).toHaveBeenCalledWith(2);
   });
 
   it("inserts valid equipment", async () => {
@@ -383,6 +390,8 @@ describe("PATCH /api/equipment", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/already assigned/i);
     expect(mockRunTransaction).not.toHaveBeenCalled();
+    expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-002");
+    expect(mockLimit).toHaveBeenCalledWith(2);
   });
 
   it("allows updating barcode equipment while keeping its current barcode", async () => {
@@ -409,6 +418,8 @@ describe("PATCH /api/equipment", () => {
       serial_number: "IGNITE-CAMERA-001",
       barcode_key: "ignite-camera-001",
     }, { merge: true });
+    expect(mockEq).toHaveBeenCalledWith("barcode_key", "ignite-camera-001");
+    expect(mockLimit).toHaveBeenCalledWith(2);
   });
 
   it("rejects equipment reactivation when its retained barcode conflicts", async () => {

@@ -33,7 +33,9 @@ const mockRunTransaction = jest.fn();
 const mockTransactionGet = jest.fn();
 const mockTransactionSet = jest.fn();
 const mockTransactionDelete = jest.fn();
+const mockReservationDocGet = jest.fn();
 let mockQueryDocs: unknown[][] = [];
+let mockReservationDocs: Record<string, { exists: boolean; data: () => Record<string, unknown> | null }> = {};
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -47,6 +49,7 @@ function mockUser(user: unknown) {
 
 function mockFirestore(queryDocs: unknown[][] = []) {
   mockQueryDocs = [...queryDocs];
+  mockReservationDocs = {};
   const chain: {
     where: jest.Mock;
     limit: jest.Mock;
@@ -59,6 +62,9 @@ function mockFirestore(queryDocs: unknown[][] = []) {
   mockWhere.mockImplementation(() => chain);
   mockLimit.mockImplementation(() => chain);
   mockGet.mockImplementation(async () => ({ docs: mockQueryDocs.shift() ?? [] }));
+  mockReservationDocGet.mockImplementation(async function getReservation(this: { id?: string }) {
+    return mockReservationDocs[this.id ?? ""] ?? { exists: false, data: () => null };
+  });
   mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
   mockTransactionSet.mockImplementation(() => undefined);
   mockTransactionDelete.mockImplementation(() => undefined);
@@ -67,16 +73,20 @@ function mockFirestore(queryDocs: unknown[][] = []) {
     set: mockTransactionSet,
     delete: mockTransactionDelete,
   }));
-  const collection = {
+  const makeCollection = (name: string) => ({
     where: mockWhere,
-    doc: jest.fn((id?: string) => ({
-      id: id ?? "new-student",
-      path: `students/${id ?? "new-student"}`,
-      set: mockSetNew,
-    })),
-  };
+    doc: jest.fn((id?: string) => {
+      const docId = id ?? "new-student";
+      return {
+        id: docId,
+        path: `${name}/${docId}`,
+        set: mockSetNew,
+        get: name === "identifier_reservations" ? mockReservationDocGet : jest.fn(),
+      };
+    }),
+  });
   mockGetDb.mockReturnValue({
-    collection: jest.fn(() => collection),
+    collection: jest.fn((name: string) => makeCollection(name)),
     runTransaction: mockRunTransaction,
   } as never);
 }
@@ -173,7 +183,13 @@ describe("POST /api/admin/add-student-roster", () => {
 
   it("rejects duplicate active student emails on another roster row", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    mockFirestore([[], [{ id: "other-student", data: () => ({ email_key: "jane@bentonvillek12.org" }) }]]);
+    mockFirestore([[]]);
+    mockReservationDocs = {
+      "student_email:jane%40bentonvillek12.org": {
+        exists: true,
+        data: () => ({ owner_id: "other-student", owner_collection: "students" }),
+      },
+    };
 
     const res = await POST(makeRequest(validBody));
 

@@ -89,21 +89,15 @@ async function findActiveEquipmentWithBarcode(
   const { data, error } = await admin
     .from("equipment")
     .select("id, name, serial_number, barcode_key")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("barcode_key", barcodeKey)
+    .limit(2);
 
   if (error) {
     return { error: error.message };
   }
 
-  const duplicate = (data ?? []).find((item) => {
-    if (item.id === excludeId) return false;
-    if (typeof item.barcode_key === "string" && item.barcode_key === barcodeKey) {
-      return true;
-    }
-    return parseSerialNumbers(
-      typeof item.serial_number === "string" ? item.serial_number : null
-    ).some((serial) => normalizeBarcodeKey(serial) === barcodeKey);
-  });
+  const duplicate = (data ?? []).find((item) => item.id !== excludeId);
 
   return duplicate ? { duplicate } : null;
 }
@@ -307,7 +301,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: serialError }, { status: 400 });
     }
 
-      const duplicateBarcode = await findActiveEquipmentWithBarcode(admin, nextSerialNumber, equipmentId);
+    const duplicateBarcode = await findActiveEquipmentWithBarcode(admin, nextSerialNumber, equipmentId);
     if (duplicateBarcode?.error) {
       return NextResponse.json({ error: duplicateBarcode.error }, { status: 400 });
     }

@@ -55,6 +55,7 @@ function mockFirestore(options: {
   directApproval?: ReturnType<typeof makeApprovalDoc>;
   queriedApproval?: ReturnType<typeof makeApprovalDoc>;
   activeStudentDocs?: Array<{ id: string; data: () => Record<string, unknown> }>;
+  reservationDocs?: Record<string, { exists: boolean; data: () => Record<string, unknown> | null }>;
 } = {}) {
   const approvalQuery: QueryMock = {
     where: jest.fn(),
@@ -75,18 +76,27 @@ function mockFirestore(options: {
   const profiles = {
     doc: jest.fn(() => ({ set: mockProfileSet })),
   };
-  const studentsQuery: Pick<QueryMock, "where" | "get"> = {
+  const studentsQuery: QueryMock = {
     where: jest.fn(),
+    limit: jest.fn(),
     get: jest.fn(async () => ({ docs: options.activeStudentDocs ?? [] })),
   };
   studentsQuery.where.mockImplementation(() => studentsQuery);
+  studentsQuery.limit.mockImplementation(() => studentsQuery);
   const students = {
     where: studentsQuery.where,
+  };
+  const identifierReservations = {
+    doc: jest.fn((id: string) => ({
+      id,
+      get: jest.fn(async () => options.reservationDocs?.[id] ?? { exists: false, data: () => null }),
+    })),
   };
   const collection = jest.fn((name: string) => {
     if (name === "approved_teachers") return approvedTeachers;
     if (name === "profiles") return profiles;
     if (name === "students") return students;
+    if (name === "identifier_reservations") return identifierReservations;
     return { doc: jest.fn(() => ({ set: jest.fn() })) };
   });
 

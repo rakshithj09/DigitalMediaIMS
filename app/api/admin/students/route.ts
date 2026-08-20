@@ -262,14 +262,17 @@ export async function DELETE(req: Request) {
   if (lookupError) {
     return NextResponse.json({ error: lookupError.message }, { status: 400 });
   }
+  if (!student) {
+    return NextResponse.json({ error: "Student was not found." }, { status: 404 });
+  }
   const previousState = {
     id: studentRecordId,
-    studentId: typeof student?.student_id === "string" ? student.student_id : null,
-    email: typeof student?.email === "string" ? student.email : null,
-    isActive: student?.is_active === true,
+    studentId: typeof student.student_id === "string" ? student.student_id : null,
+    email: typeof student.email === "string" ? student.email : null,
+    isActive: student.is_active === true,
   };
 
-  if (student?.user_id) {
+  if (student.user_id) {
     const { error: profileByIdError } = await admin
       .from("profiles")
       .delete()
@@ -280,7 +283,7 @@ export async function DELETE(req: Request) {
     }
   }
 
-  if (student?.email) {
+  if (student.email) {
     const { error: profileByEmailError } = await admin
       .from("profiles")
       .delete()
@@ -300,7 +303,7 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 });
   }
 
-  const studentAuthUserId = typeof student?.user_id === "string" ? student.user_id : null;
+  const studentAuthUserId = typeof student.user_id === "string" ? student.user_id : null;
   if (studentAuthUserId) {
     const { error: deleteAuthError } = await admin.auth.admin.deleteUser(studentAuthUserId, false);
     if (deleteAuthError) {

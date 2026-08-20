@@ -1,8 +1,10 @@
-import type { Firestore } from "firebase-admin/firestore";
+import type { Firestore, QuerySnapshot } from "firebase-admin/firestore";
 import {
+  IDENTIFIER_RESERVATIONS_COLLECTION,
   IdentifierReservation,
   normalizeSchoolEmailKey,
   normalizeStudentIdKey,
+  reservationId,
 } from "@/app/lib/identifier-keys";
 
 type StudentIdentifierState = {
@@ -77,23 +79,67 @@ export async function findActiveStudentIdentifierConflict(
   if (!state.isActive) return null;
 
   const { studentIdKey, emailKey } = studentIdentifierKeys(state);
-  const snap = await db.collection("students").where("is_active", "==", true).get();
 
-  for (const doc of snap.docs) {
-    if (doc.id === state.id) continue;
+  const reservationChecks = [
+    studentIdKey ? { kind: "student_id" as const, key: studentIdKey } : null,
+    emailKey ? { kind: "student_email" as const, key: emailKey } : null,
+  ].filter((check): check is { kind: "student_id" | "student_email"; key: string } => Boolean(check));
 
-    const data = doc.data();
-    const existingStudentIdKey =
-      typeof data.student_id_key === "string" ? data.student_id_key : getStudentIdKey(data.student_id);
-    const existingEmailKey =
-      typeof data.email_key === "string" ? data.email_key : getStudentEmailKey(data.email);
+  const reservationSnapshots = await Promise.all(
+    reservationChecks.map((check) =>
+      db.collection(IDENTIFIER_RESERVATIONS_COLLECTION).doc(reservationId(check.kind, check.key)).get()
+    )
+  );
 
-    if (studentIdKey && existingStudentIdKey === studentIdKey) {
-      return "That Student ID is already assigned to another active student.";
+  for (let index = 0; index < reservationChecks.length; index += 1) {
+    const check = reservationChecks[index];
+    const data = reservationSnapshots[index].exists ? reservationSnapshots[index].data() : null;
+    const ownerId = typeof data?.owner_id === "string" ? data.owner_id : null;
+    const ownerCollection = typeof data?.owner_collection === "string" ? data.owner_collection : null;
+
+    if (ownerId && (ownerId !== state.id || ownerCollection !== "students")) {
+      return check.kind === "student_id"
+        ? "That Student ID is already assigned to another active student."
+        : "That student email is already assigned to another active student.";
     }
+  }
 
-    if (emailKey && existingEmailKey === emailKey) {
-      return "That student email is already assigned to another active student.";
+  const fallbackQueries = [
+    studentIdKey
+      ? {
+          kind: "student_id" as const,
+          query: db.collection("students")
+            .where("is_active", "==", true)
+            .where("student_id_key", "==", studentIdKey)
+            .limit(2)
+            .get(),
+        }
+      : null,
+    emailKey
+      ? {
+          kind: "student_email" as const,
+          query: db.collection("students")
+            .where("is_active", "==", true)
+            .where("email_key", "==", emailKey)
+            .limit(2)
+            .get(),
+        }
+      : null,
+  ].filter((check): check is {
+    kind: "student_id" | "student_email";
+    query: Promise<QuerySnapshot>;
+  } => Boolean(check));
+
+  const fallbackSnapshots = await Promise.all(fallbackQueries.map((check) => check.query));
+
+  for (let index = 0; index < fallbackQueries.length; index += 1) {
+    const check = fallbackQueries[index];
+    const hasOtherOwner = fallbackSnapshots[index].docs.some((doc) => doc.id !== state.id);
+
+    if (hasOtherOwner) {
+      return check.kind === "student_id"
+        ? "That Student ID is already assigned to another active student."
+        : "That student email is already assigned to another active student.";
     }
   }
 

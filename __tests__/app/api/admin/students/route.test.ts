@@ -57,13 +57,16 @@ const mockAuthUpdate = jest.fn();
 const mockAuthDelete = jest.fn();
 const mockStudentDocGet = jest.fn();
 const mockStudentWhere = jest.fn();
+const mockStudentLimit = jest.fn();
 const mockStudentGet = jest.fn();
+const mockReservationDocGet = jest.fn();
 const mockRunTransaction = jest.fn();
 const mockTransactionGet = jest.fn();
 const mockTransactionSet = jest.fn();
 const mockTransactionDelete = jest.fn();
 let mockCurrentStudent: Record<string, unknown> | null = null;
 let mockActiveStudentDocs: unknown[] = [];
+let mockReservationDocs: Record<string, { exists: boolean; data: () => Record<string, unknown> | null }> = {};
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -123,10 +126,15 @@ function mockAdminDb() {
   }));
   const whereChain = {
     where: mockStudentWhere,
+    limit: mockStudentLimit,
     get: mockStudentGet,
   };
   mockStudentWhere.mockImplementation(() => whereChain);
+  mockStudentLimit.mockImplementation(() => whereChain);
   mockStudentGet.mockImplementation(async () => ({ docs: mockActiveStudentDocs }));
+  mockReservationDocGet.mockImplementation(async function getReservation(this: { id?: string }) {
+    return mockReservationDocs[this.id ?? ""] ?? { exists: false, data: () => null };
+  });
   mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
   mockTransactionSet.mockImplementation(() => undefined);
   mockTransactionDelete.mockImplementation(() => undefined);
@@ -138,11 +146,14 @@ function mockAdminDb() {
 
   mockGetDb.mockReturnValue({
     collection: jest.fn((name: string) => ({
-      doc: jest.fn((id?: string) => ({
-        id: id ?? "student-1",
-        path: `${name}/${id ?? "student-1"}`,
-        get: mockStudentDocGet,
-      })),
+      doc: jest.fn((id?: string) => {
+        const docId = id ?? "student-1";
+        return {
+          id: docId,
+          path: `${name}/${docId}`,
+          get: name === "identifier_reservations" ? mockReservationDocGet : mockStudentDocGet,
+        };
+      }),
       where: mockStudentWhere,
     })),
     runTransaction: mockRunTransaction,
@@ -153,6 +164,7 @@ describe("admin students route", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     queryResults.length = 0;
+    mockReservationDocs = {};
     mockAdminDataClient();
     mockAdminDb();
     mockVerifyPassword.mockResolvedValue(null);
@@ -171,13 +183,18 @@ describe("admin students route", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/student id/i);
     expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockStudentWhere).toHaveBeenCalledWith("student_id_key", "==", "12345");
+    expect(mockStudentLimit).toHaveBeenCalledWith(2);
   });
 
   it("rejects student edits that duplicate another active email", async () => {
     mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
-    mockActiveStudentDocs = [
-      { id: "student-2", data: () => ({ email_key: "other@bentonvillek12.org" }) },
-    ];
+    mockReservationDocs = {
+      "student_email:other%40bentonvillek12.org": {
+        exists: true,
+        data: () => ({ owner_id: "student-2", owner_collection: "students" }),
+      },
+    };
 
     const res = await PATCH(makeRequest({
       id: "student-1",
@@ -237,6 +254,12 @@ describe("admin students route", () => {
       period: "AM",
       is_active: false,
     };
+    mockReservationDocs = {
+      "student_id:12345": {
+        exists: true,
+        data: () => ({ owner_id: "student-2", owner_collection: "students" }),
+      },
+    };
     mockTransactionGet.mockResolvedValue({
       exists: true,
       data: () => ({ owner_id: "student-2", owner_collection: "students" }),
@@ -246,6 +269,28 @@ describe("admin students route", () => {
 
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/already assigned/i);
+  });
+
+  it("allows student edits when identifier reservations belong to the same row", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+    mockReservationDocs = {
+      "student_id:12345": {
+        exists: true,
+        data: () => ({ owner_id: "student-1", owner_collection: "students" }),
+      },
+      "student_email:jane%40bentonvillek12.org": {
+        exists: true,
+        data: () => ({ owner_id: "student-1", owner_collection: "students" }),
+      },
+    };
+    mockActiveStudentDocs = [
+      { id: "student-1", data: () => ({ student_id_key: "12345", email_key: "jane@bentonvillek12.org" }) },
+    ];
+
+    const res = await PATCH(makeRequest({ id: "student-1", studentId: "12345" }));
+
+    expect(res.status).toBe(200);
+    expect(mockTransactionSet).toHaveBeenCalled();
   });
 
   it("releases student identifier reservations when deactivating a student", async () => {
@@ -283,5 +328,23 @@ describe("admin students route", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).error).toMatch(/active checkouts/i);
     expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when deleting a missing student", async () => {
+    mockUser({ id: "teacher-1", email: "teacher@example.com", user_metadata: { role: "Teacher" } });
+    queryResults.push(
+      { data: [], error: null },
+      { data: null, error: null },
+    );
+
+    const res = await DELETE(makeRequest({
+      id: "missing-student",
+      teacherPassword: "secret",
+    }));
+
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toMatch(/not found/i);
+    expect(mockTransactionDelete).not.toHaveBeenCalled();
+    expect(mockAuthDelete).not.toHaveBeenCalled();
   });
 });

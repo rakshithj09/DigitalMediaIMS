@@ -55,6 +55,13 @@ Verify Firestore collection counts:
 npm run firebase:verify
 ```
 
+Verify and backfill active student/equipment identifier keys and reservation documents before deploying duplicate-identifier enforcement changes:
+
+```bash
+npm run firebase:backfill-identifiers
+npm run firebase:backfill-identifiers -- --apply
+```
+
 Deploy Hosting:
 
 ```bash
