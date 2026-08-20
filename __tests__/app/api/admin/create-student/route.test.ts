@@ -27,8 +27,18 @@ const mockGetAuth = getFirebaseAdminAuth as jest.MockedFunction<typeof getFireba
 const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAdminDb>;
 
 const mockCreateUser = jest.fn();
+const mockDeleteUser = jest.fn();
 const mockSetCustomClaims = jest.fn();
 const mockSetStudent = jest.fn();
+const mockStudentWhere = jest.fn();
+const mockStudentLimit = jest.fn();
+const mockStudentGet = jest.fn();
+const mockReservationDocGet = jest.fn();
+const mockRunTransaction = jest.fn();
+const mockTransactionGet = jest.fn();
+const mockTransactionSet = jest.fn();
+let mockActiveStudentDocs: unknown[] = [];
+let mockReservationDocs: Record<string, { exists: boolean; data: () => Record<string, unknown> | null }> = {};
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -42,19 +52,52 @@ function mockUser(user: unknown) {
 
 function mockFirebaseAdmin() {
   mockCreateUser.mockResolvedValue({ uid: "student-auth-1" });
+  mockDeleteUser.mockResolvedValue(undefined);
   mockSetCustomClaims.mockResolvedValue(undefined);
   mockSetStudent.mockResolvedValue(undefined);
+  mockActiveStudentDocs = [];
+  mockReservationDocs = {};
   mockGetAuth.mockReturnValue({
     createUser: mockCreateUser,
+    deleteUser: mockDeleteUser,
     setCustomUserClaims: mockSetCustomClaims,
   } as never);
-  mockGetDb.mockReturnValue({
-    collection: jest.fn(() => ({
-      doc: jest.fn(() => ({
-        id: "student-doc-1",
+  const studentsQuery: {
+    where: jest.Mock;
+    limit: jest.Mock;
+    get: jest.Mock;
+  } = {
+    where: mockStudentWhere,
+    limit: mockStudentLimit,
+    get: mockStudentGet.mockImplementation(async () => ({ docs: mockActiveStudentDocs })),
+  };
+  mockStudentWhere.mockImplementation(() => studentsQuery);
+  mockStudentLimit.mockImplementation(() => studentsQuery);
+  mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
+  mockReservationDocGet.mockImplementation(async function getReservation(this: { id?: string }) {
+    return mockReservationDocs[this.id ?? ""] ?? { exists: false, data: () => null };
+  });
+  mockTransactionSet.mockImplementation(() => undefined);
+  mockRunTransaction.mockImplementation(async (callback) => callback({
+    get: mockTransactionGet,
+    set: mockTransactionSet,
+    delete: jest.fn(),
+  }));
+  const collection = jest.fn((name: string) => ({
+    where: studentsQuery.where,
+    doc: jest.fn((id?: string) => {
+      const docId = id ?? "student-doc-1";
+      return {
+        id: docId,
+        path: `${name}/${docId}`,
         set: mockSetStudent,
-      })),
-    })),
+        get: name === "identifier_reservations" ? mockReservationDocGet : jest.fn(),
+      };
+    }),
+  }));
+  mockGetDb.mockReturnValue({
+    collection,
+    runTransaction: mockRunTransaction,
   } as never);
 }
 
@@ -108,11 +151,57 @@ describe("POST /api/admin/create-student", () => {
       period: "AM",
       student_id: "12345",
     }));
-    expect(mockSetStudent).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "student-doc-1",
+    }), expect.objectContaining({
       id: "student-doc-1",
       email: "jane@bentonvillek12.org",
+      email_key: "jane@bentonvillek12.org",
+      student_id_key: "12345",
       user_id: "student-auth-1",
       is_active: true,
     }));
+  });
+
+  it("rejects non-school student emails before creating an auth user", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+
+    const res = await POST(makeRequest({
+      ...validBody,
+      email: "jane@example.com",
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/bentonvillek12/i);
+    expect(mockCreateUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active Student IDs before creating an auth user", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockActiveStudentDocs = [
+      { id: "existing-student", data: () => ({ student_id_key: "12345" }) },
+    ];
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockCreateUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active student emails before creating an auth user", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockReservationDocs = {
+      "student_email:jane%40bentonvillek12.org": {
+        exists: true,
+        data: () => ({ owner_id: "existing-student", owner_collection: "students" }),
+      },
+    };
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/email/i);
+    expect(mockCreateUser).not.toHaveBeenCalled();
   });
 });

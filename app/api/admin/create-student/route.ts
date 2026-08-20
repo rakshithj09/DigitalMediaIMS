@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin-client";
 import { createFirebaseServerAuthClient } from "@/lib/firebase/server-auth";
+import {
+  IdentifierReservationConflict,
+  syncIdentifierReservations,
+} from "@/app/lib/identifier-keys";
+import {
+  findActiveStudentIdentifierConflict,
+  getStudentEmailKey,
+  getStudentIdKey,
+  studentReservations,
+  validateActiveStudentIdentifiers,
+} from "@/app/lib/student-identifiers";
 
 async function requireTeacher() {
   const firebaseClient = await createFirebaseServerAuthClient();
@@ -36,10 +47,37 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "period must be AM or PM" }, { status: 400 });
   }
 
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const normalizedStudentId = String(student_id).trim();
+
+  if (!getStudentIdKey(normalizedStudentId)) {
+    return NextResponse.json({ error: "Student ID is required." }, { status: 400 });
+  }
+
+  if (!normalizedEmail.endsWith("@bentonvillek12.org")) {
+    return NextResponse.json({ error: "Student email must be a @bentonvillek12.org address." }, { status: 400 });
+  }
+
   try {
     const auth = getFirebaseAdminAuth();
     const db = getFirebaseAdminDb();
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const ref = db.collection("students").doc();
+    const finalState = {
+      id: ref.id,
+      studentId: normalizedStudentId,
+      email: normalizedEmail,
+      isActive: true,
+    };
+    const validationError = validateActiveStudentIdentifiers(finalState);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    const conflict = await findActiveStudentIdentifierConflict(db, finalState);
+    if (conflict) {
+      return NextResponse.json({ error: conflict }, { status: 409 });
+    }
+
     const user = await auth.createUser({
       email: normalizedEmail,
       password,
@@ -51,24 +89,35 @@ export async function POST(req: Request) {
       last_name,
       role: "Student",
       period,
-      student_id,
+      student_id: normalizedStudentId,
     });
 
-    const ref = db.collection("students").doc();
+    const now = new Date().toISOString();
     const student = {
       id: ref.id,
       name: `${first_name} ${last_name}`,
-      student_id,
+      student_id: normalizedStudentId,
+      student_id_key: getStudentIdKey(normalizedStudentId),
       period,
       email: normalizedEmail,
+      email_key: getStudentEmailKey(normalizedEmail),
       user_id: user.uid,
       is_active: true,
-      created_at: new Date().toISOString(),
+      created_at: now,
     };
-    await ref.set(student);
+    try {
+      await db.runTransaction(async (transaction) => {
+        await syncIdentifierReservations(transaction, db, [], studentReservations(finalState), now);
+        transaction.set(ref, student);
+      });
+    } catch (writeError) {
+      await auth.deleteUser(user.uid);
+      throw writeError;
+    }
 
     return NextResponse.json({ user, student });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
+    const status = err instanceof IdentifierReservationConflict ? 409 : 500;
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status });
   }
 }

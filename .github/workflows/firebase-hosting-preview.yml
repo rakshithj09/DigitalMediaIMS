@@ -93,7 +93,20 @@ jobs:
         run: |
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" > "$RUNNER_TEMP/firebase-service-account.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
-          npx firebase-tools@latest hosting:channel:deploy "$CHANNEL_ID" --expires 30d --project igndigitalmedia
+          for attempt in 1 2 3; do
+            if npx firebase hosting:channel:deploy "$CHANNEL_ID" --expires 30d --project igndigitalmedia; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Firebase preview deploy failed after 3 attempts."
+              exit 1
+            fi
+
+            delay=$((attempt * 90))
+            echo "::warning::Firebase preview deploy failed on attempt $attempt. Retrying in ${delay}s..."
+            sleep "$delay"
+          done
 
       - name: Delete legacy branch-name preview channel
         if: steps.preview-channel.outputs.legacy_channel != '' && steps.preview-channel.outputs.legacy_channel != steps.preview-channel.outputs.channel
@@ -102,7 +115,7 @@ jobs:
         run: |
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" > "$RUNNER_TEMP/firebase-service-account.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
-          npx firebase-tools@latest hosting:channel:delete "$LEGACY_CHANNEL_ID" --project igndigitalmedia --force || true
+          npx firebase hosting:channel:delete "$LEGACY_CHANNEL_ID" --project igndigitalmedia --force || true
 
   delete-preview:
     name: Delete branch preview
@@ -139,7 +152,7 @@ jobs:
         run: |
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT_IGNDIGITALMEDIA" > "$RUNNER_TEMP/firebase-service-account.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
-          npx firebase-tools@latest hosting:channel:delete "$CHANNEL_ID" --project igndigitalmedia --force || true
+          npx firebase hosting:channel:delete "$CHANNEL_ID" --project igndigitalmedia --force || true
           if [ -n "$LEGACY_CHANNEL_ID" ] && [ "$LEGACY_CHANNEL_ID" != "$CHANNEL_ID" ]; then
-            npx firebase-tools@latest hosting:channel:delete "$LEGACY_CHANNEL_ID" --project igndigitalmedia --force || true
+            npx firebase hosting:channel:delete "$LEGACY_CHANNEL_ID" --project igndigitalmedia --force || true
           fi

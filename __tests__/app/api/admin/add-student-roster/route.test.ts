@@ -26,6 +26,16 @@ const mockGetDb = getFirebaseAdminDb as jest.MockedFunction<typeof getFirebaseAd
 
 const mockSetExisting = jest.fn();
 const mockSetNew = jest.fn();
+const mockWhere = jest.fn();
+const mockLimit = jest.fn();
+const mockGet = jest.fn();
+const mockRunTransaction = jest.fn();
+const mockTransactionGet = jest.fn();
+const mockTransactionSet = jest.fn();
+const mockTransactionDelete = jest.fn();
+const mockReservationDocGet = jest.fn();
+let mockQueryDocs: unknown[][] = [];
+let mockReservationDocs: Record<string, { exists: boolean; data: () => Record<string, unknown> | null }> = {};
 
 function makeRequest(body: unknown): Request {
   return { json: async () => body } as unknown as Request;
@@ -37,32 +47,47 @@ function mockUser(user: unknown) {
   } as never);
 }
 
-type FirestoreWhereChain = {
-  where: jest.MockedFunction<() => FirestoreWhereChain>;
-  limit: jest.MockedFunction<() => FirestoreWhereChain>;
-  get: jest.MockedFunction<() => Promise<{ docs: unknown[] }>>;
-};
-
-function makeWhereChain(existingDoc: unknown | null) {
-  const chain = {} as FirestoreWhereChain;
-  chain.where = jest.fn(() => chain);
-  chain.limit = jest.fn(() => chain);
-  chain.get = jest.fn(async () => ({ docs: existingDoc ? [existingDoc] : [] }));
-  return chain;
-}
-
-function mockFirestore(existing = false) {
-  const existingDoc = existing ? { id: "existing-student", ref: { set: mockSetExisting } } : null;
-  const chain = makeWhereChain(existingDoc);
-  const collection = {
-    where: chain.where,
-    doc: jest.fn(() => ({
-      id: "new-student",
-      set: mockSetNew,
-    })),
+function mockFirestore(queryDocs: unknown[][] = []) {
+  mockQueryDocs = [...queryDocs];
+  mockReservationDocs = {};
+  const chain: {
+    where: jest.Mock;
+    limit: jest.Mock;
+    get: jest.Mock;
+  } = {
+    where: mockWhere,
+    limit: mockLimit,
+    get: mockGet,
   };
+  mockWhere.mockImplementation(() => chain);
+  mockLimit.mockImplementation(() => chain);
+  mockGet.mockImplementation(async () => ({ docs: mockQueryDocs.shift() ?? [] }));
+  mockReservationDocGet.mockImplementation(async function getReservation(this: { id?: string }) {
+    return mockReservationDocs[this.id ?? ""] ?? { exists: false, data: () => null };
+  });
+  mockTransactionGet.mockResolvedValue({ exists: false, data: () => null });
+  mockTransactionSet.mockImplementation(() => undefined);
+  mockTransactionDelete.mockImplementation(() => undefined);
+  mockRunTransaction.mockImplementation(async (callback) => callback({
+    get: mockTransactionGet,
+    set: mockTransactionSet,
+    delete: mockTransactionDelete,
+  }));
+  const makeCollection = (name: string) => ({
+    where: mockWhere,
+    doc: jest.fn((id?: string) => {
+      const docId = id ?? "new-student";
+      return {
+        id: docId,
+        path: `${name}/${docId}`,
+        set: mockSetNew,
+        get: name === "identifier_reservations" ? mockReservationDocGet : jest.fn(),
+      };
+    }),
+  });
   mockGetDb.mockReturnValue({
-    collection: jest.fn(() => collection),
+    collection: jest.fn((name: string) => makeCollection(name)),
+    runTransaction: mockRunTransaction,
   } as never);
 }
 
@@ -105,28 +130,123 @@ describe("POST /api/admin/add-student-roster", () => {
     const res = await POST(makeRequest(validBody));
 
     expect(res.status).toBe(200);
-    expect(mockSetNew).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "new-student",
+    }), expect.objectContaining({
       id: "new-student",
       name: "Jane Student",
       period: "PM",
       email: "jane@bentonvillek12.org",
+      email_key: "jane@bentonvillek12.org",
+      student_id_key: "12345",
       user_id: "student-auth-1",
       is_active: true,
-    }));
+    }), { merge: false });
   });
 
   it("updates an existing roster row for the same auth user", async () => {
     mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
-    mockFirestore(true);
+    const existingDoc = {
+      id: "existing-student",
+      ref: { id: "existing-student", path: "students/existing-student", set: mockSetExisting },
+      data: () => ({
+        student_id: "12345",
+        email: "jane@bentonvillek12.org",
+        is_active: true,
+      }),
+    };
+    mockFirestore([[existingDoc], [existingDoc]]);
 
     const res = await POST(makeRequest(validBody));
 
     expect(res.status).toBe(200);
-    expect(mockSetExisting).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "existing-student",
+    }), expect.objectContaining({
       name: "Jane Student",
       period: "PM",
       email: "jane@bentonvillek12.org",
     }), { merge: true });
     expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active Student IDs on another roster row", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockFirestore([[], [{ id: "other-student", data: () => ({ student_id_key: "12345" }) }]]);
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate active student emails on another roster row", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    mockFirestore([[]]);
+    mockReservationDocs = {
+      "student_email:jane%40bentonvillek12.org": {
+        exists: true,
+        data: () => ({ owner_id: "other-student", owner_collection: "students" }),
+      },
+    };
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/email/i);
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("allows updating the same auth user's roster row with its current identifiers", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+    const existingDoc = {
+      id: "existing-student",
+      ref: { id: "existing-student", path: "students/existing-student", set: mockSetExisting },
+      data: () => ({
+        student_id: "12345",
+        email: "jane@bentonvillek12.org",
+        is_active: true,
+      }),
+    };
+    mockFirestore([[existingDoc], [existingDoc]]);
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(200);
+    expect(mockTransactionSet).toHaveBeenCalledWith(expect.objectContaining({
+      id: "existing-student",
+    }), expect.objectContaining({
+      id: "existing-student",
+      student_id_key: "12345",
+      email_key: "jane@bentonvillek12.org",
+    }), { merge: true });
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-school student emails", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+
+    const res = await POST(makeRequest({
+      ...validBody,
+      email: "jane@example.com",
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/bentonvillek12/i);
+    expect(mockSetNew).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty normalized Student IDs", async () => {
+    mockUser({ id: "teacher-1", user_metadata: { role: "Teacher" } });
+
+    const res = await POST(makeRequest({
+      ...validBody,
+      student_id: "   ",
+    }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/student id/i);
+    expect(mockRunTransaction).not.toHaveBeenCalled();
   });
 });

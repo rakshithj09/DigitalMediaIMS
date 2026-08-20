@@ -1,5 +1,6 @@
 import type { AppUser as User } from "@/lib/firebase/types";
 import { getFirebaseAdminDataClient } from "@/lib/firebase/admin-data";
+import { getStudentEmailKey, getStudentIdKey } from "@/app/lib/student-identifiers";
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -25,7 +26,7 @@ export async function createStudentApprovalRequest(user: User) {
   const studentId = clean(metadata.student_id);
   const period = clean(metadata.period);
 
-  if (!email || !firstName || !lastName || !studentId || (period !== "AM" && period !== "PM")) {
+  if (!email || !firstName || !lastName || !getStudentIdKey(studentId) || (period !== "AM" && period !== "PM")) {
     throw new Error("Student account is missing required approval metadata.");
   }
 
@@ -35,7 +36,9 @@ export async function createStudentApprovalRequest(user: User) {
     first_name: firstName,
     last_name: lastName,
     student_id: studentId,
+    student_id_key: getStudentIdKey(studentId),
     period,
+    email_key: getStudentEmailKey(email),
     email_verified_at: confirmedAt(user),
   };
 
@@ -75,7 +78,9 @@ export async function createStudentApprovalRequest(user: User) {
       first_name: firstName,
       last_name: lastName,
       student_id: studentId,
+      student_id_key: getStudentIdKey(studentId),
       period,
+      email_key: getStudentEmailKey(email),
       requested_at: new Date().toISOString(),
       email_verified_at: confirmedAt(user),
       approved_at: null,

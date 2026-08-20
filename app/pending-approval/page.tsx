@@ -80,8 +80,7 @@ export default function PendingApprovalPage() {
     setMessage(null);
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? window.location.origin;
-    const verificationUrl = `${siteUrl}/auth/callback?next=${encodeURIComponent("/login?verified=success&reason=student_email_verified")}`;
-    const { error: verificationError } = await firebaseClient.auth.sendEmailVerification({ redirectTo: verificationUrl });
+    const { error: verificationError } = await firebaseClient.auth.sendEmailVerification({ redirectTo: siteUrl });
 
     if (verificationError) {
       setError(formatAuthError(verificationError, "Unable to send verification email."));
