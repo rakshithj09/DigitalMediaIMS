@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -41,13 +42,21 @@ export default function SelectMenu({
   searchPlaceholder = "Search...",
 }: SelectMenuProps) {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
   const searchInputRef = React.useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
+  const [menuLayout, setMenuLayout] = React.useState<{
+    left: number;
+    top: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
 
   const closeMenu = React.useCallback(() => {
     setOpen(false);
     setSearch("");
+    setMenuLayout(null);
   }, []);
 
   const selectedOption = options.find((option) => option.value === value) ?? null;
@@ -64,13 +73,51 @@ export default function SelectMenu({
     if (!open) return;
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         closeMenu();
       }
     };
 
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [closeMenu, open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    const updateMenuLayout = () => {
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const gap = 8;
+      const viewportPadding = 12;
+      const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+      const availableAbove = rect.top - viewportPadding - gap;
+      const placeAbove = availableBelow < 180 && availableAbove > availableBelow;
+      const maxHeight = Math.max(160, Math.min(288, placeAbove ? availableAbove : availableBelow));
+
+      setMenuLayout({
+        left: Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - rect.width - viewportPadding)),
+        top: placeAbove ? rect.top - gap - maxHeight : rect.bottom + gap,
+        width: rect.width,
+        maxHeight,
+      });
+    };
+
+    updateMenuLayout();
+    const handleScroll = (event: Event) => {
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
+      closeMenu();
+    };
+
+    window.addEventListener("resize", updateMenuLayout);
+    window.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuLayout);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
   }, [closeMenu, open]);
 
   React.useEffect(() => {
@@ -108,13 +155,20 @@ export default function SelectMenu({
         <ChevronDown className={cn("shrink-0 transition-transform", open && "rotate-180")} size={16} strokeWidth={2.2} />
       </button>
 
-      {open && !disabled && (
+      {open && !disabled && menuLayout && createPortal(
         <div
+          ref={menuRef}
           role="listbox"
           className={cn(
-            "absolute left-0 top-[calc(100%+0.45rem)] z-30 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-1.5 shadow-[0_14px_34px_rgba(8,36,58,0.14),0_2px_6px_rgba(15,36,55,0.08)]",
+            "fixed z-50 overflow-auto rounded-xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-1.5 shadow-[0_14px_34px_rgba(8,36,58,0.14),0_2px_6px_rgba(15,36,55,0.08)]",
             menuClassName,
           )}
+          style={{
+            left: menuLayout.left,
+            top: menuLayout.top,
+            width: menuLayout.width,
+            maxHeight: menuLayout.maxHeight,
+          }}
         >
           {searchable && (
             <div className="p-1.5">
@@ -159,7 +213,8 @@ export default function SelectMenu({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
