@@ -86,9 +86,7 @@ export default function EmailPasswordDemo({ user }: Props) {
         }
 
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? window.location.origin;
-        const verificationReason = role === "Student" ? "student_email_verified" : "email_verified";
-        const verificationUrl = `${siteUrl}/auth/callback?next=${encodeURIComponent(`/login?verified=success&reason=${verificationReason}`)}`;
-        const { error: verificationError } = await firebaseClient.auth.sendEmailVerification({ redirectTo: verificationUrl });
+        const { error: verificationError } = await firebaseClient.auth.sendEmailVerification({ redirectTo: siteUrl });
         await firebaseClient.auth.signOut();
 
         if (verificationError) {
