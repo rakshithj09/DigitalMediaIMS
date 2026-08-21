@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 function toLocalDateInputValue(date: Date) {
@@ -66,27 +67,84 @@ export default function DatePicker({
   disableWeekends?: boolean;
 }) {
   const pickerRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const today = new Date();
   const selectedDate = value ? parseLocalDate(value) : null;
   const minSelectableDate = minDate ? parseLocalDate(minDate) : null;
   const [open, setOpen] = useState(false);
+  const [popoverLayout, setPopoverLayout] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const initialDate = selectedDate ?? minSelectableDate ?? today;
     return new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
   });
 
+  const closePopover = useCallback(() => {
+    setOpen(false);
+    setPopoverLayout(null);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!pickerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (!pickerRef.current?.contains(target) && !popoverRef.current?.contains(target)) {
+        closePopover();
       }
     };
 
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [open]);
+  }, [closePopover, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const updatePopoverLayout = () => {
+      const rect = pickerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const gap = 10;
+      const viewportPadding = 12;
+      const preferredWidth = Math.min(320, window.innerWidth - viewportPadding * 2);
+      const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+      const availableAbove = rect.top - viewportPadding - gap;
+      const placeAbove = availableBelow < 380 && availableAbove > availableBelow;
+      const availableHeight = placeAbove ? availableAbove : availableBelow;
+      const maxHeight = Math.max(260, Math.min(420, availableHeight));
+      const naturalLeft = rect.left;
+
+      setPopoverLayout({
+        left: Math.max(
+          viewportPadding,
+          Math.min(naturalLeft, window.innerWidth - preferredWidth - viewportPadding)
+        ),
+        top: placeAbove ? rect.top - gap - maxHeight : rect.bottom + gap,
+        width: preferredWidth,
+        maxHeight,
+      });
+    };
+
+    updatePopoverLayout();
+
+    const handleScroll = (event: Event) => {
+      if (event.target instanceof Node && popoverRef.current?.contains(event.target)) return;
+      closePopover();
+    };
+
+    window.addEventListener("resize", updatePopoverLayout);
+    window.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePopoverLayout);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [closePopover, open]);
 
   const calendarDays = useMemo(() => buildCalendarDays(visibleMonth), [visibleMonth]);
   const monthLabel = visibleMonth.toLocaleDateString([], { month: "long", year: "numeric" });
@@ -114,9 +172,16 @@ export default function DatePicker({
         <ChevronDown size={16} strokeWidth={2.2} />
       </button>
 
-      {open && (
+      {open && popoverLayout && createPortal(
         <div
-          className="absolute left-0 top-[calc(100%+0.65rem)] z-30 w-[min(20rem,calc(100vw-3rem))] rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_right,rgba(255,210,31,0.16),transparent_32%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-[0_16px_44px_rgba(8,36,58,0.16),0_2px_6px_rgba(15,36,55,0.08)]"
+          ref={popoverRef}
+          className="fixed z-50 overflow-auto rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_right,rgba(255,210,31,0.16),transparent_32%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-[0_16px_44px_rgba(8,36,58,0.16),0_2px_6px_rgba(15,36,55,0.08)]"
+          style={{
+            left: popoverLayout.left,
+            top: popoverLayout.top,
+            width: popoverLayout.width,
+            maxHeight: popoverLayout.maxHeight,
+          }}
           role="dialog"
           aria-label="Choose date"
         >
@@ -187,7 +252,7 @@ export default function DatePicker({
                   onClick={() => {
                     setVisibleMonth(new Date(day.getFullYear(), day.getMonth(), 1));
                     onChange(dayValue);
-                    setOpen(false);
+                    closePopover();
                   }}
                 >
                   {day.getDate()}
@@ -202,7 +267,7 @@ export default function DatePicker({
               className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-900 transition hover:border-slate-300 hover:bg-slate-50"
               onClick={() => {
                 onChange("");
-                setOpen(false);
+                closePopover();
               }}
             >
               Clear
@@ -221,13 +286,14 @@ export default function DatePicker({
                 const todayValue = toLocalDateInputValue(nextDate);
                 onChange(minDate && todayValue < minDate ? minDate : todayValue);
                 setVisibleMonth(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
-                setOpen(false);
+                closePopover();
               }}
             >
               {quickActionLabel}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
