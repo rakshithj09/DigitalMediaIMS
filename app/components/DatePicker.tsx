@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 function toLocalDateInputValue(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
@@ -111,22 +113,71 @@ export default function DatePicker({
 
       const gap = 10;
       const viewportPadding = 12;
-      const preferredWidth = Math.min(320, window.innerWidth - viewportPadding * 2);
+      const viewportWidth = Math.max(180, window.innerWidth - viewportPadding * 2);
+      const viewportHeight = Math.max(160, window.innerHeight - viewportPadding * 2);
+      const preferredWidth = Math.min(320, viewportWidth);
+      const preferredHeight = Math.min(430, viewportHeight);
       const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
       const availableAbove = rect.top - viewportPadding - gap;
-      const placeAbove = availableBelow < 380 && availableAbove > availableBelow;
-      const availableHeight = placeAbove ? availableAbove : availableBelow;
-      const maxHeight = Math.max(260, Math.min(420, availableHeight));
-      const naturalLeft = rect.left;
+      const availableRight = window.innerWidth - rect.right - viewportPadding - gap;
+      const availableLeft = rect.left - viewportPadding - gap;
+      const clampTop = (top: number, height: number) =>
+        Math.max(viewportPadding, Math.min(top, window.innerHeight - height - viewportPadding));
+      const clampLeft = (left: number, width: number) =>
+        Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
 
+      if (availableRight >= preferredWidth) {
+        const height = Math.min(preferredHeight, viewportHeight);
+        setPopoverLayout({
+          left: rect.right + gap,
+          top: clampTop(rect.top, height),
+          width: preferredWidth,
+          maxHeight: height,
+        });
+        return;
+      }
+
+      if (availableLeft >= preferredWidth) {
+        const height = Math.min(preferredHeight, viewportHeight);
+        setPopoverLayout({
+          left: rect.left - gap - preferredWidth,
+          top: clampTop(rect.top, height),
+          width: preferredWidth,
+          maxHeight: height,
+        });
+        return;
+      }
+
+      if (availableBelow >= preferredHeight) {
+        setPopoverLayout({
+          left: clampLeft(rect.left, preferredWidth),
+          top: rect.bottom + gap,
+          width: preferredWidth,
+          maxHeight: Math.min(preferredHeight, availableBelow),
+        });
+        return;
+      }
+
+      if (availableAbove >= preferredHeight) {
+        setPopoverLayout({
+          left: clampLeft(rect.left, preferredWidth),
+          top: rect.top - gap - preferredHeight,
+          width: preferredWidth,
+          maxHeight: preferredHeight,
+        });
+        return;
+      }
+
+      const fallbackHeight = Math.max(
+        Math.min(220, preferredHeight),
+        Math.min(preferredHeight, Math.max(availableBelow, availableAbove, viewportHeight)),
+      );
+      const placeAbove = availableAbove > availableBelow;
       setPopoverLayout({
-        left: Math.max(
-          viewportPadding,
-          Math.min(naturalLeft, window.innerWidth - preferredWidth - viewportPadding)
-        ),
-        top: placeAbove ? rect.top - gap - maxHeight : rect.bottom + gap,
+        left: clampLeft(rect.left, preferredWidth),
+        top: clampTop(placeAbove ? rect.top - gap - fallbackHeight : rect.bottom + gap, fallbackHeight),
         width: preferredWidth,
-        maxHeight,
+        maxHeight: fallbackHeight,
       });
     };
 
@@ -169,7 +220,7 @@ export default function DatePicker({
         aria-expanded={open}
       >
         <span className={value ? "" : "text-slate-400"}>{formatDisplayDate(value, placeholder)}</span>
-        <ChevronDown size={16} strokeWidth={2.2} />
+        <ChevronDown className={cn("shrink-0 transition-transform", open && "rotate-180")} size={16} strokeWidth={2.2} />
       </button>
 
       {open && popoverLayout && createPortal(

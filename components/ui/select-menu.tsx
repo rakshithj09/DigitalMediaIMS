@@ -92,16 +92,73 @@ export default function SelectMenu({
 
       const gap = 8;
       const viewportPadding = 12;
+      const preferredHeight = 288;
+      const viewportWidth = Math.max(180, window.innerWidth - viewportPadding * 2);
+      const viewportHeight = Math.max(120, window.innerHeight - viewportPadding * 2);
+      const preferredWidth = Math.min(Math.max(rect.width, 240), viewportWidth);
       const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
       const availableAbove = rect.top - viewportPadding - gap;
-      const placeAbove = availableBelow < 180 && availableAbove > availableBelow;
-      const maxHeight = Math.max(160, Math.min(288, placeAbove ? availableAbove : availableBelow));
+      const availableRight = window.innerWidth - rect.right - viewportPadding - gap;
+      const availableLeft = rect.left - viewportPadding - gap;
+      const clampTop = (top: number, height: number) =>
+        Math.max(viewportPadding, Math.min(top, window.innerHeight - height - viewportPadding));
+      const clampLeft = (left: number, width: number) =>
+        Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
 
+      if (availableRight >= 240) {
+        const width = Math.min(preferredWidth, availableRight);
+        const height = Math.min(preferredHeight, viewportHeight);
+        setMenuLayout({
+          left: rect.right + gap,
+          top: clampTop(rect.top, height),
+          width,
+          maxHeight: height,
+        });
+        return;
+      }
+
+      if (availableLeft >= 240) {
+        const width = Math.min(preferredWidth, availableLeft);
+        const height = Math.min(preferredHeight, viewportHeight);
+        setMenuLayout({
+          left: rect.left - gap - width,
+          top: clampTop(rect.top, height),
+          width,
+          maxHeight: height,
+        });
+        return;
+      }
+
+      if (availableBelow >= preferredHeight) {
+        setMenuLayout({
+          left: clampLeft(rect.left, preferredWidth),
+          top: rect.bottom + gap,
+          width: preferredWidth,
+          maxHeight: preferredHeight,
+        });
+        return;
+      }
+
+      if (availableAbove >= preferredHeight) {
+        setMenuLayout({
+          left: clampLeft(rect.left, preferredWidth),
+          top: rect.top - gap - preferredHeight,
+          width: preferredWidth,
+          maxHeight: preferredHeight,
+        });
+        return;
+      }
+
+      const height = Math.max(
+        120,
+        Math.min(preferredHeight, Math.max(availableBelow, availableAbove, viewportHeight)),
+      );
+      const placeAbove = availableAbove > availableBelow;
       setMenuLayout({
-        left: Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - rect.width - viewportPadding)),
-        top: placeAbove ? rect.top - gap - maxHeight : rect.bottom + gap,
-        width: rect.width,
-        maxHeight,
+        left: clampLeft(rect.left, preferredWidth),
+        top: clampTop(placeAbove ? rect.top - gap - height : rect.bottom + gap, height),
+        width: preferredWidth,
+        maxHeight: height,
       });
     };
 
