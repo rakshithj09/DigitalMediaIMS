@@ -34,7 +34,7 @@ export default function PendingApprovalPage() {
       }
 
       if (user.user_metadata?.role !== "Student") {
-        router.replace("/");
+        router.replace("/dashboard");
         return;
       }
 

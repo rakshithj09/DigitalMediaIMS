@@ -124,7 +124,7 @@ export default function EmailPasswordDemo({ user }: Props) {
               className="rounded-lg text-white hover:opacity-90"
               style={{ background: "var(--navy)" }}
             >
-              <Link href="/">Dashboard</Link>
+              <Link href="/dashboard">Dashboard</Link>
             </Button>
           </div>
         </div>
@@ -369,6 +369,10 @@ export default function EmailPasswordDemo({ user }: Props) {
         {" · "}
         <Link href="/privacy" className="font-semibold hover:underline" style={{ color: "var(--navy)" }}>
           Privacy
+        </Link>
+        {" · "}
+        <Link href="/terms" className="font-semibold hover:underline" style={{ color: "var(--navy)" }}>
+          Terms
         </Link>
       </p>
     </LoginSignupFrame>

@@ -103,4 +103,4 @@ The app currently uses Firebase Auth email/password authentication for `@bentonv
 
 Data used by the app is limited to school email, name, role, student ID, class period, email verification status, teacher approval status, and equipment checkout records created inside the app. Student users may be under 18 if the school approves student access; student accounts require email verification and teacher approval before full use.
 
-The public privacy/data-access page is available at `/privacy`.
+The public homepage is available at `/` and explains the app purpose before login for Google OAuth brand review. The public privacy/data-access page is available at `/privacy`. The public terms of service page is available at `/terms`.
