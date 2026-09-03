@@ -34,6 +34,8 @@ export interface Checkout {
   checked_in_at?: string | null;
   notes?: string | null;
   return_notes?: string | null;
+  due_extended_at?: string | null;
+  due_extended_by?: string | null;
   period: Period;
   created_at: string;
   student?: Pick<Student, "id" | "name" | "student_id" | "email">;

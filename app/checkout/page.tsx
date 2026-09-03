@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, FormEvent } from "react";
-import { ArrowDownLeft, ArrowUpRight, Check, CheckCircle2, CircleAlert, LoaderCircle } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CalendarClock, Check, CheckCircle2, CircleAlert, LoaderCircle } from "lucide-react";
 import type { AppUser as User } from "@/lib/firebase/types";
 import AppShell from "@/app/components/AppShell";
 import BarcodeScanner from "@/app/components/BarcodeScanner";
@@ -36,6 +36,10 @@ function toLocalDateInputValue(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
+function toLocalTimeInputValue(date: Date) {
+  return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+}
+
 function padTime(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -66,6 +70,31 @@ function createMinimumReturnTime(dateValue: string) {
   if (dateValue !== toLocalDateInputValue(new Date())) return null;
   const date = roundUpToFiveMinutes(new Date());
   return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+}
+
+function getCheckoutDueDateTime(checkout: Checkout) {
+  const dueAt = checkout.due_at ? new Date(checkout.due_at) : null;
+  if (!dueAt || Number.isNaN(dueAt.getTime())) return createDefaultReturnDateTime();
+
+  return {
+    date: toLocalDateInputValue(dueAt),
+    time: toLocalTimeInputValue(dueAt),
+  };
+}
+
+function getMinimumExtensionDate(checkout: Checkout) {
+  const today = createMinimumReturnDate();
+  const dueDate = getCheckoutDueDateTime(checkout).date;
+  return dueDate > today ? dueDate : today;
+}
+
+function getDefaultExtensionDateTime(checkout: Checkout) {
+  const dueDateTime = getCheckoutDueDateTime(checkout);
+  const minimumDate = getMinimumExtensionDate(checkout);
+  return {
+    date: dueDateTime.date >= minimumDate ? dueDateTime.date : minimumDate,
+    time: dueDateTime.time,
+  };
 }
 
 function buildTimeOptions() {
@@ -123,6 +152,10 @@ function CheckoutContent() {
 
   const [checkingIn, setCheckingIn] = useState<string | null>(null);
   const [returnNotes, setReturnNotes] = useState<Record<string, string>>({});
+  const [extendingDue, setExtendingDue] = useState<string | null>(null);
+  const [extendDueDates, setExtendDueDates] = useState<Record<string, string>>({});
+  const [extendDueTimes, setExtendDueTimes] = useState<Record<string, string>>({});
+  const [extendDueErrors, setExtendDueErrors] = useState<Record<string, string>>({});
   const currentRole = (currentUser as unknown as { user_metadata?: { role?: string } })?.user_metadata?.role;
   const checkoutPeriod = currentRole === "Student" && ownStudentPeriod ? ownStudentPeriod : period;
 
@@ -431,6 +464,84 @@ function CheckoutContent() {
       alert("Check in failed: " + String(msg));
     } else refresh();
     setCheckingIn(null);
+  };
+
+  const getExtensionTimeOptions = (checkout: Checkout, dateValue: string) => {
+    const checkoutDue = getCheckoutDueDateTime(checkout);
+    const extensionPeriod = checkout.period === "PM" ? "PM" : "AM";
+    const minimumTodayTime = createMinimumReturnTime(dateValue);
+
+    return filterTimeOptionsForPeriod(extensionPeriod, buildTimeOptions()).filter((time) => {
+      if (minimumTodayTime && time < minimumTodayTime) return false;
+      if (dateValue === checkoutDue.date && time <= checkoutDue.time) return false;
+      return true;
+    });
+  };
+
+  const handleExtendDue = async (checkout: Checkout) => {
+    if (currentRole !== "Teacher") return;
+
+    const defaultExtension = getDefaultExtensionDateTime(checkout);
+    const dateValue = extendDueDates[checkout.id] ?? defaultExtension.date;
+    const options = getExtensionTimeOptions(checkout, dateValue);
+    const requestedTime = extendDueTimes[checkout.id] ?? defaultExtension.time;
+    const timeValue = options.includes(requestedTime) ? requestedTime : (options[0] ?? "");
+
+    setExtendDueErrors((current) => ({ ...current, [checkout.id]: "" }));
+
+    if (!dateValue || !timeValue) {
+      setExtendDueErrors((current) => ({ ...current, [checkout.id]: "Choose a later due date and time." }));
+      return;
+    }
+
+    const returnBy = new Date(`${dateValue}T${timeValue}:00`);
+    if (Number.isNaN(returnBy.getTime())) {
+      setExtendDueErrors((current) => ({ ...current, [checkout.id]: "Choose a valid due date and time." }));
+      return;
+    }
+
+    try {
+      setExtendingDue(checkout.id);
+      const extendResp = await firebaseFetch("/api/checkouts/extend-due", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checkoutId: checkout.id,
+          returnBy: returnBy.toISOString(),
+        }),
+      });
+
+      if (!extendResp.ok) {
+        const data = await extendResp.json().catch(() => ({}));
+        const msg = (data && (data.error?.message ?? data.error)) ?? "Due date extension failed.";
+        setExtendDueErrors((current) => ({ ...current, [checkout.id]: String(msg) }));
+        return;
+      }
+
+      setExtendDueDates((current) => {
+        const next = { ...current };
+        delete next[checkout.id];
+        return next;
+      });
+      setExtendDueTimes((current) => {
+        const next = { ...current };
+        delete next[checkout.id];
+        return next;
+      });
+      setExtendDueErrors((current) => {
+        const next = { ...current };
+        delete next[checkout.id];
+        return next;
+      });
+      refresh();
+    } catch (error) {
+      setExtendDueErrors((current) => ({
+        ...current,
+        [checkout.id]: error instanceof Error ? error.message : "Due date extension failed.",
+      }));
+    } finally {
+      setExtendingDue(null);
+    }
   };
 
   return (
@@ -777,6 +888,14 @@ function CheckoutContent() {
                     : state === "danger" || state === "overdue"
                     ? { background: "#fee2e2", color: "#dc2626" }
                     : { background: "#dcfce7", color: "#15803d" };
+                const defaultExtension = getDefaultExtensionDateTime(c);
+                const extensionDate = extendDueDates[c.id] ?? defaultExtension.date;
+                const extensionTimeOptions = getExtensionTimeOptions(c, extensionDate);
+                const requestedExtensionTime = extendDueTimes[c.id] ?? defaultExtension.time;
+                const extensionTime = extensionTimeOptions.includes(requestedExtensionTime)
+                  ? requestedExtensionTime
+                  : (extensionTimeOptions[0] ?? "");
+                const extensionError = extendDueErrors[c.id];
 
                 return (
                   <div
@@ -831,6 +950,65 @@ function CheckoutContent() {
                         {checkingIn === c.id ? "…" : "Check In"}
                       </button>
                     </div>
+                    {currentRole === "Teacher" && (
+                      <div
+                        className="mt-3 rounded-lg p-3"
+                        style={{ background: "#ffffff", border: "1px solid #e2e8f0" }}
+                      >
+                        <div className="mb-2 flex items-center gap-2">
+                          <CalendarClock size={14} color="#005a78" strokeWidth={2.2} />
+                          <p className="text-xs font-semibold" style={{ color: "var(--ignite-navy)" }}>
+                            Extend Due Date
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)_auto] gap-2">
+                          <DatePicker
+                            value={extensionDate}
+                            minDate={getMinimumExtensionDate(c)}
+                            onChange={(value) => {
+                              setExtendDueDates((current) => ({ ...current, [c.id]: value }));
+                              setExtendDueErrors((current) => ({ ...current, [c.id]: "" }));
+                            }}
+                            placeholder="Choose due date"
+                            quickActionLabel="Today"
+                            disableWeekends
+                          />
+                          <SelectMenu
+                            value={extensionTime}
+                            onChange={(value) => {
+                              setExtendDueTimes((current) => ({ ...current, [c.id]: value }));
+                              setExtendDueErrors((current) => ({ ...current, [c.id]: "" }));
+                            }}
+                            disabled={extensionTimeOptions.length === 0}
+                            placeholder="Choose time"
+                            triggerClassName="text-sm"
+                            options={extensionTimeOptions.map((time) => ({
+                              label: formatTimeOption(time),
+                              value: time,
+                            }))}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleExtendDue(c)}
+                            disabled={extendingDue === c.id || extensionTimeOptions.length === 0}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                            style={{ background: "var(--navy)" }}
+                          >
+                            {extendingDue === c.id ? (
+                              <LoaderCircle className="animate-spin" size={13} strokeWidth={2.5} />
+                            ) : (
+                              <CalendarClock size={13} strokeWidth={2.4} />
+                            )}
+                            Extend
+                          </button>
+                        </div>
+                        {extensionError && (
+                          <p className="mt-2 text-xs" style={{ color: "#dc2626" }}>
+                            {extensionError}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-2.5">
                       <input
                         type="text"
