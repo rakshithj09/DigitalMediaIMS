@@ -14,11 +14,13 @@ import {
   confirmPasswordReset,
   getIdToken,
   getIdTokenResult,
+  GoogleAuthProvider,
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updatePassword,
   type User as FirebaseUser,
@@ -186,6 +188,7 @@ type FirebaseDataClient = {
     getSession(): AuthResponse<{ session: AuthSession | null }>;
     getIdToken(): Promise<string | null>;
     signInWithPassword(credentials: { email: string; password: string }): AuthResponse<Record<string, never> | null>;
+    signInWithGoogle(): AuthResponse<{ user: AppUser | null } | null>;
     sendEmailVerification(options?: { redirectTo?: string }): AuthResponse<Record<string, never> | null>;
     resetPasswordForEmail(email: string, options?: { redirectTo?: string }): AuthResponse<Record<string, never> | null>;
     updateUser(update: { password?: string }): AuthResponse<Record<string, never> | null>;
@@ -228,6 +231,16 @@ export function createFirebaseDataClient(): FirebaseDataClient {
         try {
           await signInWithEmailAndPassword(auth, email, password);
           return { data: {}, error: null };
+        } catch (err) {
+          return { data: null, error: toErrorResult(err) };
+        }
+      },
+      async signInWithGoogle() {
+        try {
+          const provider = new GoogleAuthProvider();
+          provider.setCustomParameters({ hd: "bentonvillek12.org" });
+          const result = await signInWithPopup(auth, provider);
+          return { data: { user: await toAppUser(result.user) }, error: null };
         } catch (err) {
           return { data: null, error: toErrorResult(err) };
         }
